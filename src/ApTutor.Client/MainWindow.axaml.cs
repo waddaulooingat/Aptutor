@@ -126,6 +126,9 @@ public partial class MainWindow : Window
 
     private void OnSceneDemoClick(object? sender, RoutedEventArgs e) => new SceneDemoWindow(_course).Show();
 
+    private void OnMockExamClick(object? sender, RoutedEventArgs e) =>
+        new MockExamWindow(_course, _mastery, () => { SaveProgress(); RefreshAll(); }).Show();
+
     private void SaveProgress()
     {
         var mutable = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal);

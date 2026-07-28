@@ -36,4 +36,30 @@ public class MasteryTrackerTests
         var afterBC = tracker.Available().Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
         Assert.Equal(new HashSet<string>(StringComparer.Ordinal) { "D" }, afterBC);
     }
+
+    // Phase 6 acceptance: "weak nodes reappear in MasteryTracker.Available()" — a missed mock-exam
+    // question un-masters that node without touching anything else already mastered.
+    [Fact]
+    public void MarkWeak_UnmastersNode_SoItReappearsInAvailable()
+    {
+        var graph = new SkillGraph(TestDags.Diamond());
+        var tracker = new MasteryTracker(graph);
+
+        tracker.MarkMastered("A");
+        tracker.MarkMastered("B");
+        tracker.MarkMastered("C");
+        Assert.DoesNotContain("A", tracker.Available().Select(n => n.Id));
+
+        tracker.MarkWeak("A");
+
+        Assert.False(tracker.IsMastered("A"));
+        Assert.Contains("A", tracker.Available().Select(n => n.Id));
+        // B and C were mastered independently of A being re-flagged weak — not cascaded.
+        Assert.True(tracker.IsMastered("B"));
+        Assert.True(tracker.IsMastered("C"));
+    }
+
+    [Fact]
+    public void MarkWeak_UnknownNode_Throws() =>
+        Assert.Throws<KeyNotFoundException>(() => new MasteryTracker(new SkillGraph(TestDags.Diamond())).MarkWeak("ghost"));
 }

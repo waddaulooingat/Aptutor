@@ -1,0 +1,27 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ApTutor.Client.MockExamWindow"
+        Title="Mock Exam"
+        Width="720" Height="520">
+  <Grid Margin="16" RowDefinitions="Auto,*,Auto">
+
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="0,0,0,12">
+      <TextBlock Name="ProgressText" FontWeight="Bold" VerticalAlignment="Center" />
+      <TextBlock Name="TimerText" Foreground="Gray" VerticalAlignment="Center" />
+    </StackPanel>
+
+    <StackPanel Grid.Row="1" Name="ExamPanel" Spacing="12">
+      <TextBlock Name="PromptText" TextWrapping="Wrap" FontSize="16" />
+      <StackPanel Name="ChoicesPanel" Spacing="8" />
+    </StackPanel>
+
+    <ScrollViewer Grid.Row="1" Name="ResultsPanel" IsVisible="False">
+      <StackPanel Name="ResultsList" Spacing="4" />
+    </ScrollViewer>
+
+    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="12" Margin="0,12,0,0">
+      <Button Name="NextButton" Content="Next" Click="OnNextClick" />
+    </StackPanel>
+
+  </Grid>
+</Window>

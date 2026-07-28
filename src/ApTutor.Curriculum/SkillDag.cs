@@ -154,6 +154,16 @@ public sealed class MasteryTracker
         _mastered.Add(id);
     }
 
+    /// A missed mock-exam question on this node's material means the student isn't solid on it
+    /// after all — un-master it so it reappears in Available() for review, even if it was
+    /// mastered before. Intentionally local: dependents that are already mastered stay mastered
+    /// (this flags one weak node for review, it doesn't invalidate everything built on top of it).
+    public void MarkWeak(string id)
+    {
+        if (!_graph.Exists(id)) throw new KeyNotFoundException(id);
+        _mastered.Remove(id);
+    }
+
     /// Frontier the student can work on right now.
     public IReadOnlyList<DagNode> Available() =>
         _graph.Unlocked(_mastered).ToList();
