@@ -5,9 +5,16 @@
 //
 // Scope: CED Units 1-5 (CLAUDE-HANDOFF §4 / PHASE3-HANDOFF "first-cut scope") — primitives and
 // expressions, objects and method calls, String/Math/wrapper methods, if/else, while/for/do-while,
-// user classes (fields, constructors, methods, static, this). Arrays, ArrayList, 2D arrays,
-// inheritance, and recursion-specific visualization (callTree) are deferred; CedSubsetValidator
-// rejects the syntax it can't interpret before this class ever runs.
+// user classes (fields, constructors, methods, static, this). CedSubsetValidator rejects syntax
+// this class can't interpret before it ever runs.
+//
+// Phase 5 extends this to Units 6-10: 1D arrays (indexedStrip), rectangular 2D arrays (grid2d,
+// deliberately NOT modeled as true Java jagged array-of-arrays — see EvalArrayOrGridAccess),
+// ArrayList<E>'s add/get/set/size (sharing the indexedStrip backing with plain arrays), single
+// inheritance (extends + super(...) chaining + super.method() + overriding via dynamic dispatch),
+// and callTree emission for every method call (not just recursive ones — simpler, and harmless
+// for non-recursive traces). Interfaces, jagged arrays, and ArrayList methods beyond the four
+// above remain out of scope.
 
 using System.Globalization;
 using ApTutor.Scene;
@@ -23,10 +30,17 @@ internal sealed class Interpreter
     private readonly Dictionary<string, Dictionary<string, JValue>> _staticFields = new(StringComparer.Ordinal);
     private readonly HashSet<string> _staticsInitialized = new(StringComparer.Ordinal);
     private readonly List<Frame> _callStack = new();
+    private readonly Stack<string> _callTreeStack = new(); // top = enclosing call's callTree node id
     private readonly Heap _heap = new();
+    private readonly Dictionary<string, List<JValue>> _arrayStore = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, JValue[,]> _gridStore = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _gridElementType = new(StringComparer.Ordinal);
     private readonly TraceEmitter _emitter = new();
     private readonly Random _random;
     private int _frameCounter;
+    private int _arrayCounter;
+    private int _gridCounter;
+    private int _callTreeCounter;
 
     // FramePush for the current frame, held back until the next thing that happens in it so it
     // can ride along in the same TraceStep (mirrors PHASE2's fixture: step 0 bundles the entry
@@ -48,16 +62,17 @@ internal sealed class Interpreter
         }
 
         JavaParser.MethodDeclarationContext? entryCtx = null;
+        string? entryClass = null;
         foreach (var cls in _classes.Values)
         {
             entryCtx = FindMethod(cls, entryMethod, -1); // -1 = match by name only, any arity
-            if (entryCtx != null) break;
+            if (entryCtx != null) { entryClass = cls.identifier().GetText(); break; }
         }
 
         if (entryCtx is null)
             return _emitter.Result(false, $"Entry method '{entryMethod}' not found.");
 
-        var frame = new Frame { Id = "main", MethodSig = entryMethod };
+        var frame = new Frame { Id = "main", MethodSig = entryMethod, DefiningClass = entryClass };
         _callStack.Add(frame);
         _pendingFramePush = new FramePush("main", entryMethod);
 
@@ -118,6 +133,25 @@ internal sealed class Interpreter
     private static bool IsStaticMember(JavaParser.ClassBodyDeclarationContext bd) =>
         bd.modifier().Any(m => m.classOrInterfaceModifier()?.STATIC() != null);
 
+    private static string? ParentOf(JavaParser.ClassDeclarationContext cls) =>
+        cls.EXTENDS() != null ? cls.typeType().GetText() : null;
+
+    /// Walks the extends chain starting at `className`, returning the first (method, definingClass)
+    /// match. Starting at the receiver's own runtime class and walking *up* only when not found is
+    /// what makes overriding/dynamic dispatch fall out for free — no separate override tracking.
+    private (JavaParser.MethodDeclarationContext Method, string DefiningClass)? FindMethodInChain(
+        string className, string name, int arity)
+    {
+        var current = className;
+        while (current != null && _classes.TryGetValue(current, out var cls))
+        {
+            var m = FindMethod(cls, name, arity);
+            if (m != null) return (m, current);
+            current = ParentOf(cls);
+        }
+        return null;
+    }
+
     private static JavaParser.ConstructorDeclarationContext? FindConstructor(
         JavaParser.ClassDeclarationContext cls, int arity)
     {
@@ -142,6 +176,18 @@ internal sealed class Interpreter
             foreach (var d in f.variableDeclarators().variableDeclarator())
                 yield return (d.variableDeclaratorId().identifier().GetText(), typeName, d.variableInitializer()?.expression());
         }
+    }
+
+    /// Instance fields from the whole extends chain, root ancestor first, so a subclass's own
+    /// fields are declared (and can shadow) after its parents' — matches Java's field layout order.
+    private IEnumerable<(string Name, string Type, JavaParser.ExpressionContext? Init)> AllInstanceFields(string className)
+    {
+        if (!_classes.TryGetValue(className, out var cls)) yield break;
+        if (ParentOf(cls) is { } parent)
+            foreach (var f in AllInstanceFields(parent))
+                yield return f;
+        foreach (var f in InstanceFields(cls))
+            yield return f;
     }
 
     private static IEnumerable<(string Name, string Type, JavaParser.ExpressionContext? Init)> StaticFieldDecls(
@@ -174,32 +220,69 @@ internal sealed class Interpreter
 
     private HeapObject Instantiate(string className, IReadOnlyList<JValue> args)
     {
-        if (!_classes.TryGetValue(className, out var cls))
+        if (!_classes.TryGetValue(className, out _))
             throw new JavaRuntimeException($"Unknown class '{className}'.");
 
         var obj = _heap.Alloc(className);
         var scratch = new Frame { Id = $"<init-{obj.Id}>", MethodSig = className };
-        foreach (var (name, type, init) in InstanceFields(cls))
+        foreach (var (name, type, init) in AllInstanceFields(className))
             obj.Fields[name] = init != null ? EvalExpression(init, null, scratch) : DefaultFor(type);
 
+        RunConstructorChain(className, obj, args);
+        return obj;
+    }
+
+    /// Runs `className`'s own constructor (if any) against `obj`, chaining to the parent's
+    /// constructor first — explicitly via a leading `super(args);` statement, or implicitly
+    /// (Java inserts a no-arg super() call when a constructor doesn't start with one). Constructor
+    /// bodies never emit their own TraceSteps (see Instantiate's HeapAlloc-is-atomic contract);
+    /// only the field mutations they cause show up, baked into that single snapshot.
+    private void RunConstructorChain(string className, HeapObject obj, IReadOnlyList<JValue> args)
+    {
+        if (!_classes.TryGetValue(className, out var cls)) return;
+        var parent = ParentOf(cls);
         var ctor = FindConstructor(cls, args.Count);
-        if (ctor != null)
+
+        if (ctor is null)
         {
-            var ctorFrame = new Frame { Id = $"ctor-{obj.Id}", MethodSig = className };
-            ctorFrame.Declare("this", new JRef(obj.Id));
-            BindParameters(ctorFrame, ctor.formalParameters(), args);
-            _callStack.Add(ctorFrame);
-            try
+            if (parent != null) RunConstructorChain(parent, obj, Array.Empty<JValue>());
+            return;
+        }
+
+        var ctorFrame = new Frame { Id = $"ctor-{obj.Id}-{className}", MethodSig = className, DefiningClass = className };
+        ctorFrame.Declare("this", new JRef(obj.Id));
+        BindParameters(ctorFrame, ctor.formalParameters(), args);
+
+        var statements = ctor.constructorBody.blockStatement();
+        var startIndex = 0;
+
+        if (statements.Length > 0 && statements[0].statement()?.statementExpression is JavaParser.MethodCallExpressionContext mce)
+        {
+            var mc = mce.methodCall();
+            if (mc.SUPER() != null)
             {
-                ExecBlockStatements(ctor.constructorBody.blockStatement(), ctorFrame, silent: true, selfObj: obj);
+                var superArgs = EvalArgs(mc.arguments(), obj, ctorFrame, silent: true);
+                if (parent != null) RunConstructorChain(parent, obj, superArgs);
+                startIndex = 1;
             }
-            finally
+            else if (mc.THIS() != null)
             {
-                _callStack.RemoveAt(_callStack.Count - 1);
+                throw new JavaRuntimeException("this(...) constructor chaining is not supported.");
             }
         }
 
-        return obj;
+        if (startIndex == 0 && parent != null)
+            RunConstructorChain(parent, obj, Array.Empty<JValue>()); // implicit super()
+
+        _callStack.Add(ctorFrame);
+        try
+        {
+            ExecBlockStatements(statements.Skip(startIndex).ToList(), ctorFrame, silent: true, selfObj: obj);
+        }
+        finally
+        {
+            _callStack.RemoveAt(_callStack.Count - 1);
+        }
     }
 
     private static void BindParameters(Frame frame, JavaParser.FormalParametersContext formals, IReadOnlyList<JValue> args)
@@ -282,7 +365,11 @@ internal sealed class Interpreter
                 continue;
             }
 
-            var value = EvalExpression(d.variableInitializer().expression(), selfObj, frame);
+            // `int[] a = {1, 2, 3};` — a bare arrayInitializer, not wrapped in `new T[]{...}`, so
+            // variableInitializer.expression() is null here; handle it directly.
+            var value = d.variableInitializer().arrayInitializer() is { } arrInit
+                ? EvalArrayInitializer(arrInit, ArrayRank(typeName).ElementType, selfObj, frame, silent, line)
+                : EvalExpression(d.variableInitializer().expression(), selfObj, frame);
             frame.Declare(name, value);
             if (silent) continue;
 
@@ -356,7 +443,7 @@ internal sealed class Interpreter
     {
         var forControl = ctx.forControl();
         if (forControl.enhancedForControl() != null)
-            throw new UnsupportedConstructException("for-each (needs arrays/ArrayList)", ctx.Start.Line);
+            return ExecForEach(ctx, forControl.enhancedForControl(), frame, silent, selfObj);
 
         frame.PushScope();
         try
@@ -385,6 +472,41 @@ internal sealed class Interpreter
                 if (!silent && loopVarName != null && frame.TryGet(loopVarName, out var v))
                     _emitter.Emit(ctx.Start.Line, StepKind.LoopIter, $"{loopVarName} = {Display(v)}",
                         FlushPending(new LineHighlight(ctx.Start.Line), new MemCellSet(frame.Id, loopVarName, "int", Display(v))));
+            }
+            return ExecResult.Normal;
+        }
+        finally
+        {
+            frame.PopScope();
+        }
+    }
+
+    private ExecResult ExecForEach(
+        JavaParser.StatementContext ctx, JavaParser.EnhancedForControlContext efc, Frame frame, bool silent, HeapObject? selfObj)
+    {
+        var collection = EvalExpression(efc.expression(), selfObj, frame, silent);
+        if (collection is not JArrayRef { ArrId: var arrId })
+            throw new JavaRuntimeException("for-each needs an array or ArrayList.");
+
+        var varName = efc.variableDeclaratorId().identifier().GetText();
+        var elementType = efc.typeType()?.GetText() ?? "var";
+
+        frame.PushScope();
+        try
+        {
+            // Snapshot the length: mutating the collection mid-iteration is undefined in Java too.
+            var count = _arrayStore[arrId].Count;
+            for (var i = 0; i < count; i++)
+            {
+                var element = _arrayStore[arrId][i];
+                frame.Declare(varName, element);
+                if (!silent)
+                    _emitter.Emit(ctx.Start.Line, StepKind.LoopIter, $"{varName} = {Display(element)}",
+                        FlushPending(new LineHighlight(ctx.Start.Line), new MemCellSet(frame.Id, varName, elementType, Display(element))));
+
+                var result = ExecStatement(ctx.statement(0), frame, silent, selfObj);
+                if (result.Flow == Flow.Break) break;
+                if (result.Flow is Flow.Return) return result;
             }
             return ExecResult.Normal;
         }
@@ -428,8 +550,8 @@ internal sealed class Interpreter
             case JavaParser.ObjectCreationExpressionContext oc:
                 return EvalObjectCreation(oc, self, frame, silent);
 
-            case JavaParser.SquareBracketExpressionContext:
-                throw new UnsupportedConstructException("array access", ctx.Start.Line);
+            case JavaParser.SquareBracketExpressionContext sb:
+                return EvalArrayOrGridAccess(sb, self, frame, silent);
 
             case JavaParser.ExpressionLambdaContext:
                 throw new UnsupportedConstructException("lambda expression", ctx.Start.Line);
@@ -452,8 +574,10 @@ internal sealed class Interpreter
     {
         if (p.expression() != null) return EvalExpression(p.expression(), self, frame);
         if (p.literal() != null) return EvalLiteral(p.literal());
-        if (p.THIS() != null)
-            return self != null ? new JRef(self.Id) : frame.TryGet("this", out var t) ? t : throw new JavaRuntimeException("'this' used outside an instance context.");
+        // "super" is the same object as "this" at the value level — it only changes which class
+        // method resolution starts from, handled at the call site (EvalMemberReference), not here.
+        if (p.THIS() != null || p.SUPER() != null)
+            return self != null ? new JRef(self.Id) : frame.TryGet("this", out var t) ? t : throw new JavaRuntimeException("'this'/'super' used outside an instance context.");
 
         if (p.identifier() != null)
         {
@@ -672,7 +796,107 @@ internal sealed class Interpreter
             return;
         }
 
+        if (lhs is JavaParser.SquareBracketExpressionContext sbLhs)
+        {
+            if (sbLhs.expression(0) is JavaParser.SquareBracketExpressionContext innerLhs &&
+                EvalExpression(innerLhs.expression(0), self, frame, silent) is JGridRef g)
+            {
+                var row = ((JInt)EvalExpression(innerLhs.expression(1), self, frame, silent)).V;
+                var col = ((JInt)EvalExpression(sbLhs.expression(1), self, frame, silent)).V;
+                WriteGrid(g.GridId, row, col, value, silent, line);
+                return;
+            }
+
+            var arrBase = EvalExpression(sbLhs.expression(0), self, frame, silent);
+            if (arrBase is JArrayRef a)
+            {
+                var index = ((JInt)EvalExpression(sbLhs.expression(1), self, frame, silent)).V;
+                WriteArray(a.ArrId, index, value, silent, line);
+                return;
+            }
+
+            throw new JavaRuntimeException("Index assignment needs an array or 2D array.");
+        }
+
         throw new UnsupportedConstructException("assignment target", line);
+    }
+
+    // ---------- arrays / grids ----------
+
+    /// `g[i][j]` is detected structurally (the base of the outer bracket is itself a bracket
+    /// expression whose own base evaluates to a grid) rather than through generic bottom-up
+    /// evaluation, because 2D arrays are modeled as a real Grid2dView, not Java's true
+    /// array-of-arrays — see the file header note.
+    private JValue EvalArrayOrGridAccess(JavaParser.SquareBracketExpressionContext ctx, HeapObject? self, Frame frame, bool silent)
+    {
+        var line = ctx.Start.Line;
+
+        if (ctx.expression(0) is JavaParser.SquareBracketExpressionContext inner &&
+            EvalExpression(inner.expression(0), self, frame, silent) is JGridRef g)
+        {
+            var row = ((JInt)EvalExpression(inner.expression(1), self, frame, silent)).V;
+            var col = ((JInt)EvalExpression(ctx.expression(1), self, frame, silent)).V;
+            return ReadGrid(g.GridId, row, col);
+        }
+
+        var baseValue = EvalExpression(ctx.expression(0), self, frame, silent);
+        if (baseValue is JArrayRef arr)
+        {
+            var index = ((JInt)EvalExpression(ctx.expression(1), self, frame, silent)).V;
+            return ReadArray(arr.ArrId, index);
+        }
+
+        throw new JavaRuntimeException("Index access needs an array or 2D array.");
+    }
+
+    private JValue ReadArray(string arrId, int index)
+    {
+        if (!_arrayStore.TryGetValue(arrId, out var list)) throw new JavaRuntimeException($"No array '{arrId}'.");
+        if (index < 0 || index >= list.Count)
+            throw new JavaRuntimeException($"Array index {index} out of bounds for length {list.Count}.");
+        return list[index];
+    }
+
+    private JValue ReadGrid(string gridId, int row, int col)
+    {
+        if (!_gridStore.TryGetValue(gridId, out var grid)) throw new JavaRuntimeException($"No grid '{gridId}'.");
+        if (row < 0 || row >= grid.GetLength(0) || col < 0 || col >= grid.GetLength(1))
+            throw new JavaRuntimeException($"Grid index [{row}][{col}] out of bounds.");
+        return grid[row, col];
+    }
+
+    private void WriteArray(string arrId, int index, JValue value, bool silent, int line)
+    {
+        if (!_arrayStore.TryGetValue(arrId, out var list)) throw new JavaRuntimeException($"No array '{arrId}'.");
+        if (index < 0 || index >= list.Count)
+            throw new JavaRuntimeException($"Array index {index} out of bounds for length {list.Count}.");
+        list[index] = value;
+        if (silent) return;
+        _emitter.Emit(line, StepKind.ArrayWrite, $"[{index}] = {Display(value)}",
+            FlushPending(new LineHighlight(line), new ArrayWrite(arrId, index, Display(value))));
+    }
+
+    /// Appends when `index == list.Count` (used by ArrayList.add) rather than requiring a
+    /// dedicated append op — SceneState.DoArrayWrite mirrors this.
+    private void AppendArray(string arrId, JValue value, bool silent, int line)
+    {
+        if (!_arrayStore.TryGetValue(arrId, out var list)) throw new JavaRuntimeException($"No array '{arrId}'.");
+        var index = list.Count;
+        list.Add(value);
+        if (silent) return;
+        _emitter.Emit(line, StepKind.ArrayWrite, $"add({Display(value)})",
+            FlushPending(new LineHighlight(line), new ArrayWrite(arrId, index, Display(value))));
+    }
+
+    private void WriteGrid(string gridId, int row, int col, JValue value, bool silent, int line)
+    {
+        if (!_gridStore.TryGetValue(gridId, out var grid)) throw new JavaRuntimeException($"No grid '{gridId}'.");
+        if (row < 0 || row >= grid.GetLength(0) || col < 0 || col >= grid.GetLength(1))
+            throw new JavaRuntimeException($"Grid index [{row}][{col}] out of bounds.");
+        grid[row, col] = value;
+        if (silent) return;
+        _emitter.Emit(line, StepKind.ArrayWrite, $"[{row}][{col}] = {Display(value)}",
+            FlushPending(new LineHighlight(line), new Grid2dWrite(gridId, row, col, Display(value))));
     }
 
     private void AssignField(HeapObject obj, string field, JValue value, bool silent, int line)
@@ -715,10 +939,13 @@ internal sealed class Interpreter
         var name = mc.identifier().GetText();
         var args = EvalArgs(mc.arguments(), self, frame, silent);
 
-        if (self is null)
-            throw new JavaRuntimeException($"Cannot call '{name}(...)' without a receiver.");
+        // No receiver: either a static method calling another static method (including recursive
+        // self-calls), or an instance method calling a sibling unqualified — either way, resolve
+        // starting from wherever the *currently executing* method was defined, not the receiver.
+        var searchStartClass = self?.ClassName ?? frame.DefiningClass
+            ?? throw new JavaRuntimeException($"Cannot call '{name}(...)': no enclosing class context.");
 
-        return InvokeMethod(self, self.ClassName, name, args, silent, line);
+        return InvokeMethod(self, searchStartClass, name, args, silent, line);
     }
 
     /// Qualified access — expr '.' (identifier | methodCall | ...): field reads, instance calls,
@@ -726,6 +953,20 @@ internal sealed class Interpreter
     private JValue EvalMemberReference(JavaParser.MemberReferenceExpressionContext ctx, HeapObject? self, Frame frame, bool silent)
     {
         var line = ctx.Start.Line;
+
+        // super.method(...): resolve starting one level above wherever the *currently executing*
+        // method/constructor was defined (frame.DefiningClass), not above the receiver's own
+        // runtime class — correct for multi-level hierarchies, not just parent/child.
+        if (ctx.expression() is JavaParser.PrimaryExpressionContext { } superPe && superPe.primary().SUPER() != null)
+        {
+            if (self is null) throw new JavaRuntimeException("'super' used outside an instance context.");
+            if (ctx.methodCall() is not { } superCall) throw new UnsupportedConstructException("super.field access", line);
+            var definingClass = frame.DefiningClass ?? self.ClassName;
+            var parent = (_classes.TryGetValue(definingClass, out var dc) ? ParentOf(dc) : null)
+                         ?? throw new JavaRuntimeException($"'{definingClass}' has no superclass.");
+            var superArgs = EvalArgs(superCall.arguments(), self, frame, silent);
+            return InvokeMethod(self, parent, superCall.identifier().GetText(), superArgs, silent, line);
+        }
 
         if (ctx.expression() is JavaParser.PrimaryExpressionContext pe && pe.primary().identifier() != null)
         {
@@ -751,8 +992,12 @@ internal sealed class Interpreter
         if (ctx.identifier() != null)
         {
             var fieldName = ctx.identifier().GetText();
-            if (receiverValue is JRef { ObjId: { } oid }) return _heap.Get(oid).Fields[fieldName];
-            throw new JavaRuntimeException($"Cannot read field '{fieldName}' on a null reference.");
+            return receiverValue switch
+            {
+                JRef { ObjId: { } oid } => _heap.Get(oid).Fields[fieldName],
+                JArrayRef { ArrId: var arrId } when fieldName == "length" => new JInt(_arrayStore[arrId].Count),
+                _ => throw new JavaRuntimeException($"Cannot read field '{fieldName}'."),
+            };
         }
 
         if (ctx.methodCall() != null)
@@ -762,29 +1007,50 @@ internal sealed class Interpreter
             return receiverValue switch
             {
                 JString str => EvalStringInstanceCall(str, name, args, line),
+                JArrayRef { ArrId: var arrId } => EvalArrayListInstanceCall(arrId, name, args, silent, line),
                 JRef { ObjId: { } oid2 } => InvokeMethod(_heap.Get(oid2), _heap.Get(oid2).ClassName, name, args, silent, line),
                 JRef { ObjId: null } => throw new JavaRuntimeException($"Cannot call '{name}(...)' on null."),
                 _ => throw new JavaRuntimeException($"Cannot call '{name}(...)' on a non-object value."),
             };
         }
 
-        throw new UnsupportedConstructException("member reference (new/super/generic invocation)", line);
+        throw new UnsupportedConstructException("member reference (new/generic invocation)", line);
     }
 
-    private JValue InvokeMethod(HeapObject? receiver, string className, string name, IReadOnlyList<JValue> args, bool silent, int line)
+    /// ArrayList<E>'s core four (shares the indexedStrip-backed array store with plain arrays —
+    /// nothing else distinguishes "is this really a List" at this representation, which is fine
+    /// since we only ever reach here via an explicit method call). remove/contains/etc. are out
+    /// of scope for this first cut.
+    private JValue EvalArrayListInstanceCall(string arrId, string name, IReadOnlyList<JValue> args, bool silent, int line) => name switch
     {
-        if (!_classes.TryGetValue(className, out var cls))
-            throw new JavaRuntimeException($"Unknown class '{className}'.");
-        var method = FindMethod(cls, name, args.Count)
-                     ?? throw new JavaRuntimeException($"No method '{name}' with {args.Count} argument(s) on {className}.");
+        "add" => Void(() => AppendArray(arrId, args[0], silent, line)),
+        "get" => ReadArray(arrId, ((JInt)args[0]).V),
+        "set" => Void(() => WriteArray(arrId, ((JInt)args[0]).V, args[1], silent, line)),
+        "size" => new JInt(_arrayStore[arrId].Count),
+        _ => throw new UnsupportedConstructException($"ArrayList.{name}(...)", line),
+    };
+
+    private JValue Void(Action action) { action(); return VoidMarker; }
+
+    private JValue InvokeMethod(HeapObject? receiver, string searchStartClass, string name, IReadOnlyList<JValue> args, bool silent, int line)
+    {
+        var found = FindMethodInChain(searchStartClass, name, args.Count)
+                    ?? throw new JavaRuntimeException($"No method '{name}' with {args.Count} argument(s) found on '{searchStartClass}' or its superclasses.");
+        var (method, definingClass) = found;
 
         var frameId = $"f#{++_frameCounter}";
         var sig = MethodSig(method);
-        var newFrame = new Frame { Id = frameId, MethodSig = sig };
+        var newFrame = new Frame { Id = frameId, MethodSig = sig, DefiningClass = definingClass };
         if (receiver != null) newFrame.Declare("this", new JRef(receiver.Id));
         BindParameters(newFrame, method.formalParameters(), args);
 
-        if (!silent) EmitCallStep(newFrame, method.formalParameters(), args, line, sig);
+        // callTree: every call gets a node, not just recursive ones — simpler, and harmless for
+        // non-recursive traces (a single-node "tree" just never branches).
+        var callTreeId = $"c{++_callTreeCounter}";
+        var callerCallTreeId = _callTreeStack.Count > 0 ? _callTreeStack.Peek() : null;
+        _callTreeStack.Push(callTreeId);
+
+        if (!silent) EmitCallStep(newFrame, method.formalParameters(), args, line, sig, callTreeId, callerCallTreeId);
 
         _callStack.Add(newFrame);
         JValue? returnValue;
@@ -796,19 +1062,29 @@ internal sealed class Interpreter
         finally
         {
             _callStack.RemoveAt(_callStack.Count - 1);
+            _callTreeStack.Pop();
         }
 
         if (!silent)
-            _emitter.Emit(line, StepKind.Return, returnValue != null ? $"return {Display(returnValue)}" : "return",
-                new FramePop(frameId));
+        {
+            // Always mark the call-tree node returned (even for void), or it would stay "active"
+            // in the visualization forever despite the call having genuinely completed.
+            var ops = new List<SceneOp>
+            {
+                new FramePop(frameId),
+                new CallTreeReturn(callTreeId, returnValue != null ? Display(returnValue) : "void"),
+            };
+            _emitter.Emit(line, StepKind.Return, returnValue != null ? $"return {Display(returnValue)}" : "return", ops.ToArray());
+        }
 
         return returnValue ?? VoidMarker;
     }
 
     private void EmitCallStep(
-        Frame newFrame, JavaParser.FormalParametersContext formals, IReadOnlyList<JValue> args, int line, string sig)
+        Frame newFrame, JavaParser.FormalParametersContext formals, IReadOnlyList<JValue> args, int line, string sig,
+        string callTreeId, string? callerCallTreeId)
     {
-        var ops = new List<SceneOp> { new FramePush(newFrame.Id, sig) };
+        var ops = new List<SceneOp> { new FramePush(newFrame.Id, sig), new CallTreeNode(callTreeId, callerCallTreeId, sig) };
         var paramList = AllParams(formals);
         for (var i = 0; i < paramList.Count && i < args.Count; i++)
         {
@@ -816,7 +1092,7 @@ internal sealed class Interpreter
             var ptype = paramList[i].typeType().GetText();
             ops.Add(args[i] is JRef r ? new RefSet(newFrame.Id, pname, r.ObjId) : new MemCellSet(newFrame.Id, pname, ptype, Display(args[i])));
         }
-        _emitter.Emit(line, StepKind.Call, $"call {sig}", ops.ToArray());
+        _emitter.Emit(line, StepKind.Call, $"call {sig}", FlushPending(ops.ToArray()));
     }
 
     private static string MethodSig(JavaParser.MethodDeclarationContext m)
@@ -833,7 +1109,10 @@ internal sealed class Interpreter
     {
         var creator = ctx.creator();
         var line = ctx.Start.Line;
-        if (creator.arrayCreatorRest() != null) throw new UnsupportedConstructException("array creation", line);
+
+        if (creator.arrayCreatorRest() != null)
+            return EvalArrayCreation(creator, self, frame, silent, line);
+
         if (creator.classCreatorRest()?.classBody() != null) throw new UnsupportedConstructException("anonymous class", line);
         if (creator.classCreatorRest() is null) throw new UnsupportedConstructException("object creation", line);
 
@@ -846,6 +1125,8 @@ internal sealed class Interpreter
                 : throw new JavaRuntimeException($"{className}(...) needs exactly one argument.");
         if (className == "String")
             return new JString(args.Count == 1 ? Display(args[0]) : "");
+        if (className == "ArrayList")
+            return EvalNewArrayList(creator, silent, line);
 
         var obj = Instantiate(className, args);
         if (!silent)
@@ -853,6 +1134,88 @@ internal sealed class Interpreter
                 FlushPending(new LineHighlight(line), new HeapAlloc(obj.Id, className,
                     obj.Fields.Select(kv => new KeyValuePair<string, string>(kv.Key, Display(kv.Value))).ToList())));
         return new JRef(obj.Id);
+    }
+
+    private JValue EvalNewArrayList(JavaParser.CreatorContext creator, bool silent, int line)
+    {
+        var elementType = creator.createdName().typeArgumentsOrDiamond().FirstOrDefault()
+            ?.typeArguments()?.typeArgument(0)?.GetText() ?? "Object";
+        var arrId = $"a{++_arrayCounter}";
+        _arrayStore[arrId] = new List<JValue>();
+        if (!silent)
+            _emitter.Emit(line, StepKind.Alloc, "new ArrayList<>()",
+                FlushPending(new LineHighlight(line), new ArrayAlloc(arrId, elementType, Array.Empty<string>())));
+        return new JArrayRef(arrId);
+    }
+
+    /// Rectangular-only: `new T[n]` (1D) or `new T[r][c]` (2D, fully sized). Jagged creation
+    /// (`new T[r][]`) and multi-dimensional brace initializers aren't supported — see the file
+    /// header note on why 2D arrays are modeled as grid2d rather than true array-of-arrays.
+    private JValue EvalArrayCreation(
+        JavaParser.CreatorContext creator, HeapObject? self, Frame frame, bool silent, int line)
+    {
+        var rest = creator.arrayCreatorRest();
+        var elementType = creator.createdName().GetText();
+
+        if (rest.arrayInitializer() != null)
+        {
+            if (rest.LBRACK().Length != 1)
+                throw new UnsupportedConstructException("multi-dimensional array initializer", line);
+            return EvalArrayInitializer(rest.arrayInitializer(), elementType, self, frame, silent, line);
+        }
+
+        var dims = rest.expression();
+        switch (dims.Length)
+        {
+            case 1:
+                var length = ((JInt)EvalExpression(dims[0], self, frame, silent)).V;
+                var def = DefaultFor(elementType);
+                return AllocArray(elementType, Enumerable.Repeat(def, length).ToList(), silent, line);
+
+            case 2:
+                var rows = ((JInt)EvalExpression(dims[0], self, frame, silent)).V;
+                var cols = ((JInt)EvalExpression(dims[1], self, frame, silent)).V;
+                return AllocGrid(elementType, rows, cols, silent, line);
+
+            default:
+                throw new UnsupportedConstructException("array rank > 2", line);
+        }
+    }
+
+    private JValue EvalArrayInitializer(
+        JavaParser.ArrayInitializerContext ctx, string elementType, HeapObject? self, Frame frame, bool silent, int line)
+    {
+        var values = ctx.variableInitializer()
+            .Select(vi => vi.expression() is { } e
+                ? EvalExpression(e, self, frame, silent)
+                : throw new UnsupportedConstructException("nested array initializer", line))
+            .ToList();
+        return AllocArray(elementType, values, silent, line);
+    }
+
+    private JValue AllocArray(string elementType, IReadOnlyList<JValue> values, bool silent, int line)
+    {
+        var arrId = $"a{++_arrayCounter}";
+        _arrayStore[arrId] = values.ToList();
+        if (!silent)
+            _emitter.Emit(line, StepKind.Alloc, $"new {elementType}[{values.Count}]",
+                FlushPending(new LineHighlight(line), new ArrayAlloc(arrId, elementType, values.Select(Display).ToList())));
+        return new JArrayRef(arrId);
+    }
+
+    private JValue AllocGrid(string elementType, int rows, int cols, bool silent, int line)
+    {
+        var gridId = $"g{++_gridCounter}";
+        _gridStore[gridId] = new JValue[rows, cols];
+        var def = DefaultFor(elementType);
+        for (var r = 0; r < rows; r++)
+            for (var c = 0; c < cols; c++)
+                _gridStore[gridId][r, c] = def;
+        _gridElementType[gridId] = elementType;
+        if (!silent)
+            _emitter.Emit(line, StepKind.Alloc, $"new {elementType}[{rows}][{cols}]",
+                FlushPending(new LineHighlight(line), new Grid2dAlloc(gridId, rows, cols, elementType, Display(def))));
+        return new JGridRef(gridId);
     }
 
     // ---------- built-ins ----------
@@ -943,6 +1306,20 @@ internal sealed class Interpreter
         JInt => "int", JDouble => "double", JBool => "boolean", JChar => "char", JString => "String", _ => "var",
     };
 
+    /// Strips trailing `[]` pairs off a type's text (e.g. "int[][]" -> (2, "int")) — typeType's
+    /// GetText() concatenates raw source with no spaces, so this is a plain string peel.
+    private static (int Rank, string ElementType) ArrayRank(string typeName)
+    {
+        var rank = 0;
+        var elem = typeName;
+        while (elem.EndsWith("[]", StringComparison.Ordinal))
+        {
+            rank++;
+            elem = elem[..^2];
+        }
+        return (rank, elem);
+    }
+
     private static JValue DefaultFor(string typeName) => typeName switch
     {
         "int" or "short" or "byte" or "long" => new JInt(0),
@@ -960,6 +1337,8 @@ internal sealed class Interpreter
         JChar c => c.V.ToString(),
         JString s => s.V,
         JRef r => r.ObjId ?? "null",
+        JArrayRef a => a.ArrId,
+        JGridRef g => g.GridId,
         JVoid => "void",
         _ => v.ToString() ?? "",
     };

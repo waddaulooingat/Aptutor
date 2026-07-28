@@ -127,6 +127,144 @@ public sealed class SceneRenderer
         // ---- current-line badge (lineHighlight) ----
         if (state.HighlightLine is { } ln)
             DrawText(canvas, $"line {ln}", Pad, Pad - 6f + 14f, headFont, mutedPaint);
+
+        // ---- Phase 5 primitives: exprBubble/boolTruthGlow, indexedStrip, grid2d, callTree ----
+        // Share the middle strip between the frame column and the heap column, stacked top-down.
+        float midLeft = Pad + CellW + 2 * FramePadInner + 24f;
+        float midY = Pad + 30f;
+
+        midY = DrawExprBubbles(state, canvas, fill, stroke, textPaint, font, midLeft, midY);
+        midY = DrawArrays(state, canvas, fill, stroke, textPaint, mutedPaint, font, headFont, midLeft, midY);
+        midY = DrawGrids(state, canvas, fill, stroke, textPaint, mutedPaint, headFont, font, midLeft, midY);
+        DrawCallTree(state, canvas, fill, stroke, textPaint, mutedPaint, headFont, font, midLeft, midY);
+    }
+
+    private float DrawExprBubbles(SceneState state, SKCanvas canvas, SKPaint fill, SKPaint stroke,
+                                   SKPaint textPaint, SKFont font, float left, float y)
+    {
+        if (state.ExprBubbles.Count == 0) return y;
+
+        const float h = 28f, gap = 10f, padX = 10f;
+        float x = left;
+        foreach (var b in state.ExprBubbles)
+        {
+            var text = b.ResolvedValue != null ? $"{b.Text} = {b.ResolvedValue}" : b.Text;
+            float w = MeasureTextWidth(text, font, textPaint) + padX * 2;
+            var rect = new SKRect(x, y, x + w, y + h);
+
+            fill.Color = b.BoolValue switch
+            {
+                true => new SKColor(0xDC, 0xFC, 0xE7),
+                false => new SKColor(0xFE, 0xE2, 0xE2),
+                null => new SKColor(0xF3, 0xF4, 0xF6),
+            };
+            canvas.DrawRoundRect(rect, h / 2, h / 2, fill);
+            canvas.DrawRoundRect(rect, h / 2, h / 2, stroke);
+            DrawText(canvas, text, rect.MidX, rect.MidY + 5f, font, textPaint, SKTextAlign.Center);
+            x += w + gap;
+        }
+        return y + h + 20f;
+    }
+
+    private float DrawArrays(SceneState state, SKCanvas canvas, SKPaint fill, SKPaint stroke,
+                              SKPaint textPaint, SKPaint mutedPaint, SKFont font, SKFont headFont, float left, float y)
+    {
+        const float cellW = 46f, cellH = 34f;
+        foreach (var arr in state.Arrays.Values)
+        {
+            DrawText(canvas, $"{arr.ElementType}[{arr.Values.Count}]", left, y + 14f, headFont, mutedPaint);
+            float x = left;
+            float cy = y + 20f;
+            for (var i = 0; i < arr.Values.Count; i++)
+            {
+                var rect = new SKRect(x, cy, x + cellW, cy + cellH);
+                fill.Color = CellFill;
+                canvas.DrawRect(rect, fill);
+                canvas.DrawRect(rect, stroke);
+                DrawText(canvas, arr.Values[i], rect.MidX, rect.MidY + 4f, font, textPaint, SKTextAlign.Center);
+                DrawText(canvas, i.ToString(), rect.MidX, rect.Bottom + 14f, font, mutedPaint, SKTextAlign.Center);
+                x += cellW;
+            }
+            y = cy + cellH + 24f;
+        }
+        return y;
+    }
+
+    private float DrawGrids(SceneState state, SKCanvas canvas, SKPaint fill, SKPaint stroke,
+                             SKPaint textPaint, SKPaint mutedPaint, SKFont headFont, SKFont font, float left, float y)
+    {
+        const float cellW = 40f, cellH = 30f;
+        foreach (var grid in state.Grids.Values)
+        {
+            DrawText(canvas, $"{grid.ElementType}[{grid.Rows}][{grid.Cols}]", left, y + 14f, headFont, mutedPaint);
+            float gy = y + 20f;
+            for (var r = 0; r < grid.Rows; r++)
+            {
+                float gx = left;
+                for (var c = 0; c < grid.Cols; c++)
+                {
+                    var rect = new SKRect(gx, gy, gx + cellW, gy + cellH);
+                    fill.Color = CellFill;
+                    canvas.DrawRect(rect, fill);
+                    canvas.DrawRect(rect, stroke);
+                    DrawText(canvas, grid[r, c], rect.MidX, rect.MidY + 4f, font, textPaint, SKTextAlign.Center);
+                    gx += cellW;
+                }
+                gy += cellH;
+            }
+            y = gy + 24f;
+        }
+        return y;
+    }
+
+    private void DrawCallTree(SceneState state, SKCanvas canvas, SKPaint fill, SKPaint stroke,
+                               SKPaint textPaint, SKPaint mutedPaint, SKFont headFont, SKFont font, float left, float y)
+    {
+        if (state.CallTree.Count == 0) return;
+
+        DrawText(canvas, "call tree", left, y + 14f, headFont, mutedPaint);
+        y += 24f;
+
+        const float nodeW = 76f, nodeH = 32f, gapX = 14f, gapY = 42f;
+        var depthOf = new Dictionary<string, int>(StringComparer.Ordinal);
+        var byId = state.CallTree.ToDictionary(n => n.Id, StringComparer.Ordinal);
+        int DepthOf(CallTreeNodeView n)
+        {
+            if (depthOf.TryGetValue(n.Id, out var d)) return d;
+            var depth = n.ParentId is null || !byId.ContainsKey(n.ParentId) ? 0 : 1 + DepthOf(byId[n.ParentId]);
+            depthOf[n.Id] = depth;
+            return depth;
+        }
+
+        var rects = new Dictionary<string, SKRect>(StringComparer.Ordinal);
+        var nextXAtDepth = new Dictionary<int, float>();
+        using var linePaint = new SKPaint { IsAntialias = true, Color = Line, StrokeWidth = 1.5f, Style = SKPaintStyle.Stroke };
+
+        foreach (var node in state.CallTree)
+        {
+            var depth = DepthOf(node);
+            var x = nextXAtDepth.TryGetValue(depth, out var nx) ? nx : left;
+            var rect = new SKRect(x, y + depth * gapY, x + nodeW, y + depth * gapY + nodeH);
+            rects[node.Id] = rect;
+            nextXAtDepth[depth] = x + nodeW + gapX;
+
+            fill.Color = node.Returned ? new SKColor(0xEE, 0xF2, 0xFF) : new SKColor(0xFF, 0xFB, 0xEB);
+            canvas.DrawRoundRect(rect, 4f, 4f, fill);
+            canvas.DrawRoundRect(rect, 4f, 4f, stroke);
+            DrawText(canvas, node.Label, rect.MidX, rect.MidY - (node.Returned ? 2f : -4f), font, textPaint, SKTextAlign.Center);
+            if (node.Returned)
+                DrawText(canvas, $"→{node.ReturnValue}", rect.MidX, rect.MidY + 12f, font, mutedPaint, SKTextAlign.Center);
+
+            if (node.ParentId != null && rects.TryGetValue(node.ParentId, out var prect))
+                canvas.DrawLine(new SKPoint(prect.MidX, prect.Bottom), new SKPoint(rect.MidX, rect.Top), linePaint);
+        }
+    }
+
+    private static float MeasureTextWidth(string text, SKFont font, SKPaint paint)
+    {
+        Span<ushort> glyphs = text.Length <= 128 ? stackalloc ushort[text.Length] : new ushort[text.Length];
+        font.GetGlyphs(text, glyphs);
+        return font.MeasureText(glyphs, paint);
     }
 
     private static float FrameHeight(FrameView f) =>
@@ -141,9 +279,7 @@ public sealed class SceneRenderer
         float dx = 0f;
         if (align != SKTextAlign.Left)
         {
-            Span<ushort> glyphs = text.Length <= 128 ? stackalloc ushort[text.Length] : new ushort[text.Length];
-            font.GetGlyphs(text, glyphs);
-            float width = font.MeasureText(glyphs, paint);
+            float width = MeasureTextWidth(text, font, paint);
             dx = align == SKTextAlign.Center ? -width / 2f : -width;
         }
         c.DrawText(text, x + dx, y, font, paint);

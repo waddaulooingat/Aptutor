@@ -140,8 +140,11 @@ public sealed class CedSubsetValidator : ISubsetValidator
 
         public override object? VisitClassDeclaration(JavaParser.ClassDeclarationContext context)
         {
-            if (context.EXTENDS() != null || context.IMPLEMENTS() != null)
-                throw new UnsupportedConstructException("inheritance (extends/implements)", context.Start.Line);
+            // Phase 5: single inheritance (extends) is now in scope for Units 6-10. Interfaces
+            // stay out ("interfaces beyond Comparable" per CLAUDE-HANDOFF §4) - no interface
+            // method dispatch is implemented.
+            if (context.IMPLEMENTS() != null)
+                throw new UnsupportedConstructException("interfaces", context.Start.Line);
             return base.VisitClassDeclaration(context);
         }
 
@@ -160,20 +163,12 @@ public sealed class CedSubsetValidator : ISubsetValidator
         public override object? VisitSwitchExpression(JavaParser.SwitchExpressionContext context) =>
             throw new UnsupportedConstructException("switch expression", context.Start.Line);
 
-        public override object? VisitSquareBracketExpression(JavaParser.SquareBracketExpressionContext context) =>
-            throw new UnsupportedConstructException("array access (needs the indexedStrip primitive)", context.Start.Line);
-
-        public override object? VisitArrayCreatorRest(JavaParser.ArrayCreatorRestContext context) =>
-            throw new UnsupportedConstructException("array creation (needs the indexedStrip primitive)", context.Start.Line);
-
-        public override object? VisitArrayInitializer(JavaParser.ArrayInitializerContext context) =>
-            throw new UnsupportedConstructException("array initializer (needs the indexedStrip primitive)", context.Start.Line);
-
-        public override object? VisitTypeArguments(JavaParser.TypeArgumentsContext context) =>
-            throw new UnsupportedConstructException("generics / ArrayList<E> (deferred with array primitives)", context.Start.Line);
-
-        public override object? VisitNonWildcardTypeArguments(JavaParser.NonWildcardTypeArgumentsContext context) =>
-            throw new UnsupportedConstructException("generics / ArrayList<E> (deferred with array primitives)", context.Start.Line);
+        // Phase 5: 1D/2D arrays and ArrayList<E> are now in scope (indexedStrip/grid2d
+        // primitives exist). Array access/creation/initializers and type arguments are no
+        // longer rejected here — the interpreter only actually implements rectangular 2D
+        // arrays and ArrayList's add/get/set/size, so anything beyond that (jagged arrays,
+        // other generic collection types) fails at interpretation time with a clean
+        // JavaRuntimeException rather than a validator-level rejection.
 
         public override object? VisitStatement(JavaParser.StatementContext context)
         {
@@ -196,6 +191,8 @@ public sealed record JBool(bool V) : JValue;
 public sealed record JChar(char V) : JValue;
 public sealed record JString(string V) : JValue;         // treated as a cell value in first cut
 public sealed record JRef(string? ObjId) : JValue;       // null ObjId => null reference
+public sealed record JArrayRef(string ArrId) : JValue;    // 1D array or ArrayList<E>, backs indexedStrip
+public sealed record JGridRef(string GridId) : JValue;    // rectangular 2D array, backs grid2d
 
 // ---------- Heap ----------
 
@@ -228,6 +225,13 @@ public sealed class Frame
 {
     public required string Id { get; init; }         // "main", "f#1", ... (drives FramePush/Pop)
     public required string MethodSig { get; init; }
+
+    /// The class whose method/constructor body this frame is executing — as opposed to the
+    /// receiver's runtime class, which may be a subclass. Used to resolve `super.method()` calls
+    /// (Phase 5 inheritance) starting one level above where the *current* method was defined,
+    /// not one level above the receiver's own class.
+    public string? DefiningClass { get; init; }
+
     private readonly List<Dictionary<string, JValue>> _scopes = new() { new(StringComparer.Ordinal) };
 
     public void PushScope() => _scopes.Add(new(StringComparer.Ordinal));

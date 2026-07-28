@@ -22,6 +22,25 @@ public sealed record FieldSet(string ObjId, string Field, string Value) : SceneO
 public sealed record RefSet(string FrameId, string VarName, string? TargetObjId) : SceneOp; // null = null ref
 public sealed record LineHighlight(int Line) : SceneOp;
 
+// ---------- Phase 5: remaining primitives ----------
+
+// indexedStrip (1D array / ArrayList / String backing)
+public sealed record ArrayAlloc(string ArrId, string ElementType, IReadOnlyList<string> InitialValues) : SceneOp;
+public sealed record ArrayWrite(string ArrId, int Index, string Value) : SceneOp;
+
+// grid2d (2D array)
+public sealed record Grid2dAlloc(string GridId, int Rows, int Cols, string ElementType, string DefaultValue) : SceneOp;
+public sealed record Grid2dWrite(string GridId, int Row, int Col, string Value) : SceneOp;
+
+// callTree (recursion)
+public sealed record CallTreeNode(string NodeId, string? ParentId, string Label) : SceneOp;
+public sealed record CallTreeReturn(string NodeId, string ReturnValue) : SceneOp;
+
+// exprBubble / boolTruthGlow (sub-expression evaluation)
+public sealed record ExprPush(string ExprId, string Text) : SceneOp;
+public sealed record ExprResolve(string ExprId, string Value) : SceneOp;
+public sealed record BoolGlow(string ExprId, bool Value) : SceneOp;
+
 public sealed record SceneDelta(IReadOnlyList<SceneOp> Ops);
 
 // ---------- Mutable view model the renderer reads ----------
@@ -50,12 +69,57 @@ public sealed class HeapObjectView
     public List<KeyValuePair<string, string>> Fields { get; } = new();
 }
 
+public sealed class IndexedStripView
+{
+    public required string Id { get; init; }
+    public required string ElementType { get; init; }
+    public List<string> Values { get; } = new();
+}
+
+public sealed class Grid2dView
+{
+    public required string Id { get; init; }
+    public required string ElementType { get; init; }
+    public required int Rows { get; init; }
+    public required int Cols { get; init; }
+    private readonly string[,] _cells;
+
+    public Grid2dView(int rows, int cols) => _cells = new string[rows, cols];
+
+    public string this[int row, int col]
+    {
+        get => _cells[row, col] ?? "";
+        set => _cells[row, col] = value;
+    }
+}
+
+public sealed class CallTreeNodeView
+{
+    public required string Id { get; init; }
+    public string? ParentId { get; init; }
+    public required string Label { get; init; }
+    public string? ReturnValue { get; set; }
+    public bool Returned { get; set; }
+}
+
+public sealed class ExprBubbleView
+{
+    public required string Id { get; init; }
+    public required string Text { get; init; }
+    public string? ResolvedValue { get; set; }
+    public bool? BoolValue { get; set; }
+}
+
 // ---------- Scene state ----------
 
 public sealed class SceneState
 {
     public List<FrameView> Frames { get; } = new(); // index 0 = bottom of stack
     public Dictionary<string, HeapObjectView> Heap { get; } = new(StringComparer.Ordinal);
+    public Dictionary<string, IndexedStripView> Arrays { get; } = new(StringComparer.Ordinal);
+    public Dictionary<string, Grid2dView> Grids { get; } = new(StringComparer.Ordinal);
+    public List<CallTreeNodeView> CallTree { get; } = new();
+    public List<ExprBubbleView> ExprBubbles { get; } = new();
     public int? HighlightLine { get; private set; }
 
     private readonly Stack<Action> _undo = new(); // one composite undo per applied delta
@@ -94,7 +158,16 @@ public sealed class SceneState
         FieldSet p => DoFieldSet(p),
         RefSet p => DoRefSet(p),
         LineHighlight p => DoLineHighlight(p),
-        _ => throw new NotSupportedException($"Phase 2 does not handle {op.GetType().Name}.")
+        ArrayAlloc p => DoArrayAlloc(p),
+        ArrayWrite p => DoArrayWrite(p),
+        Grid2dAlloc p => DoGrid2dAlloc(p),
+        Grid2dWrite p => DoGrid2dWrite(p),
+        CallTreeNode p => DoCallTreeNode(p),
+        CallTreeReturn p => DoCallTreeReturn(p),
+        ExprPush p => DoExprPush(p),
+        ExprResolve p => DoExprResolve(p),
+        BoolGlow p => DoBoolGlow(p),
+        _ => throw new NotSupportedException($"Unhandled {op.GetType().Name}.")
     };
 
     private FrameView RequireFrame(string id) =>
@@ -181,5 +254,95 @@ public sealed class SceneState
     {
         var old = HighlightLine; HighlightLine = p.Line;
         return () => HighlightLine = old;
+    }
+
+    // ---------- Phase 5: remaining primitives ----------
+
+    private Action DoArrayAlloc(ArrayAlloc p)
+    {
+        var view = new IndexedStripView { Id = p.ArrId, ElementType = p.ElementType };
+        view.Values.AddRange(p.InitialValues);
+        Arrays[p.ArrId] = view;
+        return () => Arrays.Remove(p.ArrId);
+    }
+
+    private Action DoArrayWrite(ArrayWrite p)
+    {
+        if (!Arrays.TryGetValue(p.ArrId, out var arr))
+            throw new InvalidOperationException($"No array '{p.ArrId}'.");
+
+        // Index == Count means append (ArrayList.add) rather than overwrite.
+        if (p.Index == arr.Values.Count)
+        {
+            arr.Values.Add(p.Value);
+            return () => arr.Values.RemoveAt(p.Index);
+        }
+
+        var old = arr.Values[p.Index];
+        arr.Values[p.Index] = p.Value;
+        return () => arr.Values[p.Index] = old;
+    }
+
+    private Action DoGrid2dAlloc(Grid2dAlloc p)
+    {
+        var view = new Grid2dView(p.Rows, p.Cols)
+            { Id = p.GridId, ElementType = p.ElementType, Rows = p.Rows, Cols = p.Cols };
+        for (var r = 0; r < p.Rows; r++)
+            for (var c = 0; c < p.Cols; c++)
+                view[r, c] = p.DefaultValue;
+        Grids[p.GridId] = view;
+        return () => Grids.Remove(p.GridId);
+    }
+
+    private Action DoGrid2dWrite(Grid2dWrite p)
+    {
+        if (!Grids.TryGetValue(p.GridId, out var grid))
+            throw new InvalidOperationException($"No grid '{p.GridId}'.");
+        var old = grid[p.Row, p.Col];
+        grid[p.Row, p.Col] = p.Value;
+        return () => grid[p.Row, p.Col] = old;
+    }
+
+    private Action DoCallTreeNode(CallTreeNode p)
+    {
+        var node = new CallTreeNodeView { Id = p.NodeId, ParentId = p.ParentId, Label = p.Label };
+        CallTree.Add(node);
+        return () => CallTree.Remove(node);
+    }
+
+    private Action DoCallTreeReturn(CallTreeReturn p)
+    {
+        var node = CallTree.FirstOrDefault(n => n.Id == p.NodeId)
+                   ?? throw new InvalidOperationException($"No call-tree node '{p.NodeId}'.");
+        var (oldReturned, oldValue) = (node.Returned, node.ReturnValue);
+        node.Returned = true; node.ReturnValue = p.ReturnValue;
+        return () => { node.Returned = oldReturned; node.ReturnValue = oldValue; };
+    }
+
+    private Action DoExprPush(ExprPush p)
+    {
+        var bubble = new ExprBubbleView { Id = p.ExprId, Text = p.Text };
+        ExprBubbles.Add(bubble);
+        return () => ExprBubbles.Remove(bubble);
+    }
+
+    private ExprBubbleView RequireExprBubble(string id) =>
+        ExprBubbles.FirstOrDefault(b => b.Id == id)
+        ?? throw new InvalidOperationException($"No expr bubble '{id}'.");
+
+    private Action DoExprResolve(ExprResolve p)
+    {
+        var bubble = RequireExprBubble(p.ExprId);
+        var old = bubble.ResolvedValue;
+        bubble.ResolvedValue = p.Value;
+        return () => bubble.ResolvedValue = old;
+    }
+
+    private Action DoBoolGlow(BoolGlow p)
+    {
+        var bubble = RequireExprBubble(p.ExprId);
+        var old = bubble.BoolValue;
+        bubble.BoolValue = p.Value;
+        return () => bubble.BoolValue = old;
     }
 }
