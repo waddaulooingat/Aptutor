@@ -35,6 +35,7 @@
     <ProjectReference Include="..\..\src\ApTutor.Platform\ApTutor.Platform.csproj" />
     <ProjectReference Include="..\..\src\ApTutor.Scene\ApTutor.Scene.csproj" />
     <ProjectReference Include="..\..\src\ApTutor.Tracer.Csa\ApTutor.Tracer.Csa.csproj" />
+    <ProjectReference Include="..\..\src\ApTutor.Narration\ApTutor.Narration.csproj" />
   </ItemGroup>
 
 </Project>

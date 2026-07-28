@@ -124,7 +124,7 @@ public partial class MainWindow : Window
         RefreshAll();
     }
 
-    private void OnSceneDemoClick(object? sender, RoutedEventArgs e) => new SceneDemoWindow().Show();
+    private void OnSceneDemoClick(object? sender, RoutedEventArgs e) => new SceneDemoWindow(_course).Show();
 
     private void SaveProgress()
     {

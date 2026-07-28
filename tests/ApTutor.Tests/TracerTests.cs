@@ -7,22 +7,7 @@ namespace ApTutor.Tests;
 // PHASE3-HANDOFF.md "Acceptance criteria — close the loop".
 public class TracerTests
 {
-    private const string ReferenceVsValueDemoSource = """
-        class Point {
-            int x;
-            void setX(int x) { this.x = x; }
-        }
-
-        class Demo {
-            public static void main(String[] args) {
-                int x = 5;
-                Point p = new Point();
-                p.setX(5);
-                Point q = p;
-                q.setX(9);
-            }
-        }
-        """;
+    private const string ReferenceVsValueDemoSource = SampleProgram.ReferenceVsValueDemoJava;
 
     private static SceneState ApplyAll(TraceResult result)
     {

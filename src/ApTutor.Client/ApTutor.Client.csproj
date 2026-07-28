@@ -22,6 +22,8 @@
     <ProjectReference Include="..\ApTutor.Platform\ApTutor.Platform.csproj" />
     <ProjectReference Include="..\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
     <ProjectReference Include="..\ApTutor.Scene\ApTutor.Scene.csproj" />
+    <ProjectReference Include="..\ApTutor.Tracer.Csa\ApTutor.Tracer.Csa.csproj" />
+    <ProjectReference Include="..\ApTutor.Narration\ApTutor.Narration.csproj" />
   </ItemGroup>
 
 </Project>
