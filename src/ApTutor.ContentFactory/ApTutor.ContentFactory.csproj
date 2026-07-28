@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ApTutor.ContentFactory</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
+    <ProjectReference Include="..\ApTutor.Platform\ApTutor.Platform.csproj" />
+    <ProjectReference Include="..\ApTutor.Scene\ApTutor.Scene.csproj" />
+    <ProjectReference Include="..\ApTutor.Content\ApTutor.Content.csproj" />
+  </ItemGroup>
+
+</Project>

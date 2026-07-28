@@ -1,10 +1,11 @@
 // Composition-root wiring for the CS A course. This is the one place allowed to know "CS A"
 // exists — the shell (MainWindow) talks only to ICourseModule/CourseRegistry (build-plan Phase 1
 // acceptance: "no course-specific code in the shell"). StepProvider is wired to the real Phase 3
-// tracer as of Phase 4. Content.GetPracticeItems is a small hand-authored fixture bank (Phase 6:
-// enough to drive a real mock exam) — GetWalkthroughText stays stubbed until the real content
-// factory (build-plan Track B, Phase 7) exists; there's no verified-item pipeline to consume yet.
+// tracer as of Phase 4. Content is a composite of the Phase 6 fixture bank (guaranteed to exist,
+// so the mock exam never regresses) plus Phase 7's file-based authored content — empty today since
+// nobody has run ApTutor.ContentFactory yet, but the wiring is real and ready for when they do.
 
+using ApTutor.Content;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
 using ApTutor.Tracer;
@@ -18,27 +19,48 @@ public sealed class CsaCourseModule : ICourseModule
     public SkillGraph Dag { get; }
 
     public IReadOnlyList<IScenePrimitiveRenderer> Primitives => Array.Empty<IScenePrimitiveRenderer>();
-    public IStepProvider StepProvider { get; } = new TracerStepProvider();
-    public IContentSource Content { get; } = new FixtureContentSource();
+    public IStepProvider StepProvider { get; }
+    public IContentSource Content { get; }
     public IAttemptGrader? Grader => null;
 
-    public CsaCourseModule(string dagJsonPath) => Dag = SkillDagLoader.Load(dagJsonPath);
+    /// contentDir defaults to "<app dir>/content/csa" — where a human running
+    /// `ApTutor.ContentFactory generate --course csa ...` then `review` would produce verified
+    /// "<nodeId>.json" packs. Overridable so tests can point at an isolated fixture directory.
+    public CsaCourseModule(string dagJsonPath, string? contentDir = null)
+    {
+        Dag = SkillDagLoader.Load(dagJsonPath);
+        var dir = contentDir ?? Path.Combine(AppContext.BaseDirectory, "content", "csa");
+        StepProvider = new TracerStepProvider(dir);
+        Content = new CompositeContentSource(new FixtureContentSource(), new FileContentSource(dir));
+    }
 }
 
 /// build-plan.md Phase 3: "wire it as the CS A module's IStepProvider with SupportsLiveInput =
-/// true." GetStepsForInput traces arbitrary Java live; GetSteps serves pre-authored examples by
-/// (nodeId, exampleId) — for now that's just the reference-vs-value walkthrough on u2.1 ("Objects
-/// as instances of classes; reference vs. primitive"), the DAG node it's actually teaching. A real
-/// per-node example bank is Phase 5 (content integration), not this phase's job.
+/// true." GetStepsForInput traces arbitrary Java live; GetSteps serves the reference-vs-value demo
+/// on u2.1 directly (it IS the tracer's own closing-loop fixture, see TracerTests), and falls back
+/// to Phase 7's authored content pack for every other node.
 file sealed class TracerStepProvider : IStepProvider
 {
+    private readonly IStepProvider _authored;
+
+    public TracerStepProvider(string contentDir) => _authored = new AuthoredStepProvider(contentDir);
+
     public bool SupportsLiveInput => true;
 
-    public IReadOnlyList<VisualStep> GetSteps(string nodeId, string exampleId) => nodeId switch
+    public IReadOnlyList<VisualStep> GetSteps(string nodeId, string exampleId)
     {
-        "u2.1" => Trace(SampleProgram.ReferenceVsValueDemoJava),
-        _ => throw new NotImplementedException($"No authored example for node '{nodeId}' yet (Phase 5: content integration)."),
-    };
+        if (nodeId == "u2.1") return Trace(SampleProgram.ReferenceVsValueDemoJava);
+
+        try
+        {
+            return _authored.GetSteps(nodeId, exampleId);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new NotImplementedException(
+                $"No authored walkthrough for node '{nodeId}' yet — generate + verify it via ApTutor.ContentFactory.", ex);
+        }
+    }
 
     public IReadOnlyList<VisualStep> GetStepsForInput(string nodeId, string userInput) => Trace(userInput);
 
@@ -51,10 +73,39 @@ file sealed class TracerStepProvider : IStepProvider
     }
 }
 
-/// Hand-authored MCQ fixture bank (Phase 6), NOT the verified item bank build-plan Phase 7
-/// describes — that needs the real Track B content factory + human verification pass, neither of
-/// which exists yet. This exists so the mock-exam engine has real, gradable items to run against
-/// instead of throwing. All items are original — no College Board question text.
+/// Merges the Phase 6 fixture bank with Phase 7's file-based authored content: practice items are
+/// the union of both sources; walkthrough text prefers the authored (verified, human-reviewed)
+/// version and only falls back to the fixture source's stub message if none exists yet.
+file sealed class CompositeContentSource : IContentSource
+{
+    private readonly IContentSource _fixture;
+    private readonly IContentSource _authored;
+
+    public CompositeContentSource(IContentSource fixture, IContentSource authored)
+    {
+        _fixture = fixture;
+        _authored = authored;
+    }
+
+    public string GetWalkthroughText(string nodeId, string exampleId)
+    {
+        try
+        {
+            return _authored.GetWalkthroughText(nodeId, exampleId);
+        }
+        catch (InvalidOperationException)
+        {
+            return _fixture.GetWalkthroughText(nodeId, exampleId);
+        }
+    }
+
+    public IReadOnlyList<PracticeItem> GetPracticeItems(string nodeId) =>
+        _fixture.GetPracticeItems(nodeId).Concat(_authored.GetPracticeItems(nodeId)).ToList();
+}
+
+/// Hand-authored MCQ fixture bank (Phase 6) — guaranteed to exist regardless of whether anyone has
+/// run the Phase 7 content factory yet, so the mock exam always has real, gradable items. All items
+/// are original — no College Board question text.
 file sealed class FixtureContentSource : IContentSource
 {
     private static readonly IReadOnlyList<PracticeItem> Items = new List<PracticeItem>

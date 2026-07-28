@@ -6,10 +6,34 @@
 //   refArrow -> a CellView whose TargetObjId points into Heap
 // Forward application records an inverse per delta so the shell can step backward.
 
+using System.Text.Json.Serialization;
+
 namespace ApTutor.Scene;
 
 // ---------- Delta protocol (phase-2 subset of CLAUDE-HANDOFF §5.2) ----------
 
+// [JsonPolymorphic]/[JsonDerivedType] (Phase 7): lets a SceneDelta round-trip through JSON as a
+// discriminated union, tagged by "op" — needed so authored walkthroughs (the content factory's
+// output, and later the Phase 9 content store) can persist/transmit SceneOp[] and load them back
+// as the exact same record types, not just untyped JSON.
+[JsonPolymorphic(TypeDiscriminatorPropertyName = "op")]
+[JsonDerivedType(typeof(FramePush), "framePush")]
+[JsonDerivedType(typeof(FramePop), "framePop")]
+[JsonDerivedType(typeof(MemCellSet), "memCellSet")]
+[JsonDerivedType(typeof(MemCellFlash), "memCellFlash")]
+[JsonDerivedType(typeof(HeapAlloc), "heapAlloc")]
+[JsonDerivedType(typeof(FieldSet), "fieldSet")]
+[JsonDerivedType(typeof(RefSet), "refSet")]
+[JsonDerivedType(typeof(LineHighlight), "lineHighlight")]
+[JsonDerivedType(typeof(ArrayAlloc), "arrayAlloc")]
+[JsonDerivedType(typeof(ArrayWrite), "arrayWrite")]
+[JsonDerivedType(typeof(Grid2dAlloc), "grid2dAlloc")]
+[JsonDerivedType(typeof(Grid2dWrite), "grid2dWrite")]
+[JsonDerivedType(typeof(CallTreeNode), "callTreeNode")]
+[JsonDerivedType(typeof(CallTreeReturn), "callTreeReturn")]
+[JsonDerivedType(typeof(ExprPush), "exprPush")]
+[JsonDerivedType(typeof(ExprResolve), "exprResolve")]
+[JsonDerivedType(typeof(BoolGlow), "boolGlow")]
 public abstract record SceneOp;
 
 public sealed record FramePush(string FrameId, string MethodSig) : SceneOp;
