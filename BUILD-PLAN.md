@@ -10,20 +10,57 @@ review before the next.
 
 ## Product shape (what we're building toward)
 
-- **Core — $49 one-time, fully offline.** Curriculum, the execution visualizer (tracer), and a
-  verified item bank. No account, no server, no Claude API in the loop. This is the anchor and the
-  funnel.
-- **Plus — $99/year per course, hosted.** Everything in Core plus fresh adaptive practice, new
+- **Core — one-time purchase, fully offline.** Curriculum, generated animated walkthroughs, and a verified
+  item bank — plus, for CS A specifically, the live execution visualizer (tracer). No account, no
+  server, no Claude API in the loop. This is the anchor and the funnel.
+- **Plus — recurring per-course subscription, hosted.** Everything in Core plus fresh adaptive practice, new
   timed mock exams, current-year updates, and capped live AI tutoring — served through our web
   service, which is the only thing that holds the Claude key.
 - **Flagship course: Computer Science A.** Chosen because its live visualizer is genuinely novel
   and the free official incumbent (Khan Academy) does not cover CS A.
 
+## Course model — how courses get added (READ THIS BEFORE ADDING A SECOND COURSE)
+
+There are two kinds of course. The default is cheap and is the actual product; only CS A is the
+expensive kind. Getting this distinction right is what makes "courses on the left, generated content
+per course" true.
+
+**Generated-content course — the default (Physics, Chemistry, Biology, Statistics, ...).**
+Claude generates the entire course at authoring time: the skill DAG, the practice items, the
+explanations, and the step-by-step **animated walkthroughs, authored as `SceneDelta` streams**. The
+platform replays those through the same scrubbing / TTS / mastery UI. No course-specific engine, no
+interpreter, no per-course rendering code. Adding one is a *content-generation* task (Track B) + a
+verification pass + registering an `ICourseModule` with `SupportsLiveInput = false`. This is the
+product.
+
+**Live-engine course — CS A only, for now.**
+CS A additionally has the live **tracer**: a real Java interpreter that animates the student's *own
+arbitrary code*, correctly and deterministically. That is a premium differentiator, and it needs a
+real engine precisely because generated-on-the-fly traces can be wrong. It is the *only* reason
+Phase 3 exists. It is **not** a per-course requirement — no other course needs an engine to be a
+great, sellable course. A future course could add a live engine as a Tier-2 upgrade if it's ever
+worth it, but that's optional and rare.
+
+**Shared primitive library — build once, reuse everywhere.**
+The visual vocabulary — labeled boxes, arrows, axes/plots, points, lines, highlights — is general and
+lives in the `Scene` project, not in any course. Physics vectors and free-body diagrams are mostly
+arrows + labeled points + axes drawn from this shared set. Build it rich once (Phase 5); most courses
+draw from it with **zero** new rendering code. A genuinely bespoke visual is the rare exception a
+course adds itself.
+
+**So adding Physics =** generate its DAG + items + walkthroughs (Claude, Track B) → verify → register
+a module that reuses the shared primitives. Platform, shell, scrubbing, TTS, mock-exam engine, and the
+whole backend are reused untouched. It is content work, not engineering.
+
+> The one cost that never disappears: **verification.** Generated content can contain errors, and a
+> paid product cannot ship a wrong explanation. Every course pays for a human/expert check before it
+> ships. That's a quality gate, not an engine — but it's real per-course effort.
+
 ## Architecture (three tiers + one principle)
 
 ```
 Desktop client (Avalonia, cross-platform)
-  ├─ Core: DAG, scene engine, TRACER, verified item bank — runs fully offline
+  ├─ Core: DAG, scene engine, generated walkthroughs, verified item bank — offline (CS A adds the live TRACER)
   └─ Plus features call ▼
 Web service (our server; holds the Claude key)
   ├─ Auth / entitlement (paid Plus user?)          ── Stripe
@@ -50,7 +87,7 @@ backend at all. The tracer runs locally on the client — the headline feature c
 
 ---
 
-## TRACK A — Desktop Core (the offline $49 product)
+## TRACK A — Desktop Core (the offline paid product)
 
 ### Phase 0 — Solution scaffold
 Goal: `AdvancedTestPrepper.sln` with projects `Platform`, `Curriculum`, `Scene`, `Tracer.Csa`,
@@ -70,8 +107,9 @@ Goal: SkiaSharp primitives `memCell`/`refArrow`/`heapObject`; forward+inverse st
 reference-vs-value demo fixture as the default walkthrough.
 Acceptance: the six criteria in `PHASE2-HANDOFF.md`; step-back restores prior state exactly.
 
-### Phase 3 — Java-subset tracer (the long pole)
-Seeds: `Tracer.cs`, `PHASE3-HANDOFF.md`. Depends on: 2.
+### Phase 3 — Java-subset tracer (CS A's live engine — the long pole, and CS-A-only)
+Seeds: `Tracer.cs`, `PHASE3-HANDOFF.md`. Depends on: 2. **This phase exists only for CS A** — see
+Course model. Other courses skip it entirely.
 Goal: ANTLR parse → subset validator → tree-walking interpreter emitting `VisualStep[]` for Units
 1–5 constructs; wire it as the CS A module's `IStepProvider` with `SupportsLiveInput = true`.
 Acceptance: the closing-loop test — feed the phase-2 demo Java through the tracer and get a step
@@ -81,13 +119,17 @@ stream whose deltas match the hand-written fixture; determinism; unsupported-con
 Depends on: 3. Goal: narrate each `VisualStep.Caption`; port the GeoTutor TTS layer; per-step audio
 synced to the highlight. Acceptance: a walkthrough plays end-to-end with narration and step controls.
 
-### Phase 5 — Remaining primitives + content integration + FRQ sandbox
-Depends on: 3, and Track B Phase 7 for content. Goal: build the rest of the primitives
-(`indexedStrip`, `grid2d`, `callTree`, `exprBubble`, `boolTruthGlow`), extend the tracer/validator to
-Units 6–10, load the verified item bank via `IContentSource`, and add the local FRQ sandbox
+### Phase 5 — Shared primitive library + content integration + FRQ sandbox
+Depends on: 3, and Track B Phase 7 for content.
+Goal (platform — reused by every course): build out the **shared primitive library** in the `Scene`
+project — the general visual vocabulary (`indexedStrip`, `grid2d`, `callTree`, `exprBubble`,
+`boolTruthGlow`, plus generic labeled boxes / arrows / axes / points / lines) that all courses draw
+from. Treat these as course-agnostic; a Physics or Chem walkthrough should render from this same set
+with no new rendering code. Then load verified content via `IContentSource`.
+Goal (CS-A-specific): extend the tracer/validator to Units 6–10, and add the local FRQ sandbox
 (bundled `javac`/`java`) with rubric grading via `IAttemptGrader`.
-Acceptance: every DAG node renders its declared `viz`; item bank drives practice; an FRQ attempt is
-compiled, run, and scored against a rubric.
+Acceptance: every CS A DAG node renders its declared `viz` from the shared library; the item bank +
+authored walkthroughs drive practice; an FRQ attempt is compiled, run, and scored against a rubric.
 
 ### Phase 6 — Mock exam + mastery reporting
 Depends on: 5. Goal: timed MCQ/FRQ mode; weak-node surfacing back into the DAG frontier; progress
@@ -99,18 +141,23 @@ reporting. Acceptance: a full timed mock runs; weak nodes reappear in `MasteryTr
 
 ## TRACK B — Content authoring pipeline (build-time; run by you, not the user)
 
-### Phase 7 — Content factory + verification
-Depends on: 1 (needs the DAG). Runs offline; parallelizes with Track A after Phase 1.
-Goal: a tool that uses the Claude API at BUILD TIME to draft practice items + explanations +
-walkthrough scripts per DAG node, then a human/expert verification pass, then export to the format
-`IContentSource` loads (and later, the content store).
-Guardrails: 100% original items — never College Board question text. Every item carries a verified
-flag; nothing ships unverified. One-time API spend (~$10–50), by you.
-Acceptance: a verified item bank for Units 1–5 exists and loads in Core (Phase 5 consumes it).
+### Phase 7 — Content factory + verification (this is how EVERY course is authored)
+Depends on: 1 (needs a DAG). Runs offline; parallelizes with Track A after Phase 1.
+Goal: a tool that uses the Claude API at BUILD TIME to generate, per DAG node, a course's practice
+items, explanations, and **animated walkthroughs authored as `SceneDelta` streams** — then a
+human/expert verification pass, then export to the format `IContentSource` (and the content store)
+load. This same pipeline authors CS A now and Physics/Chem/Bio later; a generated-content course is
+produced *entirely here*, with no new engineering. This is the engine of the whole multi-course
+product — the thing that makes "you generate the content" real.
+Guardrails: 100% original items — never College Board question text. Nothing ships unverified — a paid
+product cannot ship a wrong explanation. One-time API spend per course (~$10–50), by you.
+Acceptance: a verified item bank + authored walkthroughs for CS A Units 1–5 exist and load in Core
+(Phase 5 consumes them). The exporter is course-agnostic — pointing it at a new DAG produces a new
+course's content with no code changes.
 
 ---
 
-## TRACK C — Hosted Plus backend (the $99/yr recurring tier)
+## TRACK C — Hosted Plus backend (the recurring tier)
 
 ### Phase 8 — Web service skeleton + auth + billing
 Depends on: nothing in A (can start early); needs Phase 7's content format.
@@ -146,19 +193,23 @@ Plus tied to entitlement. Acceptance: signed builds install clean on both OSes; 
 
 ### Phase 13 — Pilot + price finalization
 Depends on: 12. Goal: small paid pilot to measure REAL per-active-user live-token COGS; confirm the
-$99 Plus margin (or adjust). Acceptance: COGS/active user measured; pricing decision grounded in data,
+Plus margin (or adjust). Acceptance: COGS/active user measured; pricing decision grounded in data,
 not the illustrative numbers used so far.
 
 ---
 
 ## Critical path & parallelism
 
-- **Long pole: Phase 3 (tracer).** It gates Phases 4–6. Start it as soon as Phase 2's delta protocol
-  is stable, and give it your best model (Opus) time.
+- **Long pole: Phase 3 (tracer) — but CS-A-only.** It gates CS A's Phases 4–6 and deserves your best
+  model (Opus) time. No other course needs it, so it never gates anything again.
+- **Adding a course is a Track B task, not engineering.** A new generated-content course (Physics,
+  Chem, ...) = generate its DAG + items + walkthroughs (Phase 7) → verify → register an
+  `ICourseModule` (`SupportsLiveInput = false`) that reuses the shared primitives. Platform, shell,
+  scrubbing, TTS, mock-exam, and backend are all reused untouched.
 - **Track B (content) parallelizes** with Track A after Phase 1 — it only needs the DAG.
 - **Track C (backend) can start early** (Phase 8 needs no client), but Phases 9/11 need Phase 7's
   content format and the client from Track A.
-- Ship Core (Track A + B) first as the $49 product; bring Plus (Track C) online as the upsell.
+- Ship Core (Track A + B) first as the paid product; bring Plus (Track C) online as the upsell.
 
 ## Guardrails carried across every phase
 
