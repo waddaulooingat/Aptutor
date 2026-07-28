@@ -4,7 +4,8 @@
 // refArrow (line from a reference cell to its target heap object).
 //
 // Pinned API: SkiaSharp 2.88.x. Text via SKFont + canvas.DrawText(text, x, y, align, font, paint).
-// Wire into WPF with an SKElement whose PaintSurface handler calls Render(state, e.Surface.Canvas, e.Info).
+// Wire into Avalonia with a custom control overriding Render(DrawingContext) via
+// ISkiaSharpApiLeaseFeature, calling Render(state, canvas, info) on the leased SKCanvas.
 
 using SkiaSharp;
 
@@ -25,7 +26,7 @@ public sealed class SceneRenderer
     private static readonly SKColor CellFill = new(0xFF, 0xFF, 0xFF);
     private static readonly SKColor ObjFill = new(0xEE, 0xF2, 0xFF);
     private static readonly SKColor FlashBorder = new(0xF5, 0x9E, 0x0B);
-    private static readonly SKColor RefColor = new(0x2563, 0xEB >> 8, 0xEB & 0xFF); // #2563EB
+    private static readonly SKColor RefColor = new(0x25, 0x63, 0xEB); // #2563EB
     private static readonly SKColor Line = new(0xD1, 0xD5, 0xDB);
 
     // Cache heap-object rects each frame so refArrows can target them.
@@ -131,9 +132,22 @@ public sealed class SceneRenderer
     private static float FrameHeight(FrameView f) =>
         FrameHeaderH + f.Cells.Count * (CellH + CellGap) + FramePadInner;
 
+    // SkiaSharp 2.88's DrawText(string, float, float, SKFont, SKPaint) has no SKTextAlign
+    // parameter, so alignment is applied manually via the text's measured width. SKFont only
+    // measures glyph spans (not raw strings), so shape the text to glyphs first.
     private static void DrawText(SKCanvas c, string text, float x, float y,
                                  SKFont font, SKPaint paint, SKTextAlign align = SKTextAlign.Left)
-        => c.DrawText(text, x, y, align, font, paint);
+    {
+        float dx = 0f;
+        if (align != SKTextAlign.Left)
+        {
+            Span<ushort> glyphs = text.Length <= 128 ? stackalloc ushort[text.Length] : new ushort[text.Length];
+            font.GetGlyphs(text, glyphs);
+            float width = font.MeasureText(glyphs, paint);
+            dx = align == SKTextAlign.Center ? -width / 2f : -width;
+        }
+        c.DrawText(text, x + dx, y, font, paint);
+    }
 
     private static void DrawArrow(SKCanvas c, SKPoint from, SKPoint to, SKPaint paint)
     {
