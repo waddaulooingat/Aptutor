@@ -9,7 +9,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SkiaSharp" Version="2.88.8" />
+    <!-- Matches Avalonia.Skia's SkiaSharp version so the Client project's dependency graph
+         doesn't need version unification (Avalonia 12.x pulls SkiaSharp 3.x transitively). -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
   </ItemGroup>
 
 </Project>

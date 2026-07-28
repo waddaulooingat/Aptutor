@@ -23,8 +23,17 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Native Skia binaries for the off-screen renderer test; referencing all three keeps the
+         test project runnable on whichever OS actually builds it. -->
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Win32" Version="3.119.4" />
+    <PackageReference Include="SkiaSharp.NativeAssets.macOS" Version="3.119.4" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\src\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
     <ProjectReference Include="..\..\src\ApTutor.Platform\ApTutor.Platform.csproj" />
+    <ProjectReference Include="..\..\src\ApTutor.Scene\ApTutor.Scene.csproj" />
   </ItemGroup>
 
 </Project>

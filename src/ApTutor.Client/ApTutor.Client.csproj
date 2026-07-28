@@ -21,6 +21,7 @@
   <ItemGroup>
     <ProjectReference Include="..\ApTutor.Platform\ApTutor.Platform.csproj" />
     <ProjectReference Include="..\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
+    <ProjectReference Include="..\ApTutor.Scene\ApTutor.Scene.csproj" />
   </ItemGroup>
 
 </Project>

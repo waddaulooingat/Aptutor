@@ -124,6 +124,8 @@ public partial class MainWindow : Window
         RefreshAll();
     }
 
+    private void OnSceneDemoClick(object? sender, RoutedEventArgs e) => new SceneDemoWindow().Show();
+
     private void SaveProgress()
     {
         var mutable = new Dictionary<string, IReadOnlyCollection<string>>(StringComparer.Ordinal);
