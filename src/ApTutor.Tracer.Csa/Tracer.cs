@@ -8,6 +8,7 @@
 // This file is the shape Claude Code fills in. Method bodies marked TODO are the phase-3 work.
 
 using ApTutor.Scene; // SceneOp, SceneDelta
+using Antlr4.Runtime;
 
 namespace ApTutor.Tracer;
 
@@ -39,11 +40,48 @@ public sealed class Tracer
     /// Entry point: trace `entryMethod` (default main) in the given Java source.
     public TraceResult Trace(string javaSource, string entryMethod = "main", int? randomSeed = 42)
     {
-        // TODO(1): parse with ANTLR-generated Java parser -> CompilationUnit AST.
-        // TODO(2): _validator.Validate(ast) -> reject/flag unsupported constructs (see subset below).
-        // TODO(3): new Interpreter(ast, emitter, randomSeed).Run(entryMethod).
-        // Return emitter.Result(). On UnsupportedConstruct/JavaThrow, stop and set HaltReason.
-        throw new NotImplementedException();
+        var lexer = new JavaLexer(new AntlrInputStream(javaSource));
+        var errors = new CollectingErrorListener();
+        lexer.RemoveErrorListeners();
+        lexer.AddErrorListener(errors);
+
+        var parser = new JavaParser(new CommonTokenStream(lexer));
+        parser.RemoveErrorListeners();
+        parser.AddErrorListener(errors);
+
+        var tree = parser.compilationUnit();
+        if (errors.FirstMessage is { } syntaxError)
+            return new TraceResult(Array.Empty<TraceStep>(), false, $"Syntax error: {syntaxError}");
+
+        try
+        {
+            _validator.Validate(tree);
+        }
+        catch (UnsupportedConstructException ex)
+        {
+            return new TraceResult(Array.Empty<TraceStep>(), false,
+                $"Unsupported construct '{ex.Construct}' at line {ex.Line}.");
+        }
+
+        return new Interpreter(randomSeed).Run(tree, entryMethod);
+    }
+
+    // Implements both: Lexer.AddErrorListener needs IAntlrErrorListener&lt;int&gt;,
+    // Parser.AddErrorListener needs IAntlrErrorListener&lt;IToken&gt; (what BaseErrorListener
+    // alone provides).
+    private sealed class CollectingErrorListener : IAntlrErrorListener<int>, IAntlrErrorListener<IToken>
+    {
+        public string? FirstMessage { get; private set; }
+
+        public void SyntaxError(
+            TextWriter output, IRecognizer recognizer, int offendingSymbol, int line, int charPositionInLine,
+            string msg, RecognitionException e)
+            => FirstMessage ??= $"line {line}:{charPositionInLine} {msg}";
+
+        public void SyntaxError(
+            TextWriter output, IRecognizer recognizer, IToken offendingSymbol, int line, int charPositionInLine,
+            string msg, RecognitionException e)
+            => FirstMessage ??= $"line {line}:{charPositionInLine} {msg}";
     }
 }
 
@@ -71,8 +109,81 @@ public sealed class CedSubsetValidator : ISubsetValidator
 {
     public void Validate(object compilationUnitAst)
     {
-        // TODO: visitor that throws UnsupportedConstructException on the first banned node.
-        // Prefer failing loud here over a wrong animation later.
+        if (compilationUnitAst is not JavaParser.CompilationUnitContext tree)
+            throw new ArgumentException(
+                $"Expected a {nameof(JavaParser.CompilationUnitContext)}.", nameof(compilationUnitAst));
+        new Walker().Visit(tree);
+    }
+
+    // Parses full Java via the community grammar, then rejects anything outside Units 1-5's
+    // first cut here — restricting at a validator (not the grammar) gives clean, line-numbered
+    // "unsupported construct" errors instead of a parse failure (PHASE3-HANDOFF §"two open
+    // decisions"). Array *types* are deliberately left unrejected (see VisitSquareBracketExpression
+    // / VisitArrayCreatorRest below) so `String[] args` on `main` parses fine even though nothing
+    // in this cut can actually allocate or index an array.
+    private sealed class Walker : JavaParserBaseVisitor<object?>
+    {
+        public override object? VisitInterfaceDeclaration(JavaParser.InterfaceDeclarationContext context) =>
+            throw new UnsupportedConstructException("interface", context.Start.Line);
+
+        public override object? VisitEnumDeclaration(JavaParser.EnumDeclarationContext context) =>
+            throw new UnsupportedConstructException("enum", context.Start.Line);
+
+        public override object? VisitRecordDeclaration(JavaParser.RecordDeclarationContext context) =>
+            throw new UnsupportedConstructException("record", context.Start.Line);
+
+        public override object? VisitAnnotationTypeDeclaration(JavaParser.AnnotationTypeDeclarationContext context) =>
+            throw new UnsupportedConstructException("annotation type", context.Start.Line);
+
+        public override object? VisitModuleDeclaration(JavaParser.ModuleDeclarationContext context) =>
+            throw new UnsupportedConstructException("module", context.Start.Line);
+
+        public override object? VisitClassDeclaration(JavaParser.ClassDeclarationContext context)
+        {
+            if (context.EXTENDS() != null || context.IMPLEMENTS() != null)
+                throw new UnsupportedConstructException("inheritance (extends/implements)", context.Start.Line);
+            return base.VisitClassDeclaration(context);
+        }
+
+        public override object? VisitLambdaExpression(JavaParser.LambdaExpressionContext context) =>
+            throw new UnsupportedConstructException("lambda expression", context.Start.Line);
+
+        public override object? VisitMethodReferenceExpression(JavaParser.MethodReferenceExpressionContext context) =>
+            throw new UnsupportedConstructException("method reference", context.Start.Line);
+
+        public override object? VisitInstanceOfOperatorExpression(JavaParser.InstanceOfOperatorExpressionContext context) =>
+            throw new UnsupportedConstructException("instanceof / pattern matching", context.Start.Line);
+
+        public override object? VisitExpressionSwitch(JavaParser.ExpressionSwitchContext context) =>
+            throw new UnsupportedConstructException("switch expression", context.Start.Line);
+
+        public override object? VisitSwitchExpression(JavaParser.SwitchExpressionContext context) =>
+            throw new UnsupportedConstructException("switch expression", context.Start.Line);
+
+        public override object? VisitSquareBracketExpression(JavaParser.SquareBracketExpressionContext context) =>
+            throw new UnsupportedConstructException("array access (needs the indexedStrip primitive)", context.Start.Line);
+
+        public override object? VisitArrayCreatorRest(JavaParser.ArrayCreatorRestContext context) =>
+            throw new UnsupportedConstructException("array creation (needs the indexedStrip primitive)", context.Start.Line);
+
+        public override object? VisitArrayInitializer(JavaParser.ArrayInitializerContext context) =>
+            throw new UnsupportedConstructException("array initializer (needs the indexedStrip primitive)", context.Start.Line);
+
+        public override object? VisitTypeArguments(JavaParser.TypeArgumentsContext context) =>
+            throw new UnsupportedConstructException("generics / ArrayList<E> (deferred with array primitives)", context.Start.Line);
+
+        public override object? VisitNonWildcardTypeArguments(JavaParser.NonWildcardTypeArgumentsContext context) =>
+            throw new UnsupportedConstructException("generics / ArrayList<E> (deferred with array primitives)", context.Start.Line);
+
+        public override object? VisitStatement(JavaParser.StatementContext context)
+        {
+            if (context.TRY() != null) throw new UnsupportedConstructException("try/catch", context.Start.Line);
+            if (context.SWITCH() != null) throw new UnsupportedConstructException("switch", context.Start.Line);
+            if (context.SYNCHRONIZED() != null) throw new UnsupportedConstructException("synchronized", context.Start.Line);
+            if (context.THROW() != null) throw new UnsupportedConstructException("throw", context.Start.Line);
+            if (context.ASSERT() != null) throw new UnsupportedConstructException("assert", context.Start.Line);
+            return base.VisitStatement(context);
+        }
     }
 }
 
@@ -134,6 +245,17 @@ public sealed class Frame
         for (int i = _scopes.Count - 1; i >= 0; i--)
             if (_scopes[i].ContainsKey(name)) { _scopes[i][name] = v; return true; }
         return false;
+    }
+
+    /// Names of currently-visible variables whose value is a reference to the given heap object —
+    /// used to flash a caller's variable when a mutation reaches it through a method call
+    /// (PHASE3-HANDOFF's field-write step: "MemCellFlash on the receiver var if visible").
+    public IEnumerable<string> NamesReferencing(string objId)
+    {
+        for (int i = _scopes.Count - 1; i >= 0; i--)
+            foreach (var (name, value) in _scopes[i])
+                if (value is JRef { ObjId: { } oid } && oid == objId)
+                    yield return name;
     }
 }
 
