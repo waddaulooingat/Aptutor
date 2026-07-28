@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ApTutor.Scene</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Matches Avalonia.Skia's SkiaSharp version so the Client project's dependency graph
+         doesn't need version unification (Avalonia 12.x pulls SkiaSharp 3.x transitively). -->
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+  </ItemGroup>
+
+</Project>

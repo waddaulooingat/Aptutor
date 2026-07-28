@@ -1,0 +1,19 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:sh="using:ApTutor.Client.SceneHost"
+        x:Class="ApTutor.Client.SceneDemoWindow"
+        Title="Reference vs. Value — Demo"
+        Width="900" Height="600">
+  <DockPanel Margin="12">
+    <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Spacing="12" Margin="0,12,0,0">
+      <Button Name="BackButton" Content="◀ Back" Click="OnBackClick" />
+      <Button Name="StepButton" Content="Step ▶" Click="OnStepClick" />
+      <Button Name="PlayPauseButton" Content="▶▶ Play narrated" Click="OnPlayPauseClick" />
+      <TextBlock Name="CaptionText" VerticalAlignment="Center" FontStyle="Italic" />
+      <TextBlock Name="NarrationStatusText" VerticalAlignment="Center" Foreground="Gray" FontSize="12" />
+    </StackPanel>
+    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="6">
+      <sh:SceneCanvas Name="Canvas" />
+    </Border>
+  </DockPanel>
+</Window>

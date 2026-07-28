@@ -1,0 +1,55 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:ApTutor.Client"
+        x:Class="ApTutor.Client.MainWindow"
+        Title="ApTutor — Computer Science A"
+        Width="1100" Height="720">
+  <Grid RowDefinitions="Auto,*" Margin="12">
+
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+      <TextBlock Text="Progress:" VerticalAlignment="Center" />
+      <ProgressBar Name="MasteryProgressBar" Width="240" Minimum="0" Maximum="100" VerticalAlignment="Center" />
+      <TextBlock Name="ProgressLabel" VerticalAlignment="Center" />
+      <Button Name="SceneDemoButton" Content="Reference vs. Value demo" Click="OnSceneDemoClick" Margin="24,0,0,0" />
+    </StackPanel>
+
+    <Grid Grid.Row="1" ColumnDefinitions="320,8,*">
+
+      <TreeView Name="UnitTree" Grid.Column="0" SelectionChanged="OnTreeSelectionChanged">
+        <TreeView.ItemTemplate>
+          <TreeDataTemplate DataType="local:ITreeItem" ItemsSource="{Binding Children}">
+            <TextBlock Text="{Binding Display}" />
+          </TreeDataTemplate>
+        </TreeView.ItemTemplate>
+      </TreeView>
+
+      <GridSplitter Grid.Column="1" Width="8" ResizeDirection="Columns" />
+
+      <Grid Grid.Column="2" RowDefinitions="Auto,*">
+        <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Padding="16" CornerRadius="6">
+          <StackPanel Spacing="8">
+            <TextBlock Name="DetailTitle" FontSize="18" FontWeight="Bold" Text="Select a node" />
+            <TextBlock Name="DetailType" />
+            <TextBlock Name="DetailPrereqs" TextWrapping="Wrap" />
+            <TextBlock Name="DetailViz" TextWrapping="Wrap" />
+            <Button Name="MarkMasteredButton" Content="Mark mastered" Click="OnMarkMasteredClick" IsEnabled="False" />
+          </StackPanel>
+        </Border>
+
+        <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Padding="16" CornerRadius="6" Margin="0,12,0,0">
+          <DockPanel>
+            <TextBlock DockPanel.Dock="Top" Text="Available now" FontWeight="Bold" Margin="0,0,0,8" />
+            <ListBox Name="FrontierList" SelectionChanged="OnFrontierSelectionChanged">
+              <ListBox.ItemTemplate>
+                <DataTemplate DataType="local:NodeItemVm">
+                  <TextBlock Text="{Binding Display}" />
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </DockPanel>
+        </Border>
+      </Grid>
+
+    </Grid>
+  </Grid>
+</Window>

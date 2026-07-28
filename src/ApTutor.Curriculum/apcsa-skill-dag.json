@@ -2,8 +2,8 @@
   "meta": {
     "course": "AP Computer Science A (Java)",
     "sourceStandard": "College Board CED, 10 units",
-    "purpose": "Curriculum backbone + scene-engine authoring spec for the AP Tutor (WPF/.NET 8, SkiaSharp scene engine, Neural TTS). Ports the GeoTutor DAG model.",
-    "nodeCount": 78,
+    "purpose": "Curriculum backbone + scene-engine authoring spec for the AP Tutor (Avalonia/.NET 8, SkiaSharp scene engine, Neural TTS). Ports the GeoTutor DAG model.",
+    "nodeCount": 69,
     "schema": {
       "id": "u<unit>.<topic> (stable key used by DAG edges, mastery tracker, and scene bindings)",
       "type": "concept | skill | synthesis | frq",

@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ApTutor.Client</RootNamespace>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ApTutor.Platform\ApTutor.Platform.csproj" />
+    <ProjectReference Include="..\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
+    <ProjectReference Include="..\ApTutor.Scene\ApTutor.Scene.csproj" />
+    <ProjectReference Include="..\ApTutor.Tracer.Csa\ApTutor.Tracer.Csa.csproj" />
+    <ProjectReference Include="..\ApTutor.Narration\ApTutor.Narration.csproj" />
+  </ItemGroup>
+
+</Project>
