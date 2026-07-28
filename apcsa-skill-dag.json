@@ -1,0 +1,122 @@
+{
+  "meta": {
+    "course": "AP Computer Science A (Java)",
+    "sourceStandard": "College Board CED, 10 units",
+    "purpose": "Curriculum backbone + scene-engine authoring spec for the AP Tutor (WPF/.NET 8, SkiaSharp scene engine, Neural TTS). Ports the GeoTutor DAG model.",
+    "nodeCount": 78,
+    "schema": {
+      "id": "u<unit>.<topic> (stable key used by DAG edges, mastery tracker, and scene bindings)",
+      "type": "concept | skill | synthesis | frq",
+      "prereqs": "array of node ids that must be mastered first",
+      "viz": "what the SkiaSharp scene engine renders for this node (the CS-specific innovation over GeoTutor's geometry primitives)"
+    }
+  },
+
+  "scenePrimitives": {
+    "memCell": "labeled box holding a primitive value (name : type = value); flashes on write",
+    "refArrow": "arrow from a stack variable/box into a heap object box (reference vs. value teaching)",
+    "heapObject": "rounded box with field memCells inside; the target of refArrows",
+    "indexedStrip": "horizontal cells with index labels — Array / ArrayList / String backing",
+    "grid2d": "row/col indexed matrix of cells — 2D array traversal",
+    "stackFrame": "labeled frame with local memCells; frames stack downward for calls",
+    "callTree": "node-per-invocation recursion tree, expands as calls are made, collapses on return with return value badge",
+    "lineHighlight": "current-execution-line marker synced to the tracer step",
+    "exprBubble": "sub-expression evaluation shown inline, collapsing left-to-right / precedence order",
+    "boolTruthGlow": "true/false coloring on boolean sub-expressions for short-circuit teaching"
+  },
+
+  "units": [
+    { "unit": 1, "title": "Primitive Types" },
+    { "unit": 2, "title": "Using Objects" },
+    { "unit": 3, "title": "Boolean Expressions and if Statements" },
+    { "unit": 4, "title": "Iteration" },
+    { "unit": 5, "title": "Writing Classes" },
+    { "unit": 6, "title": "Array" },
+    { "unit": 7, "title": "ArrayList" },
+    { "unit": 8, "title": "2D Array" },
+    { "unit": 9, "title": "Inheritance" },
+    { "unit": 10, "title": "Recursion" }
+  ],
+
+  "nodes": [
+    { "id": "u1.1", "unit": 1, "type": "concept", "title": "Why Programming / Why Java; compile-run model", "prereqs": [], "viz": "lineHighlight" },
+    { "id": "u1.2", "unit": 1, "type": "skill", "title": "Variables and primitive data types (int, double, boolean)", "prereqs": ["u1.1"], "viz": "memCell" },
+    { "id": "u1.3", "unit": 1, "type": "skill", "title": "Expressions and assignment; operator precedence, integer vs. double division", "prereqs": ["u1.2"], "viz": "exprBubble + memCell" },
+    { "id": "u1.4", "unit": 1, "type": "skill", "title": "Compound assignment operators (+=, ++, ...)", "prereqs": ["u1.3"], "viz": "memCell" },
+    { "id": "u1.5", "unit": 1, "type": "skill", "title": "Casting and ranges; int overflow, truncation vs. rounding", "prereqs": ["u1.3"], "viz": "exprBubble + memCell" },
+    { "id": "u1.frq", "unit": 1, "type": "synthesis", "title": "Trace a mixed-type arithmetic snippet to final values", "prereqs": ["u1.4", "u1.5"], "viz": "exprBubble + memCell + lineHighlight" },
+
+    { "id": "u2.1", "unit": 2, "type": "concept", "title": "Objects as instances of classes; reference vs. primitive", "prereqs": ["u1.2"], "viz": "refArrow + heapObject" },
+    { "id": "u2.2", "unit": 2, "type": "skill", "title": "Instantiation with new; constructors and null", "prereqs": ["u2.1"], "viz": "refArrow + heapObject" },
+    { "id": "u2.3", "unit": 2, "type": "skill", "title": "Calling a void method", "prereqs": ["u2.2"], "viz": "stackFrame + lineHighlight" },
+    { "id": "u2.4", "unit": 2, "type": "skill", "title": "Calling a void method with parameters; pass-by-value of references", "prereqs": ["u2.3"], "viz": "stackFrame + refArrow" },
+    { "id": "u2.5", "unit": 2, "type": "skill", "title": "Calling a non-void method; return values", "prereqs": ["u2.4"], "viz": "stackFrame + memCell" },
+    { "id": "u2.6", "unit": 2, "type": "skill", "title": "String concatenation, literals, escape sequences", "prereqs": ["u2.2"], "viz": "indexedStrip + heapObject" },
+    { "id": "u2.7", "unit": 2, "type": "skill", "title": "String methods (length, substring, indexOf, compareTo, equals)", "prereqs": ["u2.6"], "viz": "indexedStrip" },
+    { "id": "u2.8", "unit": 2, "type": "skill", "title": "Wrapper classes (Integer, Double); autoboxing", "prereqs": ["u2.5"], "viz": "refArrow + heapObject + memCell" },
+    { "id": "u2.9", "unit": 2, "type": "skill", "title": "Math class static methods (abs, pow, sqrt, random)", "prereqs": ["u2.5"], "viz": "exprBubble" },
+    { "id": "u2.frq", "unit": 2, "type": "synthesis", "title": "Combine String + Math methods; reason about reference aliasing", "prereqs": ["u2.7", "u2.8", "u2.9"], "viz": "refArrow + heapObject + indexedStrip" },
+
+    { "id": "u3.1", "unit": 3, "type": "skill", "title": "Boolean expressions; relational operators", "prereqs": ["u1.3"], "viz": "boolTruthGlow" },
+    { "id": "u3.2", "unit": 3, "type": "skill", "title": "if statements and control flow", "prereqs": ["u3.1"], "viz": "lineHighlight + boolTruthGlow" },
+    { "id": "u3.3", "unit": 3, "type": "skill", "title": "if-else statements", "prereqs": ["u3.2"], "viz": "lineHighlight" },
+    { "id": "u3.4", "unit": 3, "type": "skill", "title": "else if chains", "prereqs": ["u3.3"], "viz": "lineHighlight" },
+    { "id": "u3.5", "unit": 3, "type": "skill", "title": "Compound boolean expressions; short-circuit evaluation", "prereqs": ["u3.1"], "viz": "boolTruthGlow + exprBubble" },
+    { "id": "u3.6", "unit": 3, "type": "concept", "title": "Equivalent boolean expressions; De Morgan's laws", "prereqs": ["u3.5"], "viz": "boolTruthGlow" },
+    { "id": "u3.7", "unit": 3, "type": "skill", "title": "Comparing objects: == vs .equals(), null checks", "prereqs": ["u3.1", "u2.7"], "viz": "refArrow + boolTruthGlow" },
+    { "id": "u3.frq", "unit": 3, "type": "synthesis", "title": "Trace branching logic with compound conditions", "prereqs": ["u3.4", "u3.6", "u3.7"], "viz": "lineHighlight + boolTruthGlow" },
+
+    { "id": "u4.1", "unit": 4, "type": "skill", "title": "while loops", "prereqs": ["u3.2"], "viz": "lineHighlight + memCell" },
+    { "id": "u4.2", "unit": 4, "type": "skill", "title": "for loops", "prereqs": ["u4.1"], "viz": "lineHighlight + memCell" },
+    { "id": "u4.3", "unit": 4, "type": "skill", "title": "Algorithms over Strings (traversal, building substrings)", "prereqs": ["u4.2", "u2.7"], "viz": "indexedStrip + lineHighlight" },
+    { "id": "u4.4", "unit": 4, "type": "skill", "title": "Nested iteration", "prereqs": ["u4.2"], "viz": "lineHighlight + memCell" },
+    { "id": "u4.5", "unit": 4, "type": "concept", "title": "Informal code analysis: statement execution counts", "prereqs": ["u4.4"], "viz": "memCell (counter overlay)" },
+    { "id": "u4.frq", "unit": 4, "type": "synthesis", "title": "Trace nested loops; predict output and iteration count", "prereqs": ["u4.3", "u4.5"], "viz": "lineHighlight + memCell" },
+
+    { "id": "u5.1", "unit": 5, "type": "concept", "title": "Anatomy of a class: fields, constructors, methods", "prereqs": ["u2.5", "u4.2"], "viz": "heapObject" },
+    { "id": "u5.2", "unit": 5, "type": "skill", "title": "Constructors; default vs. parameterized", "prereqs": ["u5.1"], "viz": "heapObject + stackFrame" },
+    { "id": "u5.3", "unit": 5, "type": "concept", "title": "Comments, preconditions, postconditions", "prereqs": ["u5.1"], "viz": "lineHighlight" },
+    { "id": "u5.4", "unit": 5, "type": "skill", "title": "Accessor (getter) methods; return types", "prereqs": ["u5.2"], "viz": "stackFrame + memCell" },
+    { "id": "u5.5", "unit": 5, "type": "skill", "title": "Mutator (setter) methods; changing object state", "prereqs": ["u5.4"], "viz": "heapObject + memCell" },
+    { "id": "u5.6", "unit": 5, "type": "skill", "title": "Writing methods; parameters, return, decomposition", "prereqs": ["u5.4"], "viz": "stackFrame" },
+    { "id": "u5.7", "unit": 5, "type": "skill", "title": "Static variables and methods", "prereqs": ["u5.6"], "viz": "memCell (class-level pane) + stackFrame" },
+    { "id": "u5.8", "unit": 5, "type": "concept", "title": "Scope and access (local, instance, private/public)", "prereqs": ["u5.6"], "viz": "stackFrame + heapObject" },
+    { "id": "u5.9", "unit": 5, "type": "skill", "title": "this keyword; disambiguating fields and parameters", "prereqs": ["u5.5", "u5.8"], "viz": "refArrow + heapObject" },
+    { "id": "u5.10", "unit": 5, "type": "concept", "title": "Ethical and social implications of computing", "prereqs": ["u5.1"], "viz": "none (discussion node, TTS-led)" },
+    { "id": "u5.frq", "unit": 5, "type": "frq", "title": "Design a full class from a spec (fields, constructor, accessors, mutators)", "prereqs": ["u5.9", "u5.7"], "viz": "heapObject + stackFrame + lineHighlight" },
+
+    { "id": "u6.1", "unit": 6, "type": "skill", "title": "Array creation and access; index bounds", "prereqs": ["u4.2", "u2.1"], "viz": "indexedStrip" },
+    { "id": "u6.2", "unit": 6, "type": "skill", "title": "Traversing arrays with loops", "prereqs": ["u6.1"], "viz": "indexedStrip + lineHighlight" },
+    { "id": "u6.3", "unit": 6, "type": "skill", "title": "Enhanced for loop (for-each) over arrays", "prereqs": ["u6.2"], "viz": "indexedStrip + lineHighlight" },
+    { "id": "u6.4", "unit": 6, "type": "skill", "title": "Array algorithms (min/max, sum, count, reverse)", "prereqs": ["u6.3"], "viz": "indexedStrip + memCell" },
+    { "id": "u6.frq", "unit": 6, "type": "frq", "title": "Write an array-processing method to a rubric", "prereqs": ["u6.4"], "viz": "indexedStrip + stackFrame + lineHighlight" },
+
+    { "id": "u7.1", "unit": 7, "type": "concept", "title": "Introduction to ArrayList; generics, autoboxing", "prereqs": ["u6.1", "u2.8"], "viz": "indexedStrip + heapObject" },
+    { "id": "u7.2", "unit": 7, "type": "skill", "title": "ArrayList methods (add, get, set, remove, size)", "prereqs": ["u7.1"], "viz": "indexedStrip" },
+    { "id": "u7.3", "unit": 7, "type": "skill", "title": "Traversing ArrayLists; index shifting on remove", "prereqs": ["u7.2"], "viz": "indexedStrip + lineHighlight" },
+    { "id": "u7.4", "unit": 7, "type": "skill", "title": "Algorithms over ArrayLists", "prereqs": ["u7.3"], "viz": "indexedStrip + memCell" },
+    { "id": "u7.5", "unit": 7, "type": "skill", "title": "Searching: sequential/linear search", "prereqs": ["u7.4"], "viz": "indexedStrip + lineHighlight" },
+    { "id": "u7.6", "unit": 7, "type": "skill", "title": "Sorting: selection and insertion sort", "prereqs": ["u7.5"], "viz": "indexedStrip + lineHighlight (swap animation)" },
+    { "id": "u7.7", "unit": 7, "type": "concept", "title": "Ethical issues in data collection and storage", "prereqs": ["u7.1"], "viz": "none (discussion node, TTS-led)" },
+    { "id": "u7.frq", "unit": 7, "type": "frq", "title": "Write an ArrayList method involving traversal + removal", "prereqs": ["u7.6"], "viz": "indexedStrip + stackFrame + lineHighlight" },
+
+    { "id": "u8.1", "unit": 8, "type": "skill", "title": "2D arrays: declaration, initialization, row-major storage", "prereqs": ["u6.1"], "viz": "grid2d" },
+    { "id": "u8.2", "unit": 8, "type": "skill", "title": "Traversing 2D arrays with nested loops and for-each", "prereqs": ["u8.1", "u4.4"], "viz": "grid2d + lineHighlight" },
+    { "id": "u8.frq", "unit": 8, "type": "frq", "title": "Write a 2D-array method (row/col processing) to a rubric", "prereqs": ["u8.2"], "viz": "grid2d + stackFrame + lineHighlight" },
+
+    { "id": "u9.1", "unit": 9, "type": "concept", "title": "Superclasses and subclasses; is-a relationships", "prereqs": ["u5.9"], "viz": "heapObject (inheritance strata)" },
+    { "id": "u9.2", "unit": 9, "type": "skill", "title": "Subclass constructors; super(...) call", "prereqs": ["u9.1"], "viz": "stackFrame + heapObject" },
+    { "id": "u9.3", "unit": 9, "type": "skill", "title": "Overriding methods", "prereqs": ["u9.2"], "viz": "callTree (dispatch) + heapObject" },
+    { "id": "u9.4", "unit": 9, "type": "skill", "title": "super keyword for methods and constructors", "prereqs": ["u9.3"], "viz": "stackFrame + heapObject" },
+    { "id": "u9.5", "unit": 9, "type": "concept", "title": "References across inheritance hierarchies; declared vs. actual type", "prereqs": ["u9.3"], "viz": "refArrow + heapObject" },
+    { "id": "u9.6", "unit": 9, "type": "concept", "title": "Polymorphism; dynamic method dispatch", "prereqs": ["u9.5"], "viz": "callTree + refArrow" },
+    { "id": "u9.7", "unit": 9, "type": "skill", "title": "Object class: equals, toString, and overriding them", "prereqs": ["u9.6", "u3.7"], "viz": "heapObject + stackFrame" },
+    { "id": "u9.frq", "unit": 9, "type": "frq", "title": "Extend a class: subclass with overridden method + super", "prereqs": ["u9.7"], "viz": "heapObject + stackFrame + lineHighlight" },
+
+    { "id": "u10.1", "unit": 10, "type": "concept", "title": "Recursion: base case, recursive case, the call stack", "prereqs": ["u5.6", "u6.2"], "viz": "callTree + stackFrame" },
+    { "id": "u10.2", "unit": 10, "type": "skill", "title": "Recursive searching and sorting (binary search, merge sort)", "prereqs": ["u10.1", "u7.6"], "viz": "callTree + indexedStrip (partition highlight)" },
+    { "id": "u10.frq", "unit": 10, "type": "frq", "title": "Trace a recursive method; then write one to a rubric", "prereqs": ["u10.2"], "viz": "callTree + stackFrame + indexedStrip" },
+
+    { "id": "cap.mock", "unit": 0, "type": "synthesis", "title": "Full mock exam: MCQ pacing + 4 FRQs under time", "prereqs": ["u1.frq","u2.frq","u3.frq","u4.frq","u5.frq","u6.frq","u7.frq","u8.frq","u9.frq","u10.frq"], "viz": "all primitives, tracer-driven review" }
+  ]
+}
