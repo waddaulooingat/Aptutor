@@ -50,18 +50,28 @@ explanation, so **only `Verified: true` files are ever served** — see
 `ApTutor.Content.FileContentSource` and `AuthoredStepProvider`, which both skip/throw on anything
 still unverified.
 
-## 3. It's already wired up
+## 3. Rebuild the client
 
-`CsaCourseModule` reads from `<app dir>/content/csa` automatically:
+`src/ApTutor.Client/content/**/*.json` is a `Content` item with `CopyToOutputDirectory` in
+`ApTutor.Client.csproj` — so once you've generated and reviewed content at
+`src/ApTutor.Client/content/csa` (the path used above), **rebuild (or re-run) `ApTutor.Client`**
+and MSBuild copies it next to the exe, which is where `CsaCourseModule`'s default `contentDir`
+(`AppContext.BaseDirectory/content/<courseId>`) actually looks at runtime:
+
+```
+dotnet build src/ApTutor.Client
+dotnet run --project src/ApTutor.Client
+```
+
+From there:
 
 - `Content.GetPracticeItems(nodeId)` merges the Phase 6 fixture bank with whatever verified items
   exist here.
 - `StepProvider.GetSteps(nodeId, exampleId)` serves the live tracer's demo for `u2.1` and falls
   back to the authored walkthrough for every other node.
 
-No client rebuild or code change needed after running `generate` + `review` — just drop the
-`content/csa` directory next to the built app (or point `CsaCourseModule`'s `contentDir` parameter
-at it).
+Re-running `review` later (to approve more nodes) needs another rebuild of `ApTutor.Client` to
+pick up the change — the copy only happens at build time, not live.
 
 ## Reusing this for a new course
 

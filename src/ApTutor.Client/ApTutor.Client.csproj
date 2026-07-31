@@ -19,6 +19,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Phase 7: ApTutor.ContentFactory writes verified content packs here in source (so they're
+         stable across clean/rebuild, not lost like a bin/ output would be); this copies them into
+         the build output next to the exe, which is where CsaCourseModule's default contentDir
+         (AppContext.BaseDirectory/content/<courseId>) actually looks at runtime. -->
+    <Content Include="content\**\*.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\ApTutor.Platform\ApTutor.Platform.csproj" />
     <ProjectReference Include="..\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
     <ProjectReference Include="..\ApTutor.Scene\ApTutor.Scene.csproj" />
