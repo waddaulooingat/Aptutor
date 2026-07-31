@@ -1,0 +1,225 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u1.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "A variable is a named memory cell that stores a value of a specific type. In Java, int stores whole numbers, double stores decimal (floating-point) numbers, and boolean stores only true or false. When you declare a variable, Java reserves a memory cell labeled with that variable\u0027s name and type; when you assign a new value, the old value in that cell is replaced. Watching a memCell update step by step helps you see that assignment always overwrites, it never adds to, what was there before.",
+  "PracticeItems": [
+    {
+      "Id": "u1.2-q1",
+      "NodeId": "u1.2",
+      "Prompt": "Which of the following is a valid declaration and initialization of a variable that stores a whole number?",
+      "Choices": [
+        "int count = 5;",
+        "double count = 5;",
+        "boolean count = 5;",
+        "int count = 5.0;"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "int is the primitive type for whole numbers, and 5 is an integer literal, so \u0027int count = 5;\u0027 is valid. \u0027double count = 5;\u0027 actually compiles too, but the question asks which is designed to store a whole number using the correct matching type - int is the intended type for counting values. \u0027boolean count = 5;\u0027 is invalid because boolean can only hold true or false, and \u0027int count = 5.0;\u0027 is invalid because 5.0 is a double literal and cannot be assigned to an int without an explicit cast."
+    },
+    {
+      "Id": "u1.2-q2",
+      "NodeId": "u1.2",
+      "Prompt": "After the following code runs, what value is stored in the variable x?\n\nint x = 10;\nx = 3;",
+      "Choices": [
+        "10",
+        "3",
+        "13",
+        "0"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "When a variable is declared with int x = 10, memory cell x initially holds 10. The next line, x = 3, overwrites that memory cell with the new value 3, replacing the old value completely. So the final value is 3, not 13 (that would require x = x \u002B 3) and not 10 (the old value is gone once reassigned)."
+    },
+    {
+      "Id": "u1.2-q3",
+      "NodeId": "u1.2",
+      "Prompt": "Which statement correctly declares a boolean variable representing whether a light is on?",
+      "Choices": [
+        "boolean isOn = 1;",
+        "boolean isOn = \u0022true\u0022;",
+        "boolean isOn = true;",
+        "int isOn = true;"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "boolean variables can only be assigned the literal values true or false (without quotes), so \u0027boolean isOn = true;\u0027 is correct. \u0027boolean isOn = 1;\u0027 fails because Java booleans are not interchangeable with integers like in some other languages. \u0027boolean isOn = \u0022true\u0022;\u0027 fails because \u0022true\u0022 in quotes is a String literal, not a boolean literal. \u0027int isOn = true;\u0027 fails because true is not a valid int value."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with an empty stack frame for main, ready to hold variables.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "We declare \u0027int score = 0;\u0027 which creates a memory cell named score, of type int, holding 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 2,
+      "Caption": "Now we declare \u0027double average = 0.0;\u0027 which creates a separate memory cell of type double.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "average",
+            "Type": "double",
+            "Value": "0.0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "We also declare \u0027boolean passed = false;\u0027 creating a third memory cell that can only hold true or false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "passed",
+            "Type": "boolean",
+            "Value": "false"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "Next, the line \u0027score = 87;\u0027 overwrites the int cell\u0027s value, replacing 0 with 87.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "87"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 5,
+      "Caption": "Then \u0027average = 92.5;\u0027 overwrites the double cell, replacing 0.0 with 92.5.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "average",
+            "Type": "double",
+            "Value": "92.5"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "average"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 6,
+      "Caption": "Finally, \u0027passed = true;\u0027 overwrites the boolean cell, changing false to true, since passed is now given a true value.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "passed",
+            "Type": "boolean",
+            "Value": "true"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "passed"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 6
+          }
+        ]
+      },
+      "SourceLine": 6
+    },
+    {
+      "Index": 7,
+      "Caption": "Notice each memory cell keeps its own type: score stays an int, average stays a double, and passed stays a boolean, no matter what values are assigned.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "average"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "passed"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-07-31T02:14:53.2658409+00:00",
+  "Model": "claude-sonnet-5"
+}

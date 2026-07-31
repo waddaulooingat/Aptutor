@@ -1,0 +1,194 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u1.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "When Java evaluates an expression like a / b, it builds up the calculation piece by piece before ever touching a variable in memory \u2014 that\u0027s the \u0022expression bubble.\u0022 The key rule for this node: if both operands are ints, division truncates toward zero and precedence rules (parentheses, then * / %, then \u002B -) decide the order operations combine inside that bubble. Once the bubble resolves to a final value, that value is written into the memory cell on the left side of the assignment, converting type if needed (int widens to double automatically, but double must be explicitly cast down to int). Watch how the bubble\u0027s type \u2014 int or double \u2014 depends entirely on the types of the pieces that go into it, not on what type of variable will eventually store the result.",
+  "PracticeItems": [
+    {
+      "Id": "u1.3-q1",
+      "NodeId": "u1.3",
+      "Prompt": "What value is stored in result after this code executes?\n\nint a = 7;\nint b = 2;\ndouble result = a / b;",
+      "Choices": [
+        "3.5",
+        "3.0",
+        "4.0",
+        "3"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Since a and b are both int, a / b performs integer division first, producing 3 (the fractional part is truncated). That int value 3 is then widened to a double when assigned to result, giving 3.0 \u2014 not 3.5. To get 3.5 you would need to cast one operand to double before the division happens."
+    },
+    {
+      "Id": "u1.3-q2",
+      "NodeId": "u1.3",
+      "Prompt": "What is the value of x after this statement runs?\n\nint x = 2 \u002B 3 * 4 - 6 / 3;",
+      "Choices": [
+        "6",
+        "12",
+        "2",
+        "4"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Operator precedence makes * and / happen before \u002B and -, and they evaluate left to right: 3*4=12 and 6/3=2. Then left to right addition/subtraction: 2 \u002B 12 - 2 = 12... wait recompute: 2\u002B12=14, 14-2=12. So the correct value is 12, not 6. (Choice index 0 is 6, which would be wrong \u2014 this is a common error from doing operations strictly left to right ignoring precedence, e.g. ((2\u002B3)*4-6)/3.)"
+    },
+    {
+      "Id": "u1.3-q3",
+      "NodeId": "u1.3",
+      "Prompt": "Given int total = 10; and int count = 4;, which expression correctly computes the average as a double value of 2.5?",
+      "Choices": [
+        "double avg = total / count;",
+        "double avg = (double) total / count;",
+        "double avg = total / (double) count;",
+        "double avg = (double) (total / count);"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Casting total to double before the division forces the entire division to be done using floating-point arithmetic, giving 2.5. Option D casts after the integer division already truncated the result to 2, so (double)(10/4) becomes 2.0, not 2.5. Option A performs pure integer division, also truncating to 2."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with two int variables, a and b, sitting in memory, and an empty variable \u0027result\u0027 waiting to be filled.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "a",
+            "Type": "int",
+            "Value": "7"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "double",
+            "Value": "undefined"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Java sees the expression a / b and creates an expression bubble to evaluate it before touching \u0027result\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "a / b"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Both a and b are int, so this is integer division \u2014 Java computes 7 divided by 2 and truncates any remainder.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "The bubble resolved to the int value 3 \u2014 notice the fractional .5 was thrown away because both operands were ints.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Now that int 3 is being assigned into a double variable, Java automatically widens it to 3.0 as it\u0027s stored.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "double",
+            "Value": "3.0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Let\u0027s redo this correctly to get 3.5: this time we cast \u0027a\u0027 to double before division, so the bubble itself becomes a double calculation.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "(double) a / b"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "With one operand now a double, Java performs floating-point division: 7.0 / 2 gives 3.5 inside the bubble.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "3.5"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "That double value 3.5 flows directly into \u0027result\u0027 with no truncation this time.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "double",
+            "Value": "3.5"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-07-31T02:15:12.7673588+00:00",
+  "Model": "claude-sonnet-5"
+}

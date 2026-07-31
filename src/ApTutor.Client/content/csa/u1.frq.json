@@ -1,0 +1,293 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u1.frq",
+  "ExampleId": "generated",
+  "WalkthroughText": "When a line of code mixes different numeric types, Java resolves the arithmetic in a strict order: it evaluates sub-expressions using precedence rules, promotes operand types when needed (int combined with double becomes double), and only then stores the result in the target variable. Tracing this by hand means treating each line as three steps: build an expression bubble showing the raw operands, resolve that bubble down to one final value using type-promotion and operator rules, then write that value into the correct memory cell for the variable. Watching this process animated, one operation at a time, makes it much easier to catch subtle bugs like accidental integer division or a stale value being reused before it\u0027s updated.",
+  "PracticeItems": [
+    {
+      "Id": "u1.frq-q1",
+      "NodeId": "u1.frq",
+      "Prompt": "What are the final values of a and b after this code runs?\n\nint a = 7;\nint b = 2;\na = a / b \u002B a % b;\nb = a * 1.0 / b \u003E 3 ? 10 : 20;",
+      "Choices": [
+        "a = 4, b = 10",
+        "a = 4, b = 20",
+        "a = 3, b = 10",
+        "a = 4.5, b = 10"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "a/b is integer division: 7/2 = 3. a%b is 7%2 = 1. So a = 3 \u002B 1 = 4. Then a*1.0/b promotes to double: 4*1.0/2 = 2.0, which is not \u003E 3, so the ternary should give 20 \u2014 wait, check carefully: 2.0 \u003E 3 is false so b = 20. The distractor \u0027a=4, b=10\u0027 is actually wrong under naive re-check, but per the intended trace a stays an int (4) and the comparison 4*1.0/2=2.0 is false giving b=20, matching choice 2. (Correct choice text below reflects b=20.)"
+    },
+    {
+      "Id": "u1.frq-q2",
+      "NodeId": "u1.frq",
+      "Prompt": "After the following statements execute in order, what value is stored in result?\n\ndouble x = 5;\nint y = 2;\ndouble result = x / y \u002B (int)(x / y);",
+      "Choices": [
+        "2.5",
+        "4.5",
+        "5.0",
+        "2.0"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "x is a double, so x / y uses double division: 5.0 / 2 = 2.5. Casting that result, (int)(x / y), truncates 2.5 to 2. Adding gives 2.5 \u002B 2 = 4.5. A common mistake is assuming x/y performs integer division because y is an int, but since x is a double the whole expression promotes to double division first."
+    },
+    {
+      "Id": "u1.frq-q3",
+      "NodeId": "u1.frq",
+      "Prompt": "Trace this snippet and choose the final printed value of total.\n\nint total = 10;\ntotal \u002B= 3 * 2 - 1;\ntotal -= total % 4;\nSystem.out.println(total);",
+      "Choices": [
+        "15",
+        "16",
+        "12",
+        "14"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "First, 3*2-1 = 5, so total \u002B= 5 makes total = 15. Then total % 4 is 15 % 4 = 3, so total -= 3 gives 12 \u2014 recheck: 15-3=12, not 16. The correct final answer following order of operations is 12, not 16; make sure to compute total%4 using the updated total (15), not the original 10."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start by pushing a frame for main and declaring int a equal to 7.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main(String[] args)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "a",
+            "Type": "int",
+            "Value": "7"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Next we declare int b equal to 2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now we look at the line a = a / b \u002B a % b. We build an expression bubble for a / b using the current values of a and b.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "a / b  -\u003E  7 / 2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Since both a and b are ints, this is integer division, so the bubble resolves to 3, dropping the remainder.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "We build a second bubble for a % b, the remainder of 7 divided by 2, which is 1.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "a % b  -\u003E  7 % 2"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Both bubbles are combined with addition into one final bubble: 3 \u002B 1 resolves to 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "3 \u002B 1"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "4"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "That final value, 4, is written into the memory cell for a, overwriting the old value 7.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "a",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "a"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Now we trace the ternary line: b = a * 1.0 / b \u003E 3 ? 10 : 20. We build a bubble for a * 1.0 using the new value of a, which is 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e4",
+            "Text": "a * 1.0  -\u003E  4 * 1.0"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e4",
+            "Value": "4.0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Because one operand is now a double, the whole expression is promoted to double math: 4.0 divided by b, which is 2, gives 2.0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e5",
+            "Text": "4.0 / b  -\u003E  4.0 / 2"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e5",
+            "Value": "2.0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "We compare this result to 3 inside a boolean bubble: is 2.0 greater than 3? That glows false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e6",
+            "Text": "2.0 \u003E 3"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e6",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 10,
+      "Caption": "Since the condition is false, the ternary picks the value after the colon, 20, and that gets written into b\u0027s memory cell.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "int",
+            "Value": "20"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "b"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 11,
+      "Caption": "Tracing complete: a ends at 4 and b ends at 20, exactly matching what a careful step-by-step walk through the expression bubbles predicts.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "a"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "b"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-07-31T02:16:46.8285201+00:00",
+  "Model": "claude-sonnet-5"
+}

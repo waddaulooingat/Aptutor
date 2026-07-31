@@ -1,0 +1,254 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u1.5",
+  "ExampleId": "generated",
+  "WalkthroughText": "Java\u0027s numeric types have fixed ranges, and when you convert between them or exceed those ranges, specific rules apply. Casting a double to an int truncates \u2014 it chops off the decimal part instead of rounding, so 9.99 becomes 9, not 10. Casting in the other direction, from int to double, is automatic (\u0022widening\u0022) and keeps the value exactly, just adding a decimal point. Int overflow is different: it happens when a calculation produces a result outside int\u0027s storage range (about -2.1 billion to 2.1 billion), causing the value to silently wrap around to the opposite end of the range without any error message. Watch the order of operations carefully \u2014 a cast only affects the expression at the point it\u0027s applied, so casting after division has already happened does not fix truncated results.",
+  "PracticeItems": [
+    {
+      "Id": "u1.5-q1",
+      "NodeId": "u1.5",
+      "Prompt": "What value is stored in result after this code runs?\n\nint a = 7;\nint b = 2;\ndouble result = a / b;",
+      "Choices": [
+        "3.5",
+        "3.0",
+        "4.0",
+        "2.5"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Since a and b are both int, a / b performs integer division first, truncating toward zero to get 3. Only after that is the int value 3 widened to a double and stored as 3.0. It is not 3.5 because the division happens before the assignment to a double variable \u2014 the cast to double comes too late to affect the division."
+    },
+    {
+      "Id": "u1.5-q2",
+      "NodeId": "u1.5",
+      "Prompt": "What is the value of x after this code executes?\n\ndouble d = 9.99;\nint x = (int) d;",
+      "Choices": [
+        "10",
+        "9",
+        "9.99",
+        "0"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Casting a double to an int in Java truncates the decimal part rather than rounding, so 9.99 becomes 9. It is not 10 because truncation always drops the fractional part regardless of how close it is to the next integer; rounding would require Math.round(d) instead of a simple (int) cast."
+    },
+    {
+      "Id": "u1.5-q3",
+      "NodeId": "u1.5",
+      "Prompt": "What happens when this code runs?\n\nint max = 2147483647;\nint result = max \u002B 1;\nSystem.out.println(result);",
+      "Choices": [
+        "It prints 2147483648",
+        "It prints -2147483648 due to int overflow",
+        "It throws a runtime exception",
+        "It prints 0"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "2147483647 is the maximum value an int can hold. Adding 1 causes it to overflow and wrap around to the most negative int value, -2147483648, silently (no exception is thrown). It does not print 2147483648 because that value exceeds int\u0027s range and cannot be represented."
+    },
+    {
+      "Id": "u1.5-q4",
+      "NodeId": "u1.5",
+      "Prompt": "Which expression correctly computes the mathematically rounded average (not truncated) of two int variables x and y as a double?",
+      "Choices": [
+        "double avg = x \u002B y / 2;",
+        "double avg = (double) (x \u002B y) / 2;",
+        "double avg = x \u002B y / 2.0;",
+        "double avg = (double) x \u002B y / 2;"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Casting the sum (x \u002B y) to double before dividing ensures the division is done in floating point, giving an accurate average. The option \u0027x \u002B y / 2.0\u0027 is wrong because operator precedence causes only y to be divided by 2.0 first, then added to the int x, which does not compute the average of both variables."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s trace this line: int a = 7; int b = 2; double result = a / b; We start with two int variables in memory.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "a",
+            "Type": "int",
+            "Value": "7"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "int",
+            "Value": "2"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "Java builds the expression a / b. Since both operands are int, this will be integer division.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "a / b"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 2,
+      "Caption": "Integer division truncates the decimal part: 7 divided by 2 mathematically is 3.5, but int division drops everything after the decimal, giving 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 3,
+      "Caption": "Only now does the assignment to a double variable happen \u2014 the int value 3 is widened to 3.0. The damage from truncation is already done.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "double",
+            "Value": "3.0"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "Now let\u0027s look at a cast the other way: double d = 9.99; int x = (int) d;",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d",
+            "Type": "double",
+            "Value": "9.99"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 5,
+      "Caption": "We build the expression (int) d, casting the double down to an int.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "(int) d"
+          }
+        ]
+      },
+      "SourceLine": 6
+    },
+    {
+      "Index": 6,
+      "Caption": "A cast to int always truncates \u2014 it never rounds. So 9.99 becomes 9, not 10, even though 9.99 is very close to 10.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "9"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "x",
+            "Type": "int",
+            "Value": "9"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "x"
+          }
+        ]
+      },
+      "SourceLine": 6
+    },
+    {
+      "Index": 7,
+      "Caption": "Finally, let\u0027s see int overflow. We set max to the largest possible int value, 2147483647.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "max",
+            "Type": "int",
+            "Value": "2147483647"
+          }
+        ]
+      },
+      "SourceLine": 8
+    },
+    {
+      "Index": 8,
+      "Caption": "We build the expression max \u002B 1, adding one more than the int type can hold.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "max \u002B 1"
+          }
+        ]
+      },
+      "SourceLine": 9
+    },
+    {
+      "Index": 9,
+      "Caption": "The result overflows the int range and silently wraps around to the most negative int value, -2147483648 \u2014 no error is thrown.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "-2147483648"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result2",
+            "Type": "int",
+            "Value": "-2147483648"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result2"
+          }
+        ]
+      },
+      "SourceLine": 9
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-07-31T02:16:20.8715673+00:00",
+  "Model": "claude-sonnet-5"
+}

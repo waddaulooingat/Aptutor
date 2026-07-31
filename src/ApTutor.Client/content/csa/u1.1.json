@@ -1,0 +1,160 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u1.1",
+  "ExampleId": "generated",
+  "WalkthroughText": "Before a computer can run a Java program, two separate stages happen: compiling and running. First, the compiler reads your source code (a .java file) and checks it for correct syntax, translating it into bytecode the Java Virtual Machine understands. Only after compiling succeeds can the JVM actually run the program, executing statements one at a time in order. Watching a \u0022current line\u0022 highlight move down the code as it runs is a great way to see this execution step-by-step, separate from the earlier compile step.",
+  "PracticeItems": [
+    {
+      "Id": "u1.1-q1",
+      "NodeId": "u1.1",
+      "Prompt": "A student writes a Java program in a text file named Greeting.java. Before the program can be run, what must happen first?",
+      "Choices": [
+        "The file must be renamed to Greeting.class manually by the student",
+        "The source code must be compiled by the Java compiler into bytecode",
+        "The computer\u0027s operating system directly executes the .java text file",
+        "The program must be translated into English pseudocode first"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Java is a compiled language: the compiler (javac) translates human-readable source code (.java) into bytecode (.class) that the Java Virtual Machine can run. The OS cannot execute raw .java text, and renaming the file does not perform translation, so those options are incorrect."
+    },
+    {
+      "Id": "u1.1-q2",
+      "NodeId": "u1.1",
+      "Prompt": "Which best describes why we use a programming language like Java instead of just giving a computer instructions in plain English?",
+      "Choices": [
+        "Plain English is too fast for computers to process",
+        "Programming languages have precise, unambiguous syntax and rules that a compiler can reliably translate into machine instructions",
+        "Computers cannot store English words in memory",
+        "English instructions run faster than compiled Java code"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Programming languages exist because they remove ambiguity: every statement has one exact meaning, so a compiler can reliably convert it into instructions the computer executes correctly and consistently. English is ambiguous, which has nothing to do with speed or storage."
+    },
+    {
+      "Id": "u1.1-q3",
+      "NodeId": "u1.1",
+      "Prompt": "In the compile-run model, a program\u0027s statements execute one at a time, in order, unless control flow changes that order. If you were tracing a program line by line to find a bug, what would you expect to see happen as execution proceeds?",
+      "Choices": [
+        "Every line in the file executes simultaneously",
+        "The highlighted \u0027current line\u0027 marker moves through the code, generally top to bottom, following the order statements actually run",
+        "The compiler re-orders lines randomly each time the program runs",
+        "Only the first line of the program ever executes"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "During execution, the JVM runs statements sequentially by default, so a line-by-line trace shows a single current-line marker advancing through the code in run order. Lines don\u0027t run simultaneously or randomly, and normally more than just the first line executes."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here is a tiny Java program we\u0027ve written and saved as Hello.java. Nothing has happened yet \u2014 it\u0027s just text on disk.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "src",
+            "Text": "public class Hello {\n  public static void main(String[] args) {\n    System.out.println(\u0022Hi\u0022);\n    System.out.println(\u0022Bye\u0022);\n  }\n}"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Step one is compiling: the Java compiler reads Hello.java and translates it into bytecode, stored as Hello.class. No lines are \u0027running\u0027 yet \u2014 this is just translation.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "src",
+            "Value": "compiled to Hello.class"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now the Java Virtual Machine loads Hello.class and starts running it. Execution begins at the first statement inside main \u2014 line 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main(String[] args)"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Line 3 executes: it prints \u0027Hi\u0027 to the console. The highlight sits on this line while it runs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "out1",
+            "Text": "console prints: Hi"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Since Java runs statements in order, the highlight now moves down to line 4, the next statement.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Line 4 executes: it prints \u0027Bye\u0027 to the console.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "out2",
+            "Text": "console prints: Bye"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "There are no more statements in main, so the method finishes and the program ends. Notice the highlight moved top to bottom, one line at a time \u2014 that\u0027s the run model after compiling.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-07-31T02:13:24.5106567+00:00",
+  "Model": "claude-sonnet-5"
+}

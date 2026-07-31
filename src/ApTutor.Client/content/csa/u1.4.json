@@ -1,0 +1,220 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u1.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "Compound assignment operators let you update a variable using its own current value in a shorter form. Instead of writing x = x \u002B 3, you can write x \u002B= 3, and Java will take whatever x currently holds, add 3 to it, and store the result back into x. The same idea applies to -=, *=, /=, and %=, as well as the special increment and decrement operators \u002B\u002B and --, which add or subtract exactly 1. Because these operators read the old value from memory before writing the new value back, tracing them with a memory cell view is a great way to see the before-and-after change clearly.",
+  "PracticeItems": [
+    {
+      "Id": "u1.4-q1",
+      "NodeId": "u1.4",
+      "Prompt": "What value is stored in x after this code runs?\n\nint x = 5;\nx \u002B= 3;\nx *= 2;",
+      "Choices": [
+        "16",
+        "13",
+        "10",
+        "8"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "x \u002B= 3 makes x equal to 5 \u002B 3 = 8. Then x *= 2 makes x equal to 8 * 2 = 16. A common mistake (choice 13) forgets that *= multiplies the whole current value, not just the added part, and choice 10 mistakenly applies *2 only to the original 5."
+    },
+    {
+      "Id": "u1.4-q2",
+      "NodeId": "u1.4",
+      "Prompt": "What is printed after this code executes?\n\nint count = 7;\ncount--;\ncount -= 2;\nSystem.out.println(count);",
+      "Choices": [
+        "4",
+        "5",
+        "6",
+        "8"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "count-- lowers count from 7 to 6. Then count -= 2 subtracts 2 more, giving 6 - 2 = 4. Choice 5 incorrectly only applies one of the two decrements, and choice 8 incorrectly adds instead of subtracting."
+    },
+    {
+      "Id": "u1.4-q3",
+      "NodeId": "u1.4",
+      "Prompt": "Which statement is equivalent to total = total \u002B total * 2 ; ?",
+      "Choices": [
+        "total *= 3;",
+        "total \u002B= 2;",
+        "total *= 2;",
+        "total \u002B= total;"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "total \u002B total*2 equals 3 * total, so total *= 3; produces the same result. total *= 2; only doubles total instead of tripling it, and total \u002B= 2; adds a constant instead of scaling by the current value."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start by declaring an integer variable score and giving it an initial value of 10. Watch the memory cell for score appear with that value.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "10"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "Now we run score \u002B= 5. Java first reads the current value of score, which is 10.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "score \u002B 5"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 2,
+      "Caption": "It computes 10 \u002B 5 to get 15, then writes that new value back into the same memory cell for score.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "15"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "15"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "Next we run score -= 4. Again Java reads the current value, now 15, before changing it.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "score - 4"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "It computes 15 - 4 to get 11, and stores 11 back into score\u0027s memory cell.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "11"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "11"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 5,
+      "Caption": "Finally we run score\u002B\u002B. This shorthand always adds exactly 1 to the current value of score.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "score \u002B 1"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 6,
+      "Caption": "11 \u002B 1 gives 12, so the memory cell for score updates one final time to hold 12.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "12"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "12"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "score"
+          }
+        ]
+      },
+      "SourceLine": 4
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-07-31T02:16:00.6194533+00:00",
+  "Model": "claude-sonnet-5"
+}
