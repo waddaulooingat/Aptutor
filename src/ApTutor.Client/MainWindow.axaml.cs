@@ -42,13 +42,17 @@ public partial class MainWindow : Window
     private void RefreshAll()
     {
         RefreshTree();
-        RefreshFrontier();
         RefreshProgress();
         RefreshDetail();
     }
 
     private void RefreshTree()
     {
+        // Folded "Available now" straight into the tree: available = unlocked (prereqs mastered)
+        // but not yet mastered itself — NodeItemVm renders that as a distinct marker/color instead
+        // of a separate panel.
+        var available = _mastery.Available().Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
+
         var groups = _course.Dag.Dag.Units
             .OrderBy(u => u.Unit)
             .Select(u => new UnitGroupVm(
@@ -57,18 +61,11 @@ public partial class MainWindow : Window
                 _course.Dag.Dag.Nodes
                     .Where(n => n.Unit == u.Unit)
                     .OrderBy(n => n.Id, StringComparer.Ordinal)
-                    .Select(n => new NodeItemVm(n, _mastery.IsMastered(n.Id)))
+                    .Select(n => new NodeItemVm(n, _mastery.IsMastered(n.Id), available.Contains(n.Id)))
                     .ToList()))
             .ToList();
 
         UnitTree.ItemsSource = groups;
-    }
-
-    private void RefreshFrontier()
-    {
-        FrontierList.ItemsSource = _mastery.Available()
-            .Select(n => new NodeItemVm(n, false))
-            .ToList();
     }
 
     private void RefreshProgress()
@@ -171,15 +168,6 @@ public partial class MainWindow : Window
     private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (UnitTree.SelectedItem is NodeItemVm vm)
-        {
-            _selectedNode = vm.Node;
-            RefreshDetail();
-        }
-    }
-
-    private void OnFrontierSelectionChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (FrontierList.SelectedItem is NodeItemVm vm)
         {
             _selectedNode = vm.Node;
             RefreshDetail();
