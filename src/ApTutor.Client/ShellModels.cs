@@ -1,3 +1,5 @@
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using ApTutor.Curriculum;
 using Avalonia.Media;
 
@@ -32,19 +34,43 @@ public sealed class UnitGroupVm : ITreeItem
 /// Available folded straight into the tree (no separate "Available now" panel): mastered nodes get
 /// a checkmark, unlocked-but-not-mastered nodes get an arrow, and anything still locked behind a
 /// prereq is greyed out — so the "what can I work on next" signal lives in one place, not two.
-public sealed class NodeItemVm : ITreeItem
+///
+/// INotifyPropertyChanged on purpose: the tree is built ONCE (see MainWindow.BuildTree) and these
+/// same instances are updated in place afterward via SetState, rather than the whole ItemsSource
+/// being torn down and rebuilt on every mastery change — replacing ItemsSource was collapsing the
+/// user's tree expansion back to the top level on every "Mark mastered" click.
+public sealed class NodeItemVm : ITreeItem, INotifyPropertyChanged
 {
+    private bool _mastered;
+    private bool _available;
+
     public NodeItemVm(DagNode node, bool mastered, bool available)
     {
         Node = node;
-        Mastered = mastered;
-        Available = available;
+        _mastered = mastered;
+        _available = available;
     }
 
     public DagNode Node { get; }
-    public bool Mastered { get; }
-    public bool Available { get; }
+    public bool Mastered => _mastered;
+    public bool Available => _available;
     public string Display => (Mastered ? "✓ " : Available ? "▶ " : "   ") + Node.Id + " — " + Node.Title;
     public IBrush Foreground => Mastered || Available ? Brushes.Black : Brushes.Gray;
     public IReadOnlyList<ITreeItem> Children => Array.Empty<ITreeItem>();
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    public void SetState(bool mastered, bool available)
+    {
+        if (mastered == _mastered && available == _available) return;
+        _mastered = mastered;
+        _available = available;
+        OnPropertyChanged(nameof(Mastered));
+        OnPropertyChanged(nameof(Available));
+        OnPropertyChanged(nameof(Display));
+        OnPropertyChanged(nameof(Foreground));
+    }
+
+    private void OnPropertyChanged([CallerMemberName] string? name = null) =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 }

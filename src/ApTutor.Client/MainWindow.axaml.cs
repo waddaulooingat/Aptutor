@@ -12,6 +12,7 @@ public partial class MainWindow : Window
 {
     private readonly CourseRegistry _registry = new();
     private readonly ProgressStore _progressStore = new();
+    private readonly Dictionary<string, NodeItemVm> _nodeVms = new(StringComparer.Ordinal);
 
     private ICourseModule _course = null!;
     private MasteryTracker _mastery = null!;
@@ -21,6 +22,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         LoadCourse();
+        BuildTree();
         RefreshAll();
     }
 
@@ -41,16 +43,17 @@ public partial class MainWindow : Window
 
     private void RefreshAll()
     {
-        RefreshTree();
+        UpdateNodeStates();
         RefreshProgress();
         RefreshDetail();
     }
 
-    private void RefreshTree()
+    /// Builds the tree's ItemsSource exactly once. NodeItemVm instances are cached by node id and
+    /// updated in place afterward (UpdateNodeStates) instead of the tree being torn down and
+    /// rebuilt on every mastery change — rebuilding replaced every VM with a new instance, which
+    /// collapsed the user's tree expansion back to the top level on every "Mark mastered" click.
+    private void BuildTree()
     {
-        // Folded "Available now" straight into the tree: available = unlocked (prereqs mastered)
-        // but not yet mastered itself — NodeItemVm renders that as a distinct marker/color instead
-        // of a separate panel.
         var available = _mastery.Available().Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
 
         var groups = _course.Dag.Dag.Units
@@ -61,11 +64,26 @@ public partial class MainWindow : Window
                 _course.Dag.Dag.Nodes
                     .Where(n => n.Unit == u.Unit)
                     .OrderBy(n => n.Id, StringComparer.Ordinal)
-                    .Select(n => new NodeItemVm(n, _mastery.IsMastered(n.Id), available.Contains(n.Id)))
+                    .Select(n =>
+                    {
+                        var vm = new NodeItemVm(n, _mastery.IsMastered(n.Id), available.Contains(n.Id));
+                        _nodeVms[n.Id] = vm;
+                        return vm;
+                    })
                     .ToList()))
             .ToList();
 
         UnitTree.ItemsSource = groups;
+    }
+
+    /// Folded "Available now" straight into the tree: available = unlocked (prereqs mastered) but
+    /// not yet mastered itself — NodeItemVm renders that as a distinct marker/color. Updates the
+    /// existing VM instances in place (see BuildTree) so expansion state survives.
+    private void UpdateNodeStates()
+    {
+        var available = _mastery.Available().Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
+        foreach (var (id, vm) in _nodeVms)
+            vm.SetState(_mastery.IsMastered(id), available.Contains(id));
     }
 
     private void RefreshProgress()
