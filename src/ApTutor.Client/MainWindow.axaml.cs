@@ -21,24 +21,62 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        LoadCourse();
+        LoadCourses();
+    }
+
+    /// Registers every course the shell knows about and wires the dropdown to switch between
+    /// them. Defaults to CS A on launch — not persisted across runs (a "remember last course"
+    /// feature is a reasonable follow-up, not required yet).
+    private void LoadCourses()
+    {
+        var dagDir = AppContext.BaseDirectory;
+        var csa = new CsaCourseModule(Path.Combine(dagDir, "apcsa-skill-dag.json"));
+        var worldHistory = new WorldHistoryCourseModule(Path.Combine(dagDir, "apwh-skill-dag.json"));
+        _registry.Register(csa);
+        _registry.Register(worldHistory);
+
+        CourseSelector.ItemsSource = _registry.All;
+        CourseSelector.SelectedItem = csa; // triggers OnCourseSelectionChanged -> SwitchCourse
+    }
+
+    private void OnCourseSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (CourseSelector.SelectedItem is ICourseModule course && course != _course)
+            SwitchCourse(course);
+    }
+
+    private void SwitchCourse(ICourseModule course)
+    {
+        _course = course;
+        _mastery = LoadMasteryFor(course);
+        _nodeVms.Clear();
+        _selectedNode = null;
+        Title = $"ApTutor — {course.DisplayName}";
+
         BuildTree();
+        UpdateActionButtonAvailability();
         RefreshAll();
     }
 
-    private void LoadCourse()
+    private MasteryTracker LoadMasteryFor(ICourseModule course)
     {
-        var dagPath = Path.Combine(AppContext.BaseDirectory, "apcsa-skill-dag.json");
-        var csa = new CsaCourseModule(dagPath);
-        _registry.Register(csa);
-        _course = _registry.Get(csa.CourseId);
-        _mastery = new MasteryTracker(_course.Dag);
-
+        var mastery = new MasteryTracker(course.Dag);
         var saved = _progressStore.Load();
-        if (saved.TryGetValue(_course.CourseId, out var masteredIds))
+        if (saved.TryGetValue(course.CourseId, out var masteredIds))
             foreach (var id in masteredIds)
-                if (_course.Dag.Exists(id))
-                    _mastery.MarkMastered(id);
+                if (course.Dag.Exists(id))
+                    mastery.MarkMastered(id);
+        return mastery;
+    }
+
+    /// Not every course supports every action button yet: "Reference vs. Value demo" hardcodes
+    /// CS A's live-tracer node (u2.1), and MockExamSession throws if a course has zero practice
+    /// items anywhere (true for World History until someone runs ApTutor.ContentFactory for it) —
+    /// disable rather than let either crash on click.
+    private void UpdateActionButtonAvailability()
+    {
+        SceneDemoButton.IsEnabled = _course.CourseId == "csa";
+        MockExamButton.IsEnabled = _course.Dag.Dag.Nodes.Any(n => _course.Content.GetPracticeItems(n.Id).Count > 0);
     }
 
     private void RefreshAll()

@@ -1,12 +1,20 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="using:ApTutor.Client"
+        xmlns:platform="using:ApTutor.Platform"
         x:Class="ApTutor.Client.MainWindow"
-        Title="ApTutor — Computer Science A"
+        Title="ApTutor"
         Width="1100" Height="720">
   <Grid RowDefinitions="Auto,*" Margin="12">
 
     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+      <ComboBox Name="CourseSelector" SelectionChanged="OnCourseSelectionChanged" VerticalAlignment="Center" MinWidth="160">
+        <ComboBox.ItemTemplate>
+          <DataTemplate DataType="platform:ICourseModule">
+            <TextBlock Text="{Binding DisplayName}" />
+          </DataTemplate>
+        </ComboBox.ItemTemplate>
+      </ComboBox>
       <TextBlock Text="Progress:" VerticalAlignment="Center" />
       <ProgressBar Name="MasteryProgressBar" Width="240" Minimum="0" Maximum="100" VerticalAlignment="Center" />
       <TextBlock Name="ProgressLabel" VerticalAlignment="Center" />
