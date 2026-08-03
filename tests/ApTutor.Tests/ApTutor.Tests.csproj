@@ -38,6 +38,10 @@
     <ProjectReference Include="..\..\src\ApTutor.Narration\ApTutor.Narration.csproj" />
     <ProjectReference Include="..\..\src\ApTutor.Content\ApTutor.Content.csproj" />
     <ProjectReference Include="..\..\src\ApTutor.ContentFactory\ApTutor.ContentFactory.csproj" />
+    <!-- World History pilot: Client only pulls in Avalonia as a library dependency here (no
+         windowing/app startup needed to construct WorldHistoryCourseModule and read its
+         properties), so referencing it to test the real class is safe and cheap. -->
+    <ProjectReference Include="..\..\src\ApTutor.Client\ApTutor.Client.csproj" />
   </ItemGroup>
 
 </Project>

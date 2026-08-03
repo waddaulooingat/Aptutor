@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "course": "AP World History: Modern",
+    "sourceStandard": "College Board CED, 9 units — this pilot ports only Unit 1 (of 9)",
+    "purpose": "Second course pilot proving the ICourseModule architecture is genuinely course-agnostic, not CS-A-specific. Scoped to a single unit deliberately (see BUILD-PLAN.md): The Global Tapestry, c. 1200-1450, covering regional state-building across Africa, the Americas, Asia, and Europe before sustained Afro-Eurasian-American contact, plus the interregional trade/belief-system threads that connect those regions. No history-appropriate scene primitives (timeline/map/cause-effect) exist yet, so every node below uses viz:\"none\" as a placeholder rather than a fake primitive name nothing renders; building those primitives is future work, not part of this pilot.",
+    "nodeCount": 13,
+    "schema": {
+      "id": "u<unit>.<topic> (stable key used by DAG edges, mastery tracker, and scene bindings)",
+      "type": "concept | skill | synthesis | frq",
+      "prereqs": "array of node ids that must be mastered first",
+      "viz": "placeholder \"none\" for this pilot — no history scene primitives exist yet (see meta.purpose)"
+    }
+  },
+
+  "scenePrimitives": {},
+
+  "units": [
+    { "unit": 1, "title": "The Global Tapestry (c. 1200-1450)" }
+  ],
+
+  "nodes": [
+    { "id": "u1.1", "unit": 1, "type": "concept", "title": "Framing the period: periodization c. 1200-1450 and comparison as a historical thinking skill", "prereqs": [], "viz": "none" },
+
+    { "id": "u1.2", "unit": 1, "type": "concept", "title": "State-building in West Africa: Mali's imperial administration under Mansa Musa", "prereqs": ["u1.1"], "viz": "none" },
+    { "id": "u1.3", "unit": 1, "type": "skill", "title": "Trans-Saharan trade routes and the spread of Islam through West African commercial centers", "prereqs": ["u1.2"], "viz": "none" },
+
+    { "id": "u1.4", "unit": 1, "type": "concept", "title": "State-building in the Americas: Mexica and Inca imperial systems", "prereqs": ["u1.1"], "viz": "none" },
+    { "id": "u1.5", "unit": 1, "type": "skill", "title": "Tribute collection and agricultural adaptation: chinampas and terracing without Afro-Eurasian contact", "prereqs": ["u1.4"], "viz": "none" },
+
+    { "id": "u1.6", "unit": 1, "type": "concept", "title": "State-building in East Asia: Song China's bureaucratic centralization", "prereqs": ["u1.1"], "viz": "none" },
+    { "id": "u1.7", "unit": 1, "type": "skill", "title": "Neo-Confucianism and the civil service examination system as tools of imperial administration", "prereqs": ["u1.6"], "viz": "none" },
+
+    { "id": "u1.8", "unit": 1, "type": "concept", "title": "State-building in South Asia: the Delhi Sultanate and religious pluralism under Muslim rule", "prereqs": ["u1.1"], "viz": "none" },
+    { "id": "u1.9", "unit": 1, "type": "concept", "title": "State-building in Europe: feudal decentralization and the Catholic Church's parallel authority", "prereqs": ["u1.1"], "viz": "none" },
+
+    { "id": "u1.10", "unit": 1, "type": "skill", "title": "Interregional trade infrastructure: the Silk Roads, Indian Ocean network, and trans-Saharan routes as connective tissue", "prereqs": ["u1.3", "u1.7", "u1.8"], "viz": "none" },
+    { "id": "u1.11", "unit": 1, "type": "skill", "title": "Comparing belief systems as organizing structures for governance: Islam, Christianity, Buddhism, and Confucianism", "prereqs": ["u1.7", "u1.8", "u1.9"], "viz": "none" },
+
+    { "id": "u1.12", "unit": 1, "type": "concept", "title": "Environmental and demographic patterns before sustained contact: agricultural surplus, urbanization, and regional disease environments", "prereqs": ["u1.5", "u1.10"], "viz": "none" },
+
+    { "id": "u1.frq", "unit": 1, "type": "synthesis", "title": "Synthesis: compare state-building strategies across two or more regions, c. 1200-1450", "prereqs": ["u1.10", "u1.11", "u1.12"], "viz": "none" }
+  ]
+}
