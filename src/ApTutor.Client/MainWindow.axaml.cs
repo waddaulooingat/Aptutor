@@ -1,8 +1,10 @@
 using ApTutor.Client.Courses;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 
 namespace ApTutor.Client;
 
@@ -78,6 +80,8 @@ public partial class MainWindow : Window
 
     private void RefreshDetail()
     {
+        ContentPanel.Children.Clear();
+
         if (_selectedNode is not { } node)
         {
             DetailTitle.Text = "Select a node";
@@ -95,6 +99,73 @@ public partial class MainWindow : Window
             : $"Prereqs: {string.Join(", ", node.Prereqs)}";
         DetailViz.Text = $"Viz: {node.Viz}";
         MarkMasteredButton.IsEnabled = !_mastery.IsMastered(node.Id);
+
+        RefreshContent(node);
+    }
+
+    /// Phase 7 follow-up: surfaces whatever's actually in the generated/verified content pack for
+    /// the selected node (walkthrough text + practice items) — the detail pane previously only
+    /// showed the DAG's own structural fields (Type/Prereqs/Viz), never the generated content
+    /// itself, which made it look like "generate" wasn't doing anything even when it was.
+    private void RefreshContent(DagNode node)
+    {
+        string? walkthroughText = null;
+        try
+        {
+            walkthroughText = _course.Content.GetWalkthroughText(node.Id, "generated");
+        }
+        catch
+        {
+            // No verified walkthrough text for this node yet — shown as a placeholder below.
+        }
+
+        ContentPanel.Children.Add(new TextBlock
+        {
+            Text = walkthroughText ?? "(no walkthrough text generated + verified for this node yet)",
+            TextWrapping = TextWrapping.Wrap,
+            FontStyle = walkthroughText is null ? FontStyle.Italic : FontStyle.Normal,
+            Foreground = walkthroughText is null ? Brushes.Gray : Brushes.Black,
+        });
+
+        var items = _course.Content.GetPracticeItems(node.Id);
+        if (items.Count == 0)
+        {
+            ContentPanel.Children.Add(new TextBlock
+            {
+                Text = "(no practice items for this node yet)",
+                FontStyle = FontStyle.Italic,
+                Foreground = Brushes.Gray,
+                Margin = new Thickness(0, 8, 0, 0),
+            });
+            return;
+        }
+
+        foreach (var item in items)
+        {
+            var block = new StackPanel { Spacing = 2, Margin = new Thickness(0, 8, 0, 0) };
+            block.Children.Add(new TextBlock
+            {
+                Text = $"Q: {item.Prompt}",
+                TextWrapping = TextWrapping.Wrap,
+                FontWeight = FontWeight.SemiBold,
+            });
+            for (var i = 0; i < item.Choices.Count; i++)
+            {
+                block.Children.Add(new TextBlock
+                {
+                    Text = $"{(i == item.CorrectIndex ? "✓" : " ")} {(char)('A' + i)}. {item.Choices[i]}",
+                    TextWrapping = TextWrapping.Wrap,
+                });
+            }
+            block.Children.Add(new TextBlock
+            {
+                Text = $"Explanation: {item.Explanation}",
+                TextWrapping = TextWrapping.Wrap,
+                FontStyle = FontStyle.Italic,
+                Foreground = Brushes.Gray,
+            });
+            ContentPanel.Children.Add(block);
+        }
     }
 
     private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)

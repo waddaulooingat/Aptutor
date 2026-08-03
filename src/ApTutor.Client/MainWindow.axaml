@@ -26,15 +26,21 @@
 
       <GridSplitter Grid.Column="1" Width="8" ResizeDirection="Columns" />
 
-      <Grid Grid.Column="2" RowDefinitions="Auto,*">
+      <Grid Grid.Column="2" RowDefinitions="2*,*">
         <Border Grid.Row="0" BorderBrush="Gray" BorderThickness="1" Padding="16" CornerRadius="6">
-          <StackPanel Spacing="8">
-            <TextBlock Name="DetailTitle" FontSize="18" FontWeight="Bold" Text="Select a node" />
-            <TextBlock Name="DetailType" />
-            <TextBlock Name="DetailPrereqs" TextWrapping="Wrap" />
-            <TextBlock Name="DetailViz" TextWrapping="Wrap" />
-            <Button Name="MarkMasteredButton" Content="Mark mastered" Click="OnMarkMasteredClick" IsEnabled="False" />
-          </StackPanel>
+          <ScrollViewer>
+            <StackPanel Spacing="8">
+              <TextBlock Name="DetailTitle" FontSize="18" FontWeight="Bold" Text="Select a node" />
+              <TextBlock Name="DetailType" />
+              <TextBlock Name="DetailPrereqs" TextWrapping="Wrap" />
+              <TextBlock Name="DetailViz" TextWrapping="Wrap" />
+              <Button Name="MarkMasteredButton" Content="Mark mastered" Click="OnMarkMasteredClick" IsEnabled="False" />
+
+              <Separator Margin="0,8,0,0" />
+              <TextBlock Text="Content" FontWeight="Bold" Margin="0,4,0,0" />
+              <StackPanel Name="ContentPanel" Spacing="8" />
+            </StackPanel>
+          </ScrollViewer>
         </Border>
 
         <Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" Padding="16" CornerRadius="6" Margin="0,12,0,0">
