@@ -98,4 +98,51 @@ public class GeneratorTests
         // silently ship half-generated content" behavior.
         await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode));
     }
+
+    // Dev-only "Refresh questions" (MainWindow's right-click): a smaller, faster call that only
+    // regenerates practice items, no walkthrough — same parsing discipline as the full generator.
+    private const string PracticeItemsOnlyResponse = """
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "emit_practice_items",
+                    "input": {
+                        "practiceItems": [
+                            { "prompt": "Refreshed Q1?", "choices": ["a", "b", "c", "d"], "correctIndex": 0, "explanation": "e1" },
+                            { "prompt": "Refreshed Q2?", "choices": ["a", "b", "c", "d"], "correctIndex": 3, "explanation": "e2" }
+                        ]
+                    }
+                }
+            ]
+        }
+        """;
+
+    [Fact]
+    public async Task RegeneratePracticeItemsAsync_ParsesCannedResponseIntoPracticeItems()
+    {
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(PracticeItemsOnlyResponse));
+        var generator = new Generator(client);
+
+        var items = await generator.RegeneratePracticeItemsAsync("csa", SampleNode);
+
+        Assert.Equal(2, items.Count);
+        Assert.Equal("u1.2-q1", items[0].Id); // assigned by us, not the model
+        Assert.Equal("u1.2", items[0].NodeId);
+        Assert.Equal("Refreshed Q1?", items[0].Prompt);
+        Assert.Equal("u1.2-q2", items[1].Id);
+        Assert.Equal(3, items[1].CorrectIndex);
+    }
+
+    [Fact]
+    public async Task RegeneratePracticeItemsAsync_MalformedToolInput_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_practice_items", "input": { "somethingElse": true } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAnyAsync<Exception>(() => generator.RegeneratePracticeItemsAsync("csa", SampleNode));
+    }
 }

@@ -35,6 +35,7 @@ public sealed class WorldHistoryCourseModule : ICourseModule
     public IStepProvider StepProvider { get; }
     public IContentSource Content { get; }
     public IAttemptGrader? Grader => null;
+    public string ContentDir { get; }
 
     /// contentDir defaults to "<app dir>/content/worldhistory" — where a human running
     /// `ApTutor.ContentFactory generate --course worldhistory ...` then `review` would produce
@@ -46,8 +47,8 @@ public sealed class WorldHistoryCourseModule : ICourseModule
     public WorldHistoryCourseModule(string dagJsonPath, string? contentDir = null)
     {
         Dag = SkillDagLoader.Load(dagJsonPath);
-        var dir = contentDir ?? Path.Combine(AppContext.BaseDirectory, "content", "worldhistory");
-        StepProvider = new AuthoredStepProvider(dir);
-        Content = new FileContentSource(dir);
+        ContentDir = contentDir ?? Path.Combine(AppContext.BaseDirectory, "content", "worldhistory");
+        StepProvider = new AuthoredStepProvider(ContentDir);
+        Content = new FileContentSource(ContentDir);
     }
 }

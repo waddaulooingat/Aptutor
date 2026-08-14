@@ -35,6 +35,11 @@
     <ProjectReference Include="..\ApTutor.Tracer.Csa\ApTutor.Tracer.Csa.csproj" />
     <ProjectReference Include="..\ApTutor.Narration\ApTutor.Narration.csproj" />
     <ProjectReference Include="..\ApTutor.Content\ApTutor.Content.csproj" />
+    <!-- Dev-only "Refresh questions" right-click (see MainWindow.axaml.cs): reuses
+         ApTutor.ContentFactory's ClaudeClient/Generator to regenerate a single node's practice
+         items live. Only reachable if ANTHROPIC_API_KEY/ANTHROPIC_MODEL are set — nothing calls
+         the API on its own, and no key ships with the app. -->
+    <ProjectReference Include="..\ApTutor.ContentFactory\ApTutor.ContentFactory.csproj" />
   </ItemGroup>
 
 </Project>

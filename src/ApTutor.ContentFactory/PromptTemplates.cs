@@ -5,10 +5,10 @@ namespace ApTutor.ContentFactory;
 public static class PromptTemplates
 {
     public static string System(string courseId) => $"""
-        You are an expert AP Computer Science A curriculum author working for a test-prep product
-        (course id: "{courseId}"). Everything you generate is ORIGINAL content — you must never
-        reproduce College Board question text, rubric text, or any other copyrighted exam material.
-        Write clear, correct, original content suitable for a paying high-school student.
+        You are an expert curriculum author working for a test-prep product (course id: "{courseId}").
+        Everything you generate is ORIGINAL content — you must never reproduce College Board question
+        text, rubric text, or any other copyrighted exam material. Write clear, correct, original
+        content suitable for a paying high-school student.
 
         Every animated walkthrough you emit is a sequence of scene-primitive operations from a
         FIXED vocabulary (described in the tool schema) — the same primitives the product's live
@@ -21,15 +21,29 @@ public static class PromptTemplates
     public static string ForNode(DagNode node) => $"""
         Generate practice items, an explanation, and an animated walkthrough for this curriculum node:
 
+        {NodeSummary(node)}
+
+        Assume the student has already mastered every listed prereq, but nothing beyond that. The
+        walkthrough should center on the "{node.Viz}" primitive named above and directly illustrate
+        this node's title.
+        """;
+
+    /// Dev-only "refresh questions" (see Generator.RegeneratePracticeItemsAsync): practice items
+    /// only, no walkthrough — a fast, cheap single-node regeneration, not the full content pack.
+    public static string PracticeItemsOnlyForNode(DagNode node) => $"""
+        Generate ONLY practice items (no walkthrough, no explanation text) for this curriculum node:
+
+        {NodeSummary(node)}
+
+        Assume the student has already mastered every listed prereq, but nothing beyond that.
+        """;
+
+    private static string NodeSummary(DagNode node) => $"""
         id: {node.Id}
         unit: {node.Unit}
         type: {node.Type}
         title: {node.Title}
         prereqs: {(node.Prereqs.Count == 0 ? "(none)" : string.Join(", ", node.Prereqs))}
         primary visualization: {node.Viz}
-
-        Assume the student has already mastered every listed prereq, but nothing beyond that. The
-        walkthrough should center on the "{node.Viz}" primitive named above and directly illustrate
-        this node's title.
         """;
 }

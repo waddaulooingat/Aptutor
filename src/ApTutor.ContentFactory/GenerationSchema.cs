@@ -20,34 +20,7 @@ public static class GenerationSchema
                 ["description"] = "A short (2-4 sentence) original explanation of the concept, " +
                                    "written for a high-school AP CS A student. Plain prose, no markdown.",
             },
-            ["practiceItems"] = new JsonObject
-            {
-                ["type"] = "array",
-                ["minItems"] = 2,
-                ["maxItems"] = 3,
-                ["items"] = new JsonObject
-                {
-                    ["type"] = "object",
-                    ["required"] = new JsonArray { "prompt", "choices", "correctIndex", "explanation" },
-                    ["properties"] = new JsonObject
-                    {
-                        ["prompt"] = new JsonObject { ["type"] = "string" },
-                        ["choices"] = new JsonObject
-                        {
-                            ["type"] = "array",
-                            ["minItems"] = 4,
-                            ["maxItems"] = 4,
-                            ["items"] = new JsonObject { ["type"] = "string" },
-                        },
-                        ["correctIndex"] = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 3 },
-                        ["explanation"] = new JsonObject
-                        {
-                            ["type"] = "string",
-                            ["description"] = "Why the correct choice is right AND why at least one distractor is wrong.",
-                        },
-                    },
-                },
-            },
+            ["practiceItems"] = PracticeItemsArraySchema(),
             ["walkthroughSteps"] = new JsonObject
             {
                 ["type"] = "array",
@@ -69,6 +42,45 @@ public static class GenerationSchema
                         ["sourceLine"] = new JsonObject { ["type"] = new JsonArray { "integer", "null" } },
                         ["ops"] = new JsonObject { ["type"] = "array", ["items"] = SceneOpSchema() },
                     },
+                },
+            },
+        },
+    };
+
+    /// Dev-only "refresh questions" (see Generator.RegeneratePracticeItemsAsync): just the
+    /// practiceItems shape, no walkthrough — a single node's questions regenerate in one small,
+    /// cheap call instead of the full node content pack.
+    public static JsonNode PracticeItemsOnlySchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["required"] = new JsonArray { "practiceItems" },
+        ["properties"] = new JsonObject { ["practiceItems"] = PracticeItemsArraySchema() },
+    };
+
+    private static JsonNode PracticeItemsArraySchema() => new JsonObject
+    {
+        ["type"] = "array",
+        ["minItems"] = 2,
+        ["maxItems"] = 3,
+        ["items"] = new JsonObject
+        {
+            ["type"] = "object",
+            ["required"] = new JsonArray { "prompt", "choices", "correctIndex", "explanation" },
+            ["properties"] = new JsonObject
+            {
+                ["prompt"] = new JsonObject { ["type"] = "string" },
+                ["choices"] = new JsonObject
+                {
+                    ["type"] = "array",
+                    ["minItems"] = 4,
+                    ["maxItems"] = 4,
+                    ["items"] = new JsonObject { ["type"] = "string" },
+                },
+                ["correctIndex"] = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 3 },
+                ["explanation"] = new JsonObject
+                {
+                    ["type"] = "string",
+                    ["description"] = "Why the correct choice is right AND why at least one distractor is wrong.",
                 },
             },
         },

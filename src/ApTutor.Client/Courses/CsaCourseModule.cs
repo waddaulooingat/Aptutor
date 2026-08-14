@@ -22,6 +22,7 @@ public sealed class CsaCourseModule : ICourseModule
     public IStepProvider StepProvider { get; }
     public IContentSource Content { get; }
     public IAttemptGrader? Grader => null;
+    public string ContentDir { get; }
 
     /// contentDir defaults to "<app dir>/content/csa" — where a human running
     /// `ApTutor.ContentFactory generate --course csa ...` then `review` would produce verified
@@ -29,9 +30,9 @@ public sealed class CsaCourseModule : ICourseModule
     public CsaCourseModule(string dagJsonPath, string? contentDir = null)
     {
         Dag = SkillDagLoader.Load(dagJsonPath);
-        var dir = contentDir ?? Path.Combine(AppContext.BaseDirectory, "content", "csa");
-        StepProvider = new TracerStepProvider(dir);
-        Content = new CompositeContentSource(new FixtureContentSource(), new FileContentSource(dir));
+        ContentDir = contentDir ?? Path.Combine(AppContext.BaseDirectory, "content", "csa");
+        StepProvider = new TracerStepProvider(ContentDir);
+        Content = new CompositeContentSource(new FixtureContentSource(), new FileContentSource(ContentDir));
     }
 }
 

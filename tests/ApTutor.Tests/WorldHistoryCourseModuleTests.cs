@@ -56,4 +56,13 @@ public class WorldHistoryCourseModuleTests
 
         Assert.Empty(items);
     }
+
+    [Fact]
+    public void ContentDir_MatchesWhatWasPassedIn()
+    {
+        var dir = Path.Combine(Path.GetTempPath(), "aptutor-wh-contentdir-test-" + Guid.NewGuid());
+        var module = NewModule(dir);
+
+        Assert.Equal(dir, module.ContentDir);
+    }
 }

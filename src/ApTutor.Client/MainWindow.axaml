@@ -26,7 +26,15 @@
       <TreeView Name="UnitTree" Grid.Column="0" SelectionChanged="OnTreeSelectionChanged">
         <TreeView.ItemTemplate>
           <TreeDataTemplate DataType="local:ITreeItem" ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Display}" Foreground="{Binding Foreground}" />
+            <TextBlock Text="{Binding Display}" Foreground="{Binding Foreground}">
+              <TextBlock.ContextMenu>
+                <ContextMenu>
+                  <!-- Tag binds explicitly to the row's data item (UnitGroupVm or NodeItemVm) —
+                       the handler no-ops for anything that isn't a NodeItemVm, e.g. a unit header. -->
+                  <MenuItem Header="Refresh questions (dev)" Click="OnRefreshQuestionsClick" Tag="{Binding}" />
+                </ContextMenu>
+              </TextBlock.ContextMenu>
+            </TextBlock>
           </TreeDataTemplate>
         </TreeView.ItemTemplate>
       </TreeView>

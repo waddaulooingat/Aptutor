@@ -32,6 +32,13 @@ public interface ICourseModule
     IStepProvider StepProvider { get; }   // turns a lesson/example into VisualStep[]
     IContentSource Content { get; }       // verified item bank + authored walkthroughs
     IAttemptGrader? Grader { get; }       // optional rubric-based grading (FRQ-style)
+
+    /// Where this course's content packs live on disk (what ApTutor.ContentFactory writes to and
+    /// Content/StepProvider read from). Every current module is file-content-dir-based, so this
+    /// lives on the shared contract rather than requiring a cast — needed by dev-only tooling that
+    /// writes fresh (unverified) packs directly, bypassing the verified-only Content/StepProvider
+    /// reading path on purpose.
+    string ContentDir { get; }
 }
 
 /// Produces the step stream for a node's example.

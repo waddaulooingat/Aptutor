@@ -1,6 +1,9 @@
 using ApTutor.Client.Courses;
+using ApTutor.Content;
+using ApTutor.ContentFactory;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
+using ApTutor.Scene;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
@@ -177,6 +180,26 @@ public partial class MainWindow : Window
             Foreground = walkthroughText is null ? Brushes.Gray : Brushes.Black,
         });
 
+        // Dev-only "Refresh questions" (see OnRefreshQuestionsClick) writes a fresh, Verified: false
+        // pack straight to disk, bypassing the normal verified-only Content.GetPracticeItems path on
+        // purpose — peek at the raw pack here so a refresh is actually visible, clearly labeled as
+        // unreviewed rather than silently invisible until someone runs the review CLI.
+        var rawPack = ContentPackStore.TryLoad(_course.ContentDir, node.Id);
+        if (rawPack is { Verified: false })
+        {
+            ContentPanel.Children.Add(new TextBlock
+            {
+                Text = $"⚠ AI-generated, unverified (refreshed {rawPack.GeneratedAt:g}) — double-check before trusting. Run 'review' to approve.",
+                TextWrapping = TextWrapping.Wrap,
+                FontWeight = FontWeight.SemiBold,
+                Foreground = Brushes.DarkOrange,
+                Margin = new Thickness(0, 8, 0, 0),
+            });
+            foreach (var item in rawPack.PracticeItems)
+                ContentPanel.Children.Add(BuildPracticeItemBlock(item));
+            return;
+        }
+
         var items = _course.Content.GetPracticeItems(node.Id);
         if (items.Count == 0)
         {
@@ -192,6 +215,54 @@ public partial class MainWindow : Window
 
         foreach (var item in items)
             ContentPanel.Children.Add(BuildPracticeItemBlock(item));
+    }
+
+    /// Dev-only: right-click a node -> regenerate JUST its practice items live via Claude, saved as
+    /// an unverified pack (see RefreshContent's warning banner). Never touches Mock Exam's
+    /// verified-only serving path — a refreshed-but-unreviewed item is only ever visible here in
+    /// the detail pane, clearly labeled, until a human runs `review` and approves it.
+    private async void OnRefreshQuestionsClick(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: NodeItemVm vm }) return;
+        var node = vm.Node;
+
+        _selectedNode = node;
+        RefreshDetail();
+
+        var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        var model = Environment.GetEnvironmentVariable("ANTHROPIC_MODEL");
+        if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
+        {
+            ShowContentMessage("⚠ Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL to use Refresh questions (dev-only).", Brushes.DarkOrange);
+            return;
+        }
+
+        ShowContentMessage($"⏳ Refreshing questions for {node.Id} via Claude ({model})...", Brushes.Gray);
+
+        try
+        {
+            var generator = new Generator(new ClaudeClient(apiKey, model));
+            var newItems = await generator.RegeneratePracticeItemsAsync(_course.CourseId, node);
+
+            var existing = ContentPackStore.TryLoad(_course.ContentDir, node.Id);
+            var pack = existing is { } e2
+                ? e2 with { PracticeItems = newItems, Verified = false, GeneratedAt = DateTimeOffset.UtcNow, Model = model }
+                : new NodeContentPack(_course.CourseId, node.Id, "generated", "", newItems, Array.Empty<VisualStep>(), false, DateTimeOffset.UtcNow, model);
+
+            ContentPackStore.Save(_course.ContentDir, pack);
+
+            if (_selectedNode?.Id == node.Id) RefreshDetail();
+        }
+        catch (Exception ex)
+        {
+            ShowContentMessage($"⚠ Refresh failed: {ex.Message}", Brushes.DarkRed);
+        }
+    }
+
+    private void ShowContentMessage(string text, IBrush color)
+    {
+        ContentPanel.Children.Clear();
+        ContentPanel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = color });
     }
 
     /// Practice items used to render with the correct choice already marked (✓) — fine for the

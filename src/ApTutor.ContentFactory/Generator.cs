@@ -12,6 +12,7 @@ public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<string> 
 public sealed record GeneratedStep(string Caption, int? SourceLine, IReadOnlyList<SceneOp> Ops);
 public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
+public sealed record GeneratedPracticeItemsOnly(IReadOnlyList<GeneratedPracticeItem> PracticeItems);
 
 public sealed class Generator
 {
@@ -52,5 +53,25 @@ public sealed class Generator
             Verified: false,
             GeneratedAt: DateTimeOffset.UtcNow,
             Model: _client.Model);
+    }
+
+    /// Dev-only "refresh questions" (right-click a node in the shell): regenerates JUST that node's
+    /// practice items — cheaper and faster than a full GenerateAsync when all you want is a fresh
+    /// question bank, and it deliberately doesn't touch any existing walkthrough text/steps. Always
+    /// unverified — the caller (MainWindow) saves it with Verified: false and a clear warning; this
+    /// never writes into the same trusted path `review` approves without a human looking at it.
+    public async Task<IReadOnlyList<PracticeItem>> RegeneratePracticeItemsAsync(string courseId, DagNode node, CancellationToken ct = default)
+    {
+        var schema = GenerationSchema.PracticeItemsOnlySchema();
+        var system = PromptTemplates.System(courseId);
+        var user = PromptTemplates.PracticeItemsOnlyForNode(node);
+
+        var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_practice_items", ct);
+        var generated = JsonSerializer.Deserialize<GeneratedPracticeItemsOnly>(inputJson.GetRawText(), ParseOptions)
+            ?? throw new InvalidOperationException($"Claude returned an empty/unparsable practice-items block for node '{node.Id}'.");
+
+        return generated.PracticeItems
+            .Select((item, i) => new PracticeItem($"{node.Id}-q{i + 1}", node.Id, item.Prompt, item.Choices, item.CorrectIndex, item.Explanation))
+            .ToList();
     }
 }
