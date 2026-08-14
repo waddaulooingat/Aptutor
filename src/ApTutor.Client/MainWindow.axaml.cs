@@ -54,7 +54,7 @@ public partial class MainWindow : Window
         _mastery = LoadMasteryFor(course);
         _nodeVms.Clear();
         _selectedNode = null;
-        Title = $"ApTutor — {course.DisplayName}";
+        Title = $"Tutor AI — {course.DisplayName}";
 
         BuildTree();
         UpdateActionButtonAvailability();

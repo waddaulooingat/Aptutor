@@ -3,7 +3,7 @@
         xmlns:local="using:ApTutor.Client"
         xmlns:platform="using:ApTutor.Platform"
         x:Class="ApTutor.Client.MainWindow"
-        Title="ApTutor"
+        Title="Tutor AI"
         Width="1100" Height="720">
   <Grid RowDefinitions="Auto,*" Margin="12">
 

@@ -8,6 +8,11 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>ApTutor.Client</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <!-- User-facing product name (Windows taskbar tooltip, file properties) — "Tutor AI", the
+         brand name. RootNamespace/project name stay ApTutor.* for now; that's a separate, larger
+         internal rename, deliberately not done in the same pass as this one. -->
+    <AssemblyTitle>Tutor AI</AssemblyTitle>
+    <Product>Tutor AI</Product>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
   </PropertyGroup>
 
