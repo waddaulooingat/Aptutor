@@ -18,8 +18,7 @@
       <TextBlock Text="Progress:" VerticalAlignment="Center" />
       <ProgressBar Name="MasteryProgressBar" Width="240" Minimum="0" Maximum="100" VerticalAlignment="Center" />
       <TextBlock Name="ProgressLabel" VerticalAlignment="Center" />
-      <Button Name="SceneDemoButton" Content="Reference vs. Value demo" Click="OnSceneDemoClick" Margin="24,0,0,0" />
-      <Button Name="MockExamButton" Content="Mock Exam" Click="OnMockExamClick" />
+      <Button Name="MockExamButton" Content="Mock Exam" Click="OnMockExamClick" Margin="24,0,0,0" />
     </StackPanel>
 
     <Grid Grid.Row="1" ColumnDefinitions="320,8,*">

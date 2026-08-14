@@ -69,13 +69,10 @@ public partial class MainWindow : Window
         return mastery;
     }
 
-    /// Not every course supports every action button yet: "Reference vs. Value demo" hardcodes
-    /// CS A's live-tracer node (u2.1), and MockExamSession throws if a course has zero practice
-    /// items anywhere (true for World History until someone runs ApTutor.ContentFactory for it) —
-    /// disable rather than let either crash on click.
+    /// MockExamSession throws if a course has zero practice items anywhere (true for World History
+    /// until someone runs ApTutor.ContentFactory for it) — disable rather than let it crash on click.
     private void UpdateActionButtonAvailability()
     {
-        SceneDemoButton.IsEnabled = _course.CourseId == "csa";
         MockExamButton.IsEnabled = _course.Dag.Dag.Nodes.Any(n => _course.Content.GetPracticeItems(n.Id).Count > 0);
     }
 
@@ -265,8 +262,6 @@ public partial class MainWindow : Window
         SaveProgress();
         RefreshAll();
     }
-
-    private void OnSceneDemoClick(object? sender, RoutedEventArgs e) => new SceneDemoWindow(_course).Show();
 
     private void OnMockExamClick(object? sender, RoutedEventArgs e) =>
         new MockExamWindow(_course, _mastery, () => { SaveProgress(); RefreshAll(); }).Show();
