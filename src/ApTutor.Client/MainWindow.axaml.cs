@@ -194,31 +194,58 @@ public partial class MainWindow : Window
         }
 
         foreach (var item in items)
+            ContentPanel.Children.Add(BuildPracticeItemBlock(item));
+    }
+
+    /// Practice items used to render with the correct choice already marked (✓) — fine for the
+    /// content factory's own review CLI, but this panel is user-facing, and showing the answer
+    /// before the student has even read the question defeats the entire point of a practice item.
+    /// Now: pick a choice, hit "Check answer", THEN see correct/incorrect + the explanation —
+    /// mirrors how MockExamWindow already withholds the answer until a question is submitted.
+    private static Control BuildPracticeItemBlock(PracticeItem item)
+    {
+        var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        container.Children.Add(new TextBlock
         {
-            var block = new StackPanel { Spacing = 2, Margin = new Thickness(0, 8, 0, 0) };
-            block.Children.Add(new TextBlock
+            Text = $"Q: {item.Prompt}",
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.SemiBold,
+        });
+
+        int? selected = null;
+        var radios = new List<RadioButton>();
+        for (var i = 0; i < item.Choices.Count; i++)
+        {
+            var choiceIndex = i;
+            var radio = new RadioButton { Content = item.Choices[i], GroupName = item.Id };
+            radio.IsCheckedChanged += (_, _) =>
             {
-                Text = $"Q: {item.Prompt}",
-                TextWrapping = TextWrapping.Wrap,
-                FontWeight = FontWeight.SemiBold,
-            });
-            for (var i = 0; i < item.Choices.Count; i++)
-            {
-                block.Children.Add(new TextBlock
-                {
-                    Text = $"{(i == item.CorrectIndex ? "✓" : " ")} {(char)('A' + i)}. {item.Choices[i]}",
-                    TextWrapping = TextWrapping.Wrap,
-                });
-            }
-            block.Children.Add(new TextBlock
-            {
-                Text = $"Explanation: {item.Explanation}",
-                TextWrapping = TextWrapping.Wrap,
-                FontStyle = FontStyle.Italic,
-                Foreground = Brushes.Gray,
-            });
-            ContentPanel.Children.Add(block);
+                if (radio.IsChecked == true) selected = choiceIndex;
+            };
+            radios.Add(radio);
+            container.Children.Add(radio);
         }
+
+        var resultText = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
+        var checkButton = new Button { Content = "Check answer" };
+        checkButton.Click += (_, _) =>
+        {
+            if (selected is not { } chosen) return;
+
+            foreach (var radio in radios) radio.IsEnabled = false;
+            checkButton.IsEnabled = false;
+
+            var correct = chosen == item.CorrectIndex;
+            resultText.Text = correct
+                ? $"✓ Correct! {item.Explanation}"
+                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {item.Choices[item.CorrectIndex]}\n{item.Explanation}";
+            resultText.Foreground = correct ? Brushes.DarkGreen : Brushes.DarkRed;
+            resultText.IsVisible = true;
+        };
+
+        container.Children.Add(checkButton);
+        container.Children.Add(resultText);
+        return container;
     }
 
     private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
