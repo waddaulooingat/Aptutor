@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ApTutor.ContentAdmin</RootNamespace>
+    <UserSecretsId>aptutor-contentadmin</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reuses the existing generation/content-pack code as-is rather than reimplementing it:
+         Curriculum for the node picker, Content for the shared pack format, ContentFactory for
+         ClaudeClient/Generator (already proven safe to call from a long-lived host process, not
+         just a CLI — ApTutor.Client's dev-only "Refresh questions" feature already does this). Not
+         referencing ApTutor.Client — this is Avalonia-free. -->
+    <ProjectReference Include="..\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
+    <ProjectReference Include="..\ApTutor.Content\ApTutor.Content.csproj" />
+    <ProjectReference Include="..\ApTutor.ContentFactory\ApTutor.ContentFactory.csproj" />
+  </ItemGroup>
+
+</Project>

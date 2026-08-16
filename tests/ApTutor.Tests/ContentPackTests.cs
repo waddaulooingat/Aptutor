@@ -61,6 +61,19 @@ public class ContentPackTests : IDisposable
     }
 
     [Fact]
+    public void LoadAll_SkipsMalformedFile_InsteadOfThrowing()
+    {
+        ContentPackStore.Save(_dir, SamplePack("u1.1", verified: true));
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(Path.Combine(_dir, "u9.9.json"), "{ not valid json");
+
+        var all = ContentPackStore.LoadAll(_dir);
+
+        Assert.Single(all);
+        Assert.Equal("u1.1", all[0].NodeId);
+    }
+
+    [Fact]
     public void Delete_RemovesTheFile()
     {
         ContentPackStore.Save(_dir, SamplePack("u1.1", verified: false));

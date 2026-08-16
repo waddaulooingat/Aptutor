@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@(ViewData["Title"] is string t ? $"{t} — Tutor AI Content Review" : "Tutor AI Content Review")</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+    <header class="topbar">
+        <a class="brand" href="/">Tutor AI — Content Review</a>
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <form method="post" action="/Account/Logout" class="logout-form">
+                <span class="who">@User.Identity!.Name</span>
+                <button type="submit" class="link-button">Log out</button>
+            </form>
+        }
+    </header>
+    <main>
+        @RenderBody()
+    </main>
+</body>
+</html>

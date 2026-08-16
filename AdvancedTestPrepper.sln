@@ -25,6 +25,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApTutor.Content", "src\ApTu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApTutor.ContentFactory", "src\ApTutor.ContentFactory\ApTutor.ContentFactory.csproj", "{9E928394-43F6-4421-8CD8-918A4EAC9107}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ApTutor.ContentAdmin", "src\ApTutor.ContentAdmin\ApTutor.ContentAdmin.csproj", "{343F9C51-4433-4EEB-9ECD-011FEC4DC325}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -143,6 +145,18 @@ Global
 		{9E928394-43F6-4421-8CD8-918A4EAC9107}.Release|x64.Build.0 = Release|Any CPU
 		{9E928394-43F6-4421-8CD8-918A4EAC9107}.Release|x86.ActiveCfg = Release|Any CPU
 		{9E928394-43F6-4421-8CD8-918A4EAC9107}.Release|x86.Build.0 = Release|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Debug|x64.Build.0 = Debug|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Debug|x86.Build.0 = Debug|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Release|Any CPU.Build.0 = Release|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Release|x64.ActiveCfg = Release|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Release|x64.Build.0 = Release|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Release|x86.ActiveCfg = Release|Any CPU
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -157,5 +171,6 @@ Global
 		{E6F6C04F-0870-4A14-899D-CA8D1F840FEA} = {9D9E09B9-DEE9-42CC-BA93-AB581D3EDCF4}
 		{1172A080-8E39-4F21-9529-75AAEB3A7B8F} = {9D9E09B9-DEE9-42CC-BA93-AB581D3EDCF4}
 		{9E928394-43F6-4421-8CD8-918A4EAC9107} = {9D9E09B9-DEE9-42CC-BA93-AB581D3EDCF4}
+		{343F9C51-4433-4EEB-9ECD-011FEC4DC325} = {9D9E09B9-DEE9-42CC-BA93-AB581D3EDCF4}
 	EndGlobalSection
 EndGlobal

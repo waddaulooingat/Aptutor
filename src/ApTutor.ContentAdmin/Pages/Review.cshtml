@@ -1,0 +1,90 @@
+@page
+@model ApTutor.ContentAdmin.Pages.ReviewModel
+@{
+    ViewData["Title"] = Model.NodeTitle;
+}
+
+<p><a href="/">&larr; Back to topics</a></p>
+<h1>@Model.NodeTitle</h1>
+<p class="notice">@Model.CourseDisplayName</p>
+
+@if (Model.Error is not null)
+{
+    <p class="error">@Model.Error</p>
+}
+@if (Model.Notice is not null)
+{
+    <p class="notice">@Model.Notice</p>
+}
+
+@if (Model.Pack is null)
+{
+    <div class="card">
+        <p>Nothing has been generated for this topic yet.</p>
+        <form method="post" asp-page-handler="Generate">
+            <input type="hidden" name="course" value="@Model.CourseId" />
+            <input type="hidden" name="node" value="@Model.NodeId" />
+            <button type="submit" class="btn-primary">Generate</button>
+        </form>
+    </div>
+}
+else if (Model.Pack.Verified)
+{
+    <div class="card">
+        <p><span class="badge badge-live">Live</span> This topic's content has been approved and is already in the app.</p>
+        <h2>Explanation</h2>
+        <p>@Model.Pack.WalkthroughText</p>
+    </div>
+}
+else
+{
+    <div class="card">
+        <p><span class="badge badge-pending">Pending review</span></p>
+        <h2>Explanation</h2>
+        <p>@Model.Pack.WalkthroughText</p>
+
+        <h2>Practice questions</h2>
+        @foreach (var item in Model.Pack.PracticeItems)
+        {
+            <div class="card">
+                <p><strong>@item.Prompt</strong></p>
+                @for (var i = 0; i < item.Choices.Count; i++)
+                {
+                    <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
+                        @(i == item.CorrectIndex ? "✓" : "—") @item.Choices[i]
+                    </p>
+                }
+                <p class="notice">@item.Explanation</p>
+            </div>
+        }
+
+        <div class="actions">
+            <form method="post" asp-page-handler="Approve">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <button type="submit" class="btn-approve">Approve</button>
+            </form>
+        </div>
+
+        <details style="margin-top: 16px;">
+            <summary>Reject this instead</summary>
+            <form method="post" asp-page-handler="Reject" style="margin-top: 10px;">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <label for="reason">Why are you rejecting this?</label>
+                <textarea id="reason" name="reason" rows="3" required></textarea>
+                <div class="actions">
+                    <button type="submit" class="btn-reject">Reject</button>
+                </div>
+            </form>
+        </details>
+
+        <div class="actions" style="margin-top: 16px;">
+            <form method="post" asp-page-handler="Generate">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <button type="submit">Generate a new attempt</button>
+            </form>
+        </div>
+    </div>
+}

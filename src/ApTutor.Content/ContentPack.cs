@@ -39,10 +39,16 @@ public static class ContentPackStore
             : null;
     }
 
+    /// Writes via a temp file + File.Move(overwrite:true) rather than a direct WriteAllText — a
+    /// crash mid-write (container OOM-kill, forced redeploy) must never leave a truncated JSON file
+    /// behind, since one corrupt file used to take down all of LoadAll (see below).
     public static void Save(string contentDir, NodeContentPack pack)
     {
         Directory.CreateDirectory(contentDir);
-        File.WriteAllText(PathFor(contentDir, pack.NodeId), JsonSerializer.Serialize(pack, JsonOptions));
+        var finalPath = PathFor(contentDir, pack.NodeId);
+        var tempPath = Path.Combine(contentDir, $".{pack.NodeId}.{Guid.NewGuid():N}.tmp");
+        File.WriteAllText(tempPath, JsonSerializer.Serialize(pack, JsonOptions));
+        File.Move(tempPath, finalPath, overwrite: true);
     }
 
     public static void Delete(string contentDir, string nodeId)
@@ -52,13 +58,25 @@ public static class ContentPackStore
     }
 
     /// All content packs in a directory, one per "<nodeId>.json" file — pending and verified alike;
-    /// callers (like Reviewer) filter on .Verified themselves.
+    /// callers (like Reviewer) filter on .Verified themselves. A single malformed file (partial
+    /// write, hand-edited JSON) is skipped rather than throwing, so it can't take down the entire
+    /// pending-review listing.
     public static IReadOnlyList<NodeContentPack> LoadAll(string contentDir)
     {
         if (!Directory.Exists(contentDir)) return Array.Empty<NodeContentPack>();
 
         return Directory.EnumerateFiles(contentDir, "*.json")
-            .Select(path => JsonSerializer.Deserialize<NodeContentPack>(File.ReadAllText(path), JsonOptions))
+            .Select(path =>
+            {
+                try
+                {
+                    return JsonSerializer.Deserialize<NodeContentPack>(File.ReadAllText(path), JsonOptions);
+                }
+                catch (JsonException)
+                {
+                    return null;
+                }
+            })
             .Where(pack => pack != null)
             .Select(pack => pack!)
             .OrderBy(pack => pack.NodeId, StringComparer.Ordinal)

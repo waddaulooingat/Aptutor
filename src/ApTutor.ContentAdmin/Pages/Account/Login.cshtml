@@ -1,0 +1,24 @@
+@page
+@model ApTutor.ContentAdmin.Pages.Account.LoginModel
+@{
+    ViewData["Title"] = "Sign in";
+}
+
+<div class="card" style="max-width: 360px; margin: 60px auto 0;">
+    <h1>Sign in</h1>
+    @if (Model.Error is not null)
+    {
+        <p class="error">@Model.Error</p>
+    }
+    <form method="post">
+        <label for="Username">Username</label>
+        <input type="text" id="Username" name="Username" autocomplete="username" required />
+
+        <label for="Password">Password</label>
+        <input type="password" id="Password" name="Password" autocomplete="current-password" required />
+
+        <div class="actions">
+            <button type="submit" class="btn-primary">Sign in</button>
+        </div>
+    </form>
+</div>
