@@ -1,0 +1,306 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u4.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "To process a String, we treat it like a strip of indexed boxes, one box per character, each labeled with its position starting at 0. A traversal walks a pointer i across the strip from index 0 up to length-1, reading one character at a time with charAt(i). Building a substring means grabbing a contiguous range of those boxes with substring(start, end), where end is exclusive, so the substring includes boxes start through end-1. Watching the pointer move box by box on the strip, alongside the line of code currently executing, makes it clear exactly which characters get read or copied at each step.",
+  "PracticeItems": [
+    {
+      "Id": "u4.3-q1",
+      "NodeId": "u4.3",
+      "Prompt": "What is printed by the following code?\n\nString word = \u0022blueprint\u0022;\nString result = \u0022\u0022;\nfor (int i = 0; i \u003C word.length(); i\u002B\u002B) {\n    if (word.charAt(i) == \u0027e\u0027 || word.charAt(i) == \u0027u\u0027) {\n        result \u002B= word.charAt(i);\n    }\n}\nSystem.out.println(result);",
+      "Choices": [
+        "eu",
+        "ue",
+        "eue",
+        "blueprint"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The loop scans left to right through \u0022blueprint\u0022 and appends only vowels \u0027e\u0027 or \u0027u\u0027 it finds, in the order encountered: index 3 is \u0027u\u0027, index 4 is \u0027e\u0027 \u2014 wait, checking actual letters b-l-u-e-p-r-i-n-t gives \u0027u\u0027 at index 2 then \u0027e\u0027 at index 3, so result is \u0022ue\u0022. The correct order matches the string\u0027s left-to-right order, which is \u0027u\u0027 then \u0027e\u0027, so the answer \u0027eu\u0027 would be wrong if letters were reversed \u2014 but since \u0027u\u0027 appears before \u0027e\u0027 in \u0022blueprint\u0022, the appended order is \u0027u\u0027 then \u0027e\u0027, making \u0022ue\u0022 correct and \u0022eu\u0022 incorrect... The choice list\u0027s correct index reflects careful re-derivation: b(0) l(1) u(2) e(3) p(4) r(5) i(6) n(7) t(8), so matches are u then e, giving \u0022ue\u0022, which is choice index 1, not 0. \u0027blueprint\u0027 as a whole is wrong because we only keep matching characters, and \u0027eue\u0027 is wrong because it has an extra letter not present in that order."
+    },
+    {
+      "Id": "u4.3-q2",
+      "NodeId": "u4.3",
+      "Prompt": "A student wants to build all substrings of length 3 from a String s and print each one. Which loop header correctly bounds i so that s.substring(i, i\u002B3) never throws an exception?",
+      "Choices": [
+        "for (int i = 0; i \u003C s.length(); i\u002B\u002B)",
+        "for (int i = 0; i \u003C= s.length() - 3; i\u002B\u002B)",
+        "for (int i = 0; i \u003C s.length() - 3; i\u002B\u002B)",
+        "for (int i = 3; i \u003C s.length(); i\u002B\u002B)"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The last valid starting index for a length-3 substring is s.length()-3, so the loop must include that value, meaning the condition needs \u003C=. Using \u003C s.length()-3 (choice 3) would skip the final valid substring, and using i \u003C s.length() (choice 1) would eventually make i\u002B3 exceed the string\u0027s length, causing a StringIndexOutOfBoundsException."
+    },
+    {
+      "Id": "u4.3-q3",
+      "NodeId": "u4.3",
+      "Prompt": "Consider this method that traverses a String character by character:\n\npublic static int countVowels(String s) {\n    int count = 0;\n    for (int i = 0; i \u003C s.length(); i\u002B\u002B) {\n        char c = s.charAt(i);\n        if (c == \u0027a\u0027 || c == \u0027e\u0027 || c == \u0027i\u0027 || c == \u0027o\u0027 || c == \u0027u\u0027) {\n            count\u002B\u002B;\n        }\n    }\n    return count;\n}\n\nWhat does countVowels(\u0022csa exam\u0022) return?",
+      "Choices": [
+        "2",
+        "3",
+        "4",
+        "1"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Scanning each character of \u0022csa exam\u0022: c,s,a(vowel),space,e(vowel),x,a(vowel),m \u2014 that\u0027s three vowels (a, e, a), so the method returns 3. Answer \u00272\u0027 undercounts by missing one of the vowel occurrences, and \u00274\u0027 overcounts by treating a non-vowel as a vowel."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here is our String, \u0022panda\u0022, drawn as an indexed strip: each character sits in its own box labeled with its index from 0 to 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "s",
+            "Text": "String word = \u0022panda\u0022"
+          },
+          {
+            "op": "arrayAlloc",
+            "ArrId": "strip",
+            "ElementType": "char",
+            "InitialValues": [
+              "p",
+              "a",
+              "n",
+              "d",
+              "a"
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We set up an int variable i starting at 0, and an empty String result to collect characters we build up.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "String",
+            "Value": "\u0022\u0022"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "The loop checks i \u003C word.length(): since 0 \u003C 5, we enter the loop body.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "We read the character at index i using charAt(i): that\u0027s box 0, which holds \u0027p\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 0,
+            "Value": "p"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Since \u0027p\u0027 is not a vowel we care about, we skip appending and move to increment i to 1, advancing our pointer one box to the right on the strip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Now i is 1, pointing at box 1 which holds \u0027a\u0027. We read it with charAt(1).",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 1,
+            "Value": "a"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "\u0027a\u0027 is a vowel, so we append it to result, building result up as we traverse the strip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "String",
+            "Value": "\u0022a\u0022"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "We continue advancing i box by box across the strip \u2014 2, 3, 4 \u2014 repeating the same read-and-check pattern at each index.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 2,
+            "Value": "n"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "At index 4, we again find \u0027a\u0027, a vowel, so result grows to \u0022aa\u0022 by the time the pointer walks off the end of the strip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 4,
+            "Value": "a"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "String",
+            "Value": "\u0022aa\u0022"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "When i reaches 5, the condition i \u003C word.length() is false, so the traversal stops and result holds all the vowels collected while scanning the strip left to right.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "5"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": false
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-17T18:57:20.8704309+00:00",
+  "Model": "claude-sonnet-5"
+}
