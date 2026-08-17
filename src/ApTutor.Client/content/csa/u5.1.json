@@ -1,0 +1,240 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.1",
+  "ExampleId": "generated",
+  "WalkthroughText": "A class is a blueprint with three main parts: fields (variables that hold an object\u0027s data), a constructor (a special block that runs once when \u0027new\u0027 creates an object, setting up its initial field values), and methods (blocks of code that define what an object can do, which you can call again and again). When you write \u0027new ClassName(...)\u0027, Java allocates a new object on the heap, runs the constructor to fill in the fields, and hands you back a reference to that object. Methods later read or change those same fields. Keeping these three roles straight \u2014 fields store, constructors initialize, methods act \u2014 is the key to understanding any class.",
+  "PracticeItems": [
+    {
+      "Id": "u5.1-q1",
+      "NodeId": "u5.1",
+      "Prompt": "A class is defined as follows:\n\npublic class Dog {\n    private String name;\n    private int age;\n\n    public Dog(String name, int age) {\n        this.name = name;\n        this.age = age;\n    }\n\n    public void birthday() {\n        age\u002B\u002B;\n    }\n}\n\nWhat are the fields of class Dog?",
+      "Choices": [
+        "name and age",
+        "Dog and birthday",
+        "name, age, and Dog()",
+        "birthday() only"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Fields are the instance variables declared inside the class body that store an object\u0027s state \u2014 here that is name and age. Dog is the class name, birthday() is a method, and Dog(...) is the constructor, none of which are fields."
+    },
+    {
+      "Id": "u5.1-q2",
+      "NodeId": "u5.1",
+      "Prompt": "Which statement correctly distinguishes a constructor from a method?",
+      "Choices": [
+        "A constructor has no return type (not even void) and its name matches the class name; it runs when an object is created with \u0027new\u0027. A method always has a return type and can be called any time on an existing object.",
+        "A constructor and a method are identical except a constructor must be private.",
+        "A method can only be called once per object, while a constructor can be called many times.",
+        "A constructor returns an int representing the object\u0027s memory address; a method never returns anything."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Constructors initialize a newly created object and are invoked only via \u0027new\u0027; they omit a return type entirely and share the class\u0027s name. Methods, by contrast, always specify a return type (including void) and can be invoked repeatedly on existing objects. The other options invent false rules about privacy, call limits, or return values."
+    },
+    {
+      "Id": "u5.1-q3",
+      "NodeId": "u5.1",
+      "Prompt": "Given this class:\n\npublic class Circle {\n    private double radius;\n\n    public Circle(double r) {\n        radius = r;\n    }\n\n    public double getArea() {\n        return Math.PI * radius * radius;\n    }\n}\n\nAfter executing:\nCircle c = new Circle(2.0);\n\nWhich best describes what exists in memory?",
+      "Choices": [
+        "A heap object of type Circle with a field radius storing 2.0, and a reference variable c on the stack pointing to that object.",
+        "Two separate variables, c and radius, both stored directly on the stack.",
+        "A heap object named c with no fields until getArea() is called.",
+        "The constructor Circle(double r) is stored as a field inside the object."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The \u0027new Circle(2.0)\u0027 call allocates a new object on the heap whose radius field is set to 2.0 by the constructor; the variable c is a reference stored in the stack frame pointing to that heap object. Constructors are not stored as fields, and radius is not a separate stack variable \u2014 it lives inside the object."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here is a simple class, Dog, with two fields (name and age), a constructor, and a method called birthday(). Let\u0027s watch what happens when we run \u0027Dog d = new Dog(\u0022Rex\u0022, 3);\u0027",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, Java sees \u0027new Dog(...)\u0027 and allocates a brand-new object on the heap. Right now its fields exist but aren\u0027t set yet.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "d1",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "null"
+              },
+              {
+                "Key": "age",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "A stack frame is pushed for main, and a reference variable d is created \u2014 but it doesn\u0027t point anywhere yet.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d",
+            "Type": "Dog",
+            "Value": "null"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now the constructor Dog(String name, int age) runs, using the arguments \u0022Rex\u0022 and 3 to initialize the new object\u0027s fields.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "ctor",
+            "MethodSig": "Dog(String name, int age)"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Inside the constructor, \u0027this.name = name;\u0027 sets the object\u0027s name field to \u0022Rex\u0022.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "d1",
+            "Field": "name",
+            "Value": "\u0022Rex\u0022"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 6
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Then \u0027this.age = age;\u0027 sets the object\u0027s age field to 3. The object\u0027s state is now fully initialized.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "d1",
+            "Field": "age",
+            "Value": "3"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 7
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "The constructor finishes and its frame is popped \u2014 construction is done.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "ctor"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Back in main, the reference variable d is now pointed at the newly built heap object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "d",
+            "TargetObjId": "d1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Now suppose we call d.birthday(). A new frame is pushed for that method call, using the object\u0027s own fields.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "birthday",
+            "MethodSig": "birthday()"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 10
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "Inside birthday(), \u0027age\u002B\u002B;\u0027 modifies the SAME object\u0027s age field directly on the heap, changing it from 3 to 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "d1",
+            "Field": "age",
+            "Value": "4"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 10,
+      "Caption": "The method finishes and its frame pops. Notice: fields stored the data, the constructor set it up once, and the method changed it afterward \u2014 that\u0027s the anatomy of a class.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "birthday"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:22:42.3303699+00:00",
+  "Model": "claude-sonnet-5"
+}

@@ -1,0 +1,249 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.9",
+  "ExampleId": "generated",
+  "WalkthroughText": "When a constructor or method parameter has the same name as an instance field, Java lets the parameter \u0022shadow\u0022 the field inside that method\u0027s body \u2014 meaning a plain reference to that name refers to the local parameter, not the field. The keyword this refers to the current object itself, so this.fieldName always reaches into the object\u0027s own memory to get or set that field, no matter what local variables are named. Writing this.name = name; explicitly says \u0022take the parameter named name and store it into the field named name that belongs to this very object.\u0022 Without this, a line like name = name; just reassigns the parameter to itself and the field never changes, silently leaving it at its default value.",
+  "PracticeItems": [
+    {
+      "Id": "u5.9-q1",
+      "NodeId": "u5.9",
+      "Prompt": "Consider this constructor:\n\npublic class Dog {\n    private String name;\n    private int age;\n\n    public Dog(String name, int age) {\n        name = name;\n        age = age;\n    }\n}\n\nIf a Dog is constructed with new Dog(\u0022Rex\u0022, 3), what will the name and age fields of that Dog object be after construction?",
+      "Choices": [
+        "name is \u0022Rex\u0022 and age is 3",
+        "name is null and age is 0",
+        "name is \u0022Rex\u0022 and age is 0",
+        "This will not compile"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Inside the constructor, the statements name = name; and age = age; assign the parameter to itself (the parameter name shadows the field), so the instance fields are never touched. They keep their default values: null for the String field and 0 for the int field. The fix is to use this.name = name; and this.age = age;."
+    },
+    {
+      "Id": "u5.9-q2",
+      "NodeId": "u5.9",
+      "Prompt": "Which line correctly uses the this keyword to assign a constructor parameter to an instance field of the same name?",
+      "Choices": [
+        "this.radius = radius;",
+        "radius.this = radius;",
+        "this = radius;",
+        "radius = this.radius;"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "this.radius refers to the instance field belonging to the current object, so this.radius = radius; stores the parameter\u0027s value into that field. The other options either have invalid syntax (this cannot be reassigned or placed after a dot on the left of an object) or copy the field\u0027s old value into the parameter instead of the reverse."
+    },
+    {
+      "Id": "u5.9-q3",
+      "NodeId": "u5.9",
+      "Prompt": "public class Point {\n    private int x;\n    private int y;\n\n    public Point(int x, int y) {\n        this.x = x;\n        this.y = y;\n    }\n\n    public void shiftX(int x) {\n        this.x = this.x \u002B x;\n    }\n}\n\nA Point object p is created with new Point(5, 10), then p.shiftX(3) is called. What is the value of p\u0027s x field afterward?",
+      "Choices": [
+        "8",
+        "3",
+        "5",
+        "This will not compile because x is used twice"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Inside shiftX, this.x refers to the field (currently 5), and x (no this) refers to the parameter (3). this.x = this.x \u002B x; computes 5 \u002B 3 = 8 and stores it back into the field, so p\u0027s x becomes 8. It compiles fine since this.x and x clearly refer to different variables."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s trace a Dog constructor: public Dog(String name, int age) { this.name = name; this.age = age; } \u2014 first we call new Dog(\u0022Rex\u0022, 3).",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Java allocates a new Dog object on the heap. Its fields name and age start at their default values, null and 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog1",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "null"
+              },
+              {
+                "Key": "age",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "A new stack frame is pushed for the Dog constructor. Its parameters, name and age, are separate local variables holding the values we passed in: \u0022Rex\u0022 and 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "Dog_ctor",
+            "MethodSig": "Dog(String name, int age)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "Dog_ctor",
+            "Name": "name",
+            "Type": "String",
+            "Value": "\u0022Rex\u0022"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "Dog_ctor",
+            "Name": "age",
+            "Type": "int",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Inside the constructor, this is a hidden reference variable that points to the exact object being built \u2014 our new Dog on the heap. Let\u0027s draw that arrow.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "Dog_ctor",
+            "Name": "this",
+            "Type": "Dog",
+            "Value": "ref"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "Dog_ctor",
+            "VarName": "this",
+            "TargetObjId": "dog1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Now we execute this.name = name; The left side, this.name, follows the this arrow to the heap object and targets its name field. The right side, name, is the local parameter, \u0022Rex\u0022.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "Dog_ctor",
+            "Name": "name"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "this.name"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "The parameter\u0027s value, \u0022Rex\u0022, travels along the this arrow into the object\u0027s field, overwriting the default null.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "\u0022Rex\u0022"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "name",
+            "Value": "\u0022Rex\u0022"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Next, this.age = age; works the same way: this.age follows the this arrow to the field on the heap object, and age is the local parameter holding 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "Dog_ctor",
+            "Name": "age"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "this.age"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "The value 3 flows along the this arrow and is stored into the object\u0027s age field, replacing the default 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "3"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "age",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "The constructor finishes and its frame is popped, but the this arrow did its job: the heap object now correctly holds name \u0022Rex\u0022 and age 3, distinct from the local parameters that vanish with the frame.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "Dog_ctor"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "myDog",
+            "TargetObjId": "dog1"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:25:38.6799016+00:00",
+  "Model": "claude-sonnet-5"
+}

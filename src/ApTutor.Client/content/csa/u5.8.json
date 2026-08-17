@@ -1,0 +1,188 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.8",
+  "ExampleId": "generated",
+  "WalkthroughText": "Every method call gets its own stack frame \u2014 a little box holding that method\u0027s local variables and parameters, which exist only while the call is running. Objects, by contrast, live on the heap and hold their instance variables for as long as the object exists, visible across many method calls. When a local variable and an instance variable share the same name, the local variable \u0022shadows\u0022 the instance variable inside that method \u2014 plain use of the name refers to the local one, and you need this.name to reach the field. Access modifiers like private and public control which code outside the class is even allowed to reach an instance variable directly, while scope rules control which code can see a variable at all.",
+  "PracticeItems": [
+    {
+      "Id": "u5.8-q1",
+      "NodeId": "u5.8",
+      "Prompt": "A class Dog has a private instance variable named age and a method setAge(int age) that takes a parameter also named age. Inside setAge, the statement age = age; is written, intending to set the instance variable to the parameter\u0027s value. What actually happens?",
+      "Choices": [
+        "The instance variable age is correctly updated to the parameter\u0027s value because Java always favors instance variables in assignment.",
+        "A compile-time error occurs because you cannot have two variables with the same name.",
+        "The local parameter age is assigned to itself; the instance variable age is unchanged, because the local variable shadows the instance variable inside the method.",
+        "The instance variable age is updated, but only during the first call to setAge."
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Inside the method body, the bare name age refers to the local parameter (it shadows the field of the same name). The statement age = age; just assigns the parameter to itself and never touches the object\u0027s field. To fix it you\u0027d write this.age = age;. The \u0027compile-time error\u0027 choice is wrong \u2014 shadowing is legal Java, not an error."
+    },
+    {
+      "Id": "u5.8-q2",
+      "NodeId": "u5.8",
+      "Prompt": "Which variable\u0027s scope is limited to the single method in which it is declared, disappearing from the stack frame the moment that method call returns?",
+      "Choices": [
+        "A public instance variable",
+        "A private instance variable",
+        "A local variable declared inside a method",
+        "A static class variable"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Local variables live only inside the stack frame of the method call that declares them; when the method returns, its frame is popped and the local variable is gone. Instance variables (public or private) live on the heap inside the object as long as the object exists, and static variables belong to the class itself, not any one method call."
+    },
+    {
+      "Id": "u5.8-q3",
+      "NodeId": "u5.8",
+      "Prompt": "A class Account declares \u0060private double balance;\u0060. Outside code in another class writes \u0060Account a = new Account(); a.balance = 500;\u0060. What happens when this code is compiled?",
+      "Choices": [
+        "It compiles and runs fine because balance is still stored on the heap and any object can reach it.",
+        "It fails to compile because balance is private, so it can only be accessed directly from inside the Account class itself.",
+        "It compiles but throws a runtime exception when the program runs.",
+        "It compiles because private only restricts access from other packages, not other classes in the same package."
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "private members are accessible only within the class that declares them, regardless of package. External code must use a public method (like a setter) to change balance, so this line fails to compile. It\u0027s a compile-time error, not a runtime one, and package location doesn\u0027t change private\u0027s restriction."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a Dog object already on the heap, with a private instance variable age currently set to 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "dogObj",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "age (private)",
+                "Value": "3"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Now we call dog.setAge(7). This pushes a new stack frame for the setAge method call.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "setAgeFrame",
+            "MethodSig": "setAge(int age)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "The parameter age is a local variable that lives only in this stack frame, and it\u0027s set to 7.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "setAgeFrame",
+            "Name": "age (local param)",
+            "Type": "int",
+            "Value": "7"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Inside the method, the code reads age = age;  Since the local parameter shadows the instance variable, plain \u0027age\u0027 refers to the local one, so this just assigns 7 to itself.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "setAgeFrame",
+            "Name": "age (local param)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Notice the heap object\u0027s age field is untouched \u2014 it\u0027s still 3, because the shadowed local variable never reached the instance variable.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "dogObj",
+            "Field": "age (private)",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "To actually update the instance variable, the method must use this.age = age; \u2014 \u0027this\u0027 explicitly points to the heap object, bypassing the local shadow.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "refSet",
+            "FrameId": "setAgeFrame",
+            "VarName": "this",
+            "TargetObjId": "dogObj"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dogObj",
+            "Field": "age (private)",
+            "Value": "7"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Now setAge returns. Its stack frame \u2014 and the local variable age inside it \u2014 disappears completely.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "setAgeFrame"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "But the heap object survives with age now updated to 7, because instance variables live on the heap for as long as the object exists \u2014 outlasting any single method call.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "dogObj",
+            "Field": "age (private)",
+            "Value": "7"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:25:15.4945895+00:00",
+  "Model": "claude-sonnet-5"
+}

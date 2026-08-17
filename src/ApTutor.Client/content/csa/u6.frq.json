@@ -1,0 +1,354 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u6.frq",
+  "ExampleId": "generated",
+  "WalkthroughText": "Writing an array-processing FRQ response means translating a written specification into code that a rubric will check line by line. Graders typically award points for things like correctly initializing a variable, using proper loop bounds that never go out of range, applying the right condition or update inside the loop, and returning or storing the correct final result. As you trace through your own method, picture the array as a strip of labeled boxes, your loop variable living in the stack frame, and the currently executing line highlighted \u2014 this helps you catch off-by-one errors and confirm each rubric point before you ever submit the response.",
+  "PracticeItems": [
+    {
+      "Id": "u6.frq-q1",
+      "NodeId": "u6.frq",
+      "Prompt": "A method countPositives(int[] nums) should return the number of elements in nums that are greater than 0. Which implementation correctly satisfies this specification and would earn full rubric credit for logic and return value?",
+      "Choices": [
+        "int count = 0;\nfor (int i = 0; i \u003C nums.length; i\u002B\u002B) {\n    if (nums[i] \u003E 0) {\n        count\u002B\u002B;\n    }\n}\nreturn count;",
+        "int count = 0;\nfor (int i = 0; i \u003C= nums.length; i\u002B\u002B) {\n    if (nums[i] \u003E 0) {\n        count\u002B\u002B;\n    }\n}\nreturn count;",
+        "int count = 0;\nfor (int i = 0; i \u003C nums.length; i\u002B\u002B) {\n    if (nums[i] \u003E 0) {\n        count = 1;\n    }\n}\nreturn count;",
+        "int count = 0;\nfor (int i = 0; i \u003C nums.length; i\u002B\u002B) {\n    count\u002B\u002B;\n}\nreturn count;"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The first choice correctly initializes count to 0, uses the proper bound i \u003C nums.length (avoiding ArrayIndexOutOfBoundsException), and increments count only when an element is positive. The second choice uses i \u003C= nums.length, which causes an out-of-bounds access on the last iteration \u2014 a common rubric-losing error. The third choice sets count = 1 instead of incrementing, so it never counts more than one positive value. The fourth choice counts every element regardless of value, ignoring the condition entirely."
+    },
+    {
+      "Id": "u6.frq-q2",
+      "NodeId": "u6.frq",
+      "Prompt": "You are writing a method shiftLeft(int[] arr) that should move every element one position to the left, discarding the first element and placing 0 in the last slot (e.g., [3,5,8,2] becomes [5,8,2,0]). A student writes this loop: for (int i = 0; i \u003C arr.length - 1; i\u002B\u002B) { arr[i] = arr[i \u002B 1]; } arr[arr.length - 1] = 0; On a rubric that awards points for \u0027correct use of array traversal without index errors\u0027 and \u0027correct final array contents\u0027, what is true about this code?",
+      "Choices": [
+        "It earns full credit: the loop bound and index math are correct, and the last element is properly set to 0 after the loop.",
+        "It loses the traversal point because arr.length - 1 causes an off-by-one error inside the loop.",
+        "It loses the traversal point because arr[i \u002B 1] will throw an ArrayIndexOutOfBoundsException when i = arr.length - 1.",
+        "It loses the final-contents point because the last element still holds its original value, not 0."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The loop runs while i \u003C arr.length - 1, so the largest i used is arr.length - 2, making arr[i\u002B1] access at most arr[arr.length-1] \u2014 always in bounds. After the loop, the line arr[arr.length - 1] = 0 explicitly overwrites the last slot, satisfying the final-contents requirement. The other choices describe errors that don\u0027t actually occur in this code."
+    },
+    {
+      "Id": "u6.frq-q3",
+      "NodeId": "u6.frq",
+      "Prompt": "A rubric for a method sumEvenIndices(int[] data) that sums elements at even indices (0, 2, 4, ...) awards a point for \u0027correct loop increment\u0027 among other points. A student writes: int sum = 0; for (int i = 0; i \u003C data.length; i\u002B\u002B) { sum \u002B= data[i]; } Which change correctly earns the \u0027correct loop increment\u0027 point while keeping everything else intact?",
+      "Choices": [
+        "Change the loop update to i = i \u002B 2 so only even indices are visited.",
+        "Change the loop condition to i \u003C= data.length so more elements are included.",
+        "Change sum \u002B= data[i] to sum = data[i] so only the last even-indexed value counts.",
+        "Add an if (i % 2 == 0) check but keep i\u002B\u002B as the increment, since checking is equivalent to skipping."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Changing the increment to i = i \u002B 2 makes the loop visit indices 0, 2, 4, ... directly, which is exactly what \u0027correct loop increment\u0027 refers to on this rubric. Using an if-check with i\u002B\u002B (the last option) would produce the same correct sum but does not fix the increment itself, so it wouldn\u0027t satisfy a rubric point specifically about the increment. Changing the condition to \u003C= introduces an out-of-bounds risk, and changing \u002B= to = breaks the summation entirely."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s our task: write countPositives(int[] nums), returning how many elements are greater than 0. Let\u0027s set up the stack frame and the array we\u0027ll trace through.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "countPositives(int[] nums)"
+          },
+          {
+            "op": "arrayAlloc",
+            "ArrId": "nums",
+            "ElementType": "int",
+            "InitialValues": [
+              "-2",
+              "4",
+              "0",
+              "7",
+              "-1"
+            ]
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First rubric point: initialize a counter variable to 0 before the loop begins.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "count",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Second rubric point: use a loop variable i starting at 0, with the bound i \u003C nums.length so we never step off the end of the strip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "At i = 0, we check nums[0], which is -2. That\u0027s not greater than 0, so count stays the same.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "chk",
+            "Text": "nums[0] \u003E 0"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "chk",
+            "Value": false
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "chk",
+            "Value": "false"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Advance i to 1. Now nums[1] is 4, which IS greater than 0 \u2014 this is the rubric point for the correct conditional check.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "1"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "chk2",
+            "Text": "nums[1] \u003E 0"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "chk2",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "chk2",
+            "Value": "true"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Because the condition was true, we increment count from 0 to 1 \u2014 this satisfies the rubric point for correct increment logic.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "count"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "count",
+            "Type": "int",
+            "Value": "1"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Continuing on, i becomes 2. nums[2] is 0, which is not greater than 0, so count is unchanged.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "chk3",
+            "Text": "nums[2] \u003E 0"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "chk3",
+            "Value": false
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "chk3",
+            "Value": "false"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Now i is 3. nums[3] is 7, which is positive, so count increments again from 1 to 2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "3"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "chk4",
+            "Text": "nums[3] \u003E 0"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "chk4",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "chk4",
+            "Value": "true"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "count"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "count",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Finally i is 4. nums[4] is -1, not positive, so count stays at 2. Since i = 5 fails the i \u003C nums.length test, the loop stops safely \u2014 no index error.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "chk5",
+            "Text": "nums[4] \u003E 0"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "chk5",
+            "Value": false
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "chk5",
+            "Value": "false"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "The final rubric point: return the correct accumulated value. We return count, which holds 2 \u2014 matching the two positive elements in the array.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 6
+          },
+          {
+            "op": "callTreeReturn",
+            "NodeId": "main",
+            "ReturnValue": "2"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:28:26.9714944+00:00",
+  "Model": "claude-sonnet-5"
+}

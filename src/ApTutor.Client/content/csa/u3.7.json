@@ -1,0 +1,264 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.7",
+  "ExampleId": "generated",
+  "WalkthroughText": "When comparing objects in Java, == checks whether two reference variables point to the exact same object in memory (same arrow, same box), while .equals() checks whether two objects have equivalent content \u2014 but only if the class defines equals() that way (like String does). If a reference variable is null, it points to no object at all, so calling a method on it, including .equals(), throws a NullPointerException. That\u0027s why good code checks a reference against null before calling methods on it. This node uses ref arrows to show which variables share an object, and a truth glow to show the boolean result of each comparison.",
+  "PracticeItems": [
+    {
+      "Id": "u3.7-q1",
+      "NodeId": "u3.7",
+      "Prompt": "Consider the following code:\n\nString a = new String(\u0022hi\u0022);\nString b = new String(\u0022hi\u0022);\nString c = a;\n\nWhich comparison evaluates to true?",
+      "Choices": [
+        "a == b",
+        "a == c",
+        "a.equals(b) == false",
+        "b == c"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "a and c both point to the exact same String object in memory (c = a copies the reference), so a == c is true. a and b are two separate String objects created with new, so even though their characters match, a == b is false because == compares references, not content. Since the characters in a and b are the same, a.equals(b) is true, making the third choice false."
+    },
+    {
+      "Id": "u3.7-q2",
+      "NodeId": "u3.7",
+      "Prompt": "An Integer variable score is declared but never assigned a value: Integer score;\nWhat happens when the line if (score.equals(100)) runs?",
+      "Choices": [
+        "It returns false because null never equals 100",
+        "It returns true because null is treated as 0",
+        "It throws a NullPointerException because score has no object to call .equals() on",
+        "It compiles but always skips the if block silently with no error"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "An uninitialized object reference like score holds the value null, meaning it points to no object at all. Calling .equals() (or any method) on a null reference throws a NullPointerException at runtime because there is no object to receive the method call. The safe fix is to check score != null before calling methods on it."
+    },
+    {
+      "Id": "u3.7-q3",
+      "NodeId": "u3.7",
+      "Prompt": "Two Point objects, p1 and p2, were created separately with new Point(3,4) but store equal x and y values. The Point class does NOT override the equals() method inherited from Object. What is the result of p1.equals(p2)?",
+      "Choices": [
+        "true, because their fields are identical",
+        "false, because Object\u0027s default equals() compares references, same as ==",
+        "It won\u0027t compile without a custom equals() method",
+        "true, because Java automatically compares all fields"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "When a class doesn\u0027t override equals(), it inherits Object\u0027s version, which simply performs a reference comparison identical to ==. Since p1 and p2 are two distinct objects in memory (created by two separate new calls), p1.equals(p2) returns false even though their field values match. Only classes like String or Integer override equals() to compare contents."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start by creating a String object with the text \u0022cat\u0022 and storing a reference to it in variable s1.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "obj1",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "\u0022cat\u0022"
+              }
+            ]
+          },
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "s1",
+            "Type": "String",
+            "Value": "\u2192obj1"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "s1",
+            "TargetObjId": "obj1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Now we create a second, separate String object with the same text \u0022cat\u0022, and store its reference in s2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "obj2",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "\u0022cat\u0022"
+              }
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "s2",
+            "Type": "String",
+            "Value": "\u2192obj2"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "s2",
+            "TargetObjId": "obj2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Notice the two ref arrows: s1 points to obj1, and s2 points to a different box, obj2, even though both boxes contain the text \u0027cat\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e0",
+            "Text": "s1 and s2 point to different objects"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Let\u0027s evaluate s1 == s2. Since == compares the reference arrows, not the contents, and s1\u0027s arrow points to obj1 while s2\u0027s arrow points to obj2, this is false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "s1 == s2"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Now let\u0027s evaluate s1.equals(s2). String\u0027s equals() method looks inside both boxes and compares their characters, which are both \u0027cat\u0027, so this glows true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "s1.equals(s2)"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Next we declare a third variable, s3, but never assign it an object \u2014 its arrow points to nothing, which we represent as null.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "s3",
+            "Type": "String",
+            "Value": "null"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "s3",
+            "TargetObjId": null
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "If we try s3.equals(s1), Java looks for an object at the end of s3\u0027s arrow to call equals() on \u2014 but there is none, so this throws a NullPointerException.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "s3.equals(s1)"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "s3"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "NullPointerException!"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e3",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "The safe pattern is to check for null first: s3 != null. Since s3\u0027s arrow points to nothing, this comparison glows false, letting us safely skip the risky call.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e4",
+            "Text": "s3 != null"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e4",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e4",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:10:26.6873893+00:00",
+  "Model": "claude-sonnet-5"
+}

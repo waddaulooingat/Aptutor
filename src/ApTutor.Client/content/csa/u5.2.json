@@ -1,0 +1,285 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "A constructor is special method-like code that runs when you create an object with the \u0022new\u0022 keyword, and its job is to set up the instance variables stored inside that object on the heap. A default constructor takes no parameters and usually assigns fixed starting values (or Java auto-generates one that leaves fields at 0/null/false if you write no constructors yourself). A parameterized constructor takes arguments so the caller can supply custom starting values instead of relying on defaults. Watching the stack frame and heap object side by side shows exactly how the constructor\u0027s parameters (on the stack) get copied into the object\u0027s fields (on the heap) during construction.",
+  "PracticeItems": [
+    {
+      "Id": "u5.2-q1",
+      "NodeId": "u5.2",
+      "Prompt": "Consider the class below:\n\npublic class Book {\n    private String title;\n    private int pages;\n\n    public Book() {\n        title = \u0022Untitled\u0022;\n        pages = 0;\n    }\n\n    public Book(String t, int p) {\n        title = t;\n        pages = p;\n    }\n}\n\nWhat are the values of title and pages after executing:\nBook b = new Book();",
+      "Choices": [
+        "title = \u0022Untitled\u0022, pages = 0",
+        "title = null, pages = 0",
+        "title = \u0022Untitled\u0022, pages must be given explicitly or a compile error occurs",
+        "A compile error occurs because Book has two constructors"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Book() has no arguments, so Java matches the no-argument (default) constructor, which explicitly sets title to \u0022Untitled\u0022 and pages to 0. It is legal in Java to overload constructors, so having two constructors does not cause an error. The second constructor is simply not called here because no arguments were passed."
+    },
+    {
+      "Id": "u5.2-q2",
+      "NodeId": "u5.2",
+      "Prompt": "public class Point {\n    private int x;\n    private int y;\n\n    public Point(int x, int y) {\n        this.x = x;\n        this.y = y;\n    }\n}\n\nA programmer tries to compile: Point p = new Point();\nWhat happens?",
+      "Choices": [
+        "It compiles and creates a Point with x = 0 and y = 0",
+        "It compiles and creates a Point with x and y uninitialized (garbage values)",
+        "It does not compile because there is no no-argument constructor available",
+        "It compiles because Java automatically creates a no-argument constructor even when other constructors exist"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Java only auto-generates a no-argument default constructor if the class defines NO constructors at all. Since Point defines a parameterized constructor, Java does not add a no-arg one, so calling new Point() with no arguments fails to compile because there\u0027s no matching constructor signature."
+    },
+    {
+      "Id": "u5.2-q3",
+      "NodeId": "u5.2",
+      "Prompt": "public class Car {\n    private String color;\n    private int speed;\n\n    public Car() {\n        this(\u0022Black\u0022, 0);\n    }\n\n    public Car(String c, int s) {\n        color = c;\n        speed = s;\n    }\n}\n\nAfter running Car c = new Car();, what are the values of color and speed?",
+      "Choices": [
+        "color = null, speed = 0",
+        "color = \u0022Black\u0022, speed = 0",
+        "A compile error occurs because this(...) cannot be used in a constructor",
+        "color = \u0022Black\u0022, speed = 0, but only after both constructors\u0027 bodies run redundantly"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The no-arg constructor uses this(\u0022Black\u0022, 0) to delegate to the two-argument constructor, which sets color to \u0022Black\u0022 and speed to 0. This is a valid and common technique to avoid duplicating initialization code between overloaded constructors. It does not cause a compile error, and the no-arg constructor\u0027s own body doesn\u0027t run separately afterward since this(...) call replaces that initialization step (there is no other code in the no-arg constructor)."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start in main, which is about to create two Dog objects \u2014 one with the default constructor and one with a parameterized constructor.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, main calls \u0027new Dog()\u0027 with no arguments, so a new Dog constructor frame is pushed onto the stack.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "ctor1",
+            "MethodSig": "Dog()"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Java allocates a new Dog object on the heap with default placeholder fields before the constructor body runs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog1",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "null"
+              },
+              {
+                "Key": "age",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Inside the no-argument constructor, the body explicitly sets name to \u0022Rex\u0022 and age to 1, since there are no parameters to use.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "name",
+            "Value": "\u0022Rex\u0022"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "age",
+            "Value": "1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "The default constructor finishes, so its frame is popped off the stack, and main\u0027s variable d1 now refers to this new Dog object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "ctor1"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d1",
+            "Type": "Dog",
+            "Value": "dog1"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "d1",
+            "TargetObjId": "dog1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Next, main calls \u0027new Dog(\u0022Buddy\u0022, 3)\u0027, passing arguments, so a new constructor frame is pushed with parameters n and a stored in memory.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "ctor2",
+            "MethodSig": "Dog(String n, int a)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "ctor2",
+            "Name": "n",
+            "Type": "String",
+            "Value": "\u0022Buddy\u0022"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "ctor2",
+            "Name": "a",
+            "Type": "int",
+            "Value": "3"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "A second Dog object is allocated on the heap, again starting with default placeholder field values.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog2",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "null"
+              },
+              {
+                "Key": "age",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "This time the constructor body copies the parameter values from the stack frame into the object\u0027s fields: name = n and age = a.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "ctor2",
+            "Name": "n"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog2",
+            "Field": "name",
+            "Value": "\u0022Buddy\u0022"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "ctor2",
+            "Name": "a"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog2",
+            "Field": "age",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "The parameterized constructor finishes and its frame pops off the stack, leaving main\u0027s variable d2 pointing at this custom-built Dog.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "ctor2"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d2",
+            "Type": "Dog",
+            "Value": "dog2"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "d2",
+            "TargetObjId": "dog2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "Now we have two Dog objects on the heap: d1 built with fixed default values (\u0022Rex\u0022, 1), and d2 built with caller-supplied values (\u0022Buddy\u0022, 3) \u2014 the core difference between default and parameterized constructors.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:23:06.8181946+00:00",
+  "Model": "claude-sonnet-5"
+}

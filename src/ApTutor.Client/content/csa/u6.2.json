@@ -1,0 +1,323 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u6.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "Traversing an array means visiting each of its elements in order, usually with a for loop whose index variable runs from 0 up to (but not including) the array\u0027s length. At each step, the loop variable i points to one box in the array, and arr[i] lets you read or change the value stored there. Because array indices start at 0 and stop at length - 1, the loop condition i \u003C arr.length is what keeps you from stepping off the end of the array. Watching the index marker slide across the strip, one cell at a time, is the clearest way to see why this pattern reliably touches every element exactly once.",
+  "PracticeItems": [
+    {
+      "Id": "u6.2-q1",
+      "NodeId": "u6.2",
+      "Prompt": "What value is printed by the following code?\n\nint[] nums = {4, 8, 15, 16, 23};\nint sum = 0;\nfor (int i = 0; i \u003C nums.length; i\u002B\u002B) {\n    sum \u002B= nums[i];\n}\nSystem.out.println(sum);",
+      "Choices": [
+        "23",
+        "62",
+        "66",
+        "5"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "The loop visits every index from 0 to nums.length-1, adding each element to sum: 4\u002B8\u002B15\u002B16\u002B23 = 66. Choice 62 forgets to add the last element (23), which would happen if the loop condition were i \u003C nums.length - 1 by mistake."
+    },
+    {
+      "Id": "u6.2-q2",
+      "NodeId": "u6.2",
+      "Prompt": "A method should return the index of the first negative number in an array of ints, or -1 if none exists. Which loop correctly does this?",
+      "Choices": [
+        "for (int i = 0; i \u003C arr.length; i\u002B\u002B) { if (arr[i] \u003C 0) return i; } return -1;",
+        "for (int i = 0; i \u003C arr.length; i\u002B\u002B) { if (arr[i] \u003C 0) return -1; } return i;",
+        "for (int i = 1; i \u003C= arr.length; i\u002B\u002B) { if (arr[i] \u003C 0) return i; } return -1;",
+        "for (int i = 0; i \u003C= arr.length; i\u002B\u002B) { if (arr[i] \u003C 0) return i; } return -1;"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The correct version checks each valid index (0 through length-1) and returns immediately upon finding a negative value, returning -1 after the loop if none is found. The last option uses \u003C= arr.length, which causes an ArrayIndexOutOfBoundsException when i equals arr.length, since that index doesn\u0027t exist."
+    },
+    {
+      "Id": "u6.2-q3",
+      "NodeId": "u6.2",
+      "Prompt": "Consider this loop meant to print every element of an array on its own line:\n\nint[] data = {2, 4, 6, 8};\nfor (int i = 1; i \u003C data.length; i\u002B\u002B) {\n    System.out.println(data[i]);\n}\n\nWhat is wrong with this code?",
+      "Choices": [
+        "It throws an ArrayIndexOutOfBoundsException.",
+        "It prints all elements correctly.",
+        "It skips the first element (index 0), printing only 4, 6, and 8.",
+        "It prints each element twice."
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Starting the loop at i = 1 skips index 0, which holds the value 2, so the traversal misses the first element. It does not throw an exception because the loop still stops correctly before data.length, and it doesn\u0027t duplicate any values."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s our array, temps, holding four integers. We\u0027ll use a for loop to visit every element from left to right.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "temps",
+            "ElementType": "int",
+            "InitialValues": [
+              "70",
+              "72",
+              "68",
+              "75"
+            ]
+          },
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We declare int i = 0. This is our index variable, and it starts by pointing at the very first element, index 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "The loop checks the condition i \u003C temps.length. Since 0 \u003C 4 is true, the loop body runs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "cond",
+            "Text": "i \u003C temps.length"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "0 \u003C 4"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Inside the loop we access temps[i], which is temps[0]. The index marker highlights that first cell, value 70.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "val",
+            "Text": "temps[i]"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "val",
+            "Value": "70"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "After processing that element, i increments to 1. The marker now slides over to point at the second cell.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "1"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Check the condition again: 1 \u003C 4 is true, so we continue. We access temps[1], value 72.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "1 \u003C 4"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "val",
+            "Value": "72"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "i increments to 2. The marker moves again, now pointing at the third element, 68.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "val",
+            "Value": "68"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "i increments to 3. The condition 3 \u003C 4 is still true, so the marker slides to the last element, 75.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "3"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "3 \u003C 4"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "val",
+            "Value": "75"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "i increments one more time to 4. Now the condition checks 4 \u003C 4, which is false, so the loop stops \u2014 every element has been visited exactly once.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "4 \u003C 4"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": false
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "The traversal is complete: the index marker moved from 0 to 3, touching each cell in temps exactly once before the loop condition became false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:27:05.3480538+00:00",
+  "Model": "claude-sonnet-5"
+}

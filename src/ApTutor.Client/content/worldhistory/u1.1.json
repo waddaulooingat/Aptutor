@@ -1,0 +1,182 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.1",
+  "ExampleId": "generated",
+  "WalkthroughText": "Periodization is how historians break the sweeping continuity of the past into labeled chunks of time, like c. 1200-1450, so that big patterns (trade networks expanding, new empires rising, ideas spreading) become easier to see and discuss. These boundaries are not natural laws \u2014 they are choices historians make based on evidence of meaningful change or continuity across multiple regions. Comparison is a related skill: instead of studying one region in isolation, historians place two or more societies side by side to find specific similarities and differences, which reveals broader patterns of change and continuity that a single-region view would miss. Together, periodization and comparison give historians a framework and a method for organizing and interpreting the vast, messy record of the past.",
+  "PracticeItems": [
+    {
+      "Id": "u1.1-q1",
+      "NodeId": "u1.1",
+      "Prompt": "A historian divides world history into the era c. 1200-1450 CE as a distinct unit of study. What is the primary purpose of creating this kind of time period, or \u0027periodization\u0027?",
+      "Choices": [
+        "To assign exact calendar boundaries that every civilization on Earth agreed to follow at the time",
+        "To organize the past into a manageable framework that highlights shared patterns and major changes across regions",
+        "To prove that all societies experienced identical political events during those years",
+        "To replace the need for evidence when writing about the past"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Periodization is an analytical tool historians use to group time into eras that share meaningful patterns (like the spread of trade networks or the rise of certain empires), making comparison and analysis easier. It is not a claim that all societies were identical or that the dates were universally recognized at the time \u2014 no such agreement existed. It also does not eliminate the need for evidence; it organizes evidence."
+    },
+    {
+      "Id": "u1.1-q2",
+      "NodeId": "u1.1",
+      "Prompt": "A student compares the Mongol Empire and the Mali Empire during 1200-1450 by looking at how each used trade routes to gain wealth and influence. Which statement best describes what this comparison, as a historical thinking skill, is meant to accomplish?",
+      "Choices": [
+        "Show that the two empires were essentially the same in every respect",
+        "Identify specific similarities and differences to better understand patterns of change and continuity across regions",
+        "Determine which empire was objectively superior",
+        "Replace the need to study each empire individually"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Comparison as a historical thinking skill involves identifying specific similarities and differences between developments to deepen understanding of broader patterns, not ranking civilizations or claiming they were the same. Comparison also requires understanding each subject individually first, rather than replacing that study."
+    },
+    {
+      "Id": "u1.1-q3",
+      "NodeId": "u1.1",
+      "Prompt": "Why might historians choose 1450 rather than a \u0027round\u0027 number like 1500 as an end boundary for a period focused on 1200-1450?",
+      "Choices": [
+        "Because 1450 is when the calendar changed worldwide",
+        "Because a specific cluster of significant developments (such as shifts in trade, migration, or empire building) cluster meaningfully around that year across multiple regions",
+        "Because historians must always use even numbers for periods",
+        "Because no events of importance occurred after 1450"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Period boundaries are chosen because they mark a meaningful clustering of developments across regions, not because of arbitrary rounding or calendar conventions. Saying no important events occurred afterward is false \u2014 periodization boundaries are analytical choices, not claims that history stopped."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with an empty timeline of world history \u2014 no boundaries drawn yet, just a continuous flow of events across centuries.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Historians can\u0027t study \u0027all of time\u0027 at once, so they draw a boundary: here, we mark the start of our period around 1200 CE.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "start",
+            "Text": "Period begins ~1200 CE"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "They draw a second boundary around 1450 CE, based on evidence that many regions saw major shifts in trade, migration, or empires clustering near that time.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "end",
+            "Text": "Period ends ~1450 CE"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now we have a defined unit: c. 1200-1450. This is \u0027periodization\u0027 \u2014 an analytical choice, not a fact stamped onto history itself.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "start",
+            "Value": "1200 CE"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "end",
+            "Value": "1450 CE"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Within this period, let\u0027s place two developments side by side: the Mongol Empire\u0027s expansion and the Mali Empire\u0027s trade networks.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "mongol",
+            "Text": "Mongol expansion"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "mali",
+            "Text": "Mali trade networks"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Comparison means asking: what\u0027s similar here? Both empires used trade routes and military/political organization to grow their influence.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "mongol",
+            "Value": true
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "mali",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "We also ask: what\u0027s different? The Mongols expanded largely through conquest and mounted warfare, while Mali\u0027s growth centered more on controlling gold and salt trade routes.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "mongol",
+            "Value": "Conquest-driven expansion"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "mali",
+            "Value": "Trade-driven wealth and influence"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "By periodizing (defining the era) and then comparing developments within it, historians reveal patterns of change and continuity that a single, isolated story could never show.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:25:37.5112436+00:00",
+  "Model": "claude-sonnet-5"
+}

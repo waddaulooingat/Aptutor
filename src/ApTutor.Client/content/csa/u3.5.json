@@ -1,0 +1,200 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.5",
+  "ExampleId": "generated",
+  "WalkthroughText": "Compound boolean expressions combine simple relational tests using \u0026\u0026 (AND), || (OR), and ! (NOT) to form one larger true/false value. Java evaluates these left to right, and it uses short-circuit evaluation: for \u0026\u0026, if the left operand is false, the right operand is never even looked at, since the whole thing must be false; for ||, if the left operand is true, the right operand is skipped, since the whole thing must be true. This matters not just for speed but for safety \u2014 you can order checks so that a risky operation (like dividing or calling a method on an object) only runs after a guard condition confirms it\u0027s safe. In the boolTruthGlow \u002B exprBubble visualization, each sub-expression lights up as it\u0027s evaluated, and any skipped sub-expression stays dim, making short-circuiting visible.",
+  "PracticeItems": [
+    {
+      "Id": "u3.5-q1",
+      "NodeId": "u3.5",
+      "Prompt": "Given int x = 5 and int y = 0, what is the result of the expression (x \u003E 0) || (10 / y \u003E 1)?",
+      "Choices": [
+        "true, and the division by zero never happens because of short-circuit evaluation",
+        "A run-time ArithmeticException is thrown",
+        "false, because the second operand is evaluated and fails",
+        "Compile-time error"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The || operator short-circuits: since (x \u003E 0) evaluates to true, Java never evaluates the right-hand operand (10 / y \u003E 1), so the division by zero never occurs and the whole expression is true. It is not a compile error or exception, and the claim that the second operand gets evaluated is exactly what short-circuiting prevents."
+    },
+    {
+      "Id": "u3.5-q2",
+      "NodeId": "u3.5",
+      "Prompt": "int a = 4; int b = 8; boolean result = (a \u003E 5) \u0026\u0026 (b\u002B\u002B \u003E 3); After this statement runs, what is the value of b?",
+      "Choices": [
+        "8, because the \u0026\u0026 short-circuits and b\u002B\u002B never executes",
+        "9, because b\u002B\u002B still executes even though the left side is false",
+        "8, because b\u002B\u002B only executes when the whole expression is true",
+        "9, because \u0026\u0026 always evaluates both operands"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Since (a \u003E 5) is false, the \u0026\u0026 operator short-circuits and skips evaluating the right operand entirely, so b\u002B\u002B never runs and b stays at 8. The other choices incorrectly assume the right side still gets evaluated, which contradicts how \u0026\u0026 short-circuiting works."
+    },
+    {
+      "Id": "u3.5-q3",
+      "NodeId": "u3.5",
+      "Prompt": "Which expression is guaranteed to avoid a NullPointerException when checking if a String variable s might be null before calling s.equals(\u0022cat\u0022)?",
+      "Choices": [
+        "s.equals(\u0022cat\u0022) \u0026\u0026 s != null",
+        "s != null \u0026\u0026 s.equals(\u0022cat\u0022)",
+        "s == null || s.equals(\u0022cat\u0022)",
+        "!s.equals(\u0022cat\u0022) || s == null"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Placing s != null first with \u0026\u0026 means if s is null, the left side is false and \u0026\u0026 short-circuits, skipping s.equals(\u0022cat\u0022) and avoiding the exception. Putting s.equals(\u0022cat\u0022) first (as in the first choice) would call a method on a possibly-null reference before the null check ever happens, causing a crash when s is null."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s trace the compound expression (x \u003E 0) || (10 / y \u003E 1), where x is 5 and y is 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "x",
+            "Type": "int",
+            "Value": "5"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "y",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First we push the whole compound expression into an expression bubble so we can watch it evaluate piece by piece.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "whole",
+            "Text": "(x \u003E 0) || (10 / y \u003E 1)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Java evaluates the left operand first: is x greater than 0?",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "left",
+            "Text": "x \u003E 0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Since x is 5, that comparison resolves to true, and the left bubble glows green.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "left",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "left",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Because this is an OR (||) and the left side is already true, Java knows the entire expression must be true no matter what the right side says \u2014 so it short-circuits.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "right",
+            "Text": "10 / y \u003E 1  (SKIPPED)"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "right",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "The right operand, which would have divided by zero, stays dim and unevaluated \u2014 it is never executed.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "y"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "The whole expression bubble resolves to true using only the left side, and no exception is thrown.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "whole",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "whole",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "This is the power of short-circuit evaluation: it can protect risky code, like division or method calls, by placing a safe check first.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:09:46.2738708+00:00",
+  "Model": "claude-sonnet-5"
+}

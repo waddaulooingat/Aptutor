@@ -1,0 +1,235 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.1",
+  "ExampleId": "generated",
+  "WalkthroughText": "A boolean expression is any expression that evaluates to exactly one of two values: true or false. Relational operators \u2014 such as ==, !=, \u003C, \u003E, \u003C=, and \u003E= \u2014 compare two values (usually numbers) and produce a boolean result. It\u0027s important to remember that == checks equality, while a single = is assignment, and these are never interchangeable. As we trace through an expression, each piece resolves step by step until the whole expression \u0027glows\u0027 as either true or false, just like a light switch that can only be on or off.",
+  "PracticeItems": [
+    {
+      "Id": "u3.1-q1",
+      "NodeId": "u3.1",
+      "Prompt": "What is the value of the boolean expression (7 % 2 == 1)?",
+      "Choices": [
+        "true",
+        "false",
+        "1",
+        "0"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "7 % 2 computes the remainder when 7 is divided by 2, which is 1. Since 1 == 1 is true, the expression evaluates to true. The answer is not 1 or 0 because relational expressions in Java always evaluate to the boolean values true or false, not integers."
+    },
+    {
+      "Id": "u3.1-q2",
+      "NodeId": "u3.1",
+      "Prompt": "Given int x = 5; and int y = 8;, what does (x \u003E= 5 \u0026\u0026 y \u003C 8) evaluate to?",
+      "Choices": [
+        "true",
+        "false",
+        "5",
+        "It does not compile"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "x \u003E= 5 is true because x equals 5, but y \u003C 8 is false because y equals 8, not less than 8. Since \u0026\u0026 requires both sides to be true, the whole expression is false. It is not true, because one side of the \u0026\u0026 fails."
+    },
+    {
+      "Id": "u3.1-q3",
+      "NodeId": "u3.1",
+      "Prompt": "Which relational operator correctly tests whether two int variables a and b are NOT equal in Java?",
+      "Choices": [
+        "a =! b",
+        "a \u003C\u003E b",
+        "a != b",
+        "a ~= b"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Java uses != as the not-equal-to operator. The other options, =!, \u003C\u003E, and ~=, are not valid Java syntax and would cause a compile-time error."
+    },
+    {
+      "Id": "u3.1-q4",
+      "NodeId": "u3.1",
+      "Prompt": "What does the expression (10 \u003E 3) == (2 \u003C 1) evaluate to?",
+      "Choices": [
+        "true",
+        "false",
+        "10",
+        "This causes a compile error"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "10 \u003E 3 evaluates to true, and 2 \u003C 1 evaluates to false. Comparing true == false gives false. It does not compile-error because comparing two boolean values with == is valid in Java."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s evaluate the boolean expression (8 \u003E 3) using two int variables, a = 8 and b = 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "a",
+            "Type": "int",
+            "Value": "8"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "int",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We push the full expression a \u003E b onto the expression tracker so we can watch it resolve.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "a \u003E b"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "First, Java substitutes the current values of the variables: a becomes 8 and b becomes 3, so the expression is really 8 \u003E 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "a"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "b"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "8 \u003E 3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now Java applies the relational operator \u003E to compare 8 and 3. Since 8 is indeed greater than 3, this comparison is true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "true"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "The whole boolean expression a \u003E b resolves to true \u2014 watch it glow green to show a true result.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Now let\u0027s try a different comparison: is a equal to b? We push the expression a == b.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "a == b"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Substituting values again, a is 8 and b is 3, so this becomes 8 == 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "a"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "b"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e4",
+            "Text": "8 == 3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "8 is not equal to 3, so this comparison is false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e4",
+            "Value": "false"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "The expression a == b resolves to false \u2014 this time it glows red, showing a false result. This contrast shows how relational operators always produce one of exactly two outcomes.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e3",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:08:35.2387839+00:00",
+  "Model": "claude-sonnet-5"
+}

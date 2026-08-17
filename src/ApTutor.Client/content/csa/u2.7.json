@@ -1,0 +1,342 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.7",
+  "ExampleId": "generated",
+  "WalkthroughText": "A String in Java can be pictured as a strip of boxes, one per character, each box numbered starting at index 0. length() tells you how many boxes there are. substring(start, end) copies the boxes from start up to but not including end. indexOf(target) scans the strip left to right and reports the index of the first box where target begins, or -1 if it\u0027s never found. equals() compares two strips box-by-box for identical contents, while compareTo() tells you which string would come first alphabetically by returning negative, zero, or positive.",
+  "PracticeItems": [
+    {
+      "Id": "u2.7-q1",
+      "NodeId": "u2.7",
+      "Prompt": "What value is stored in result after the following code runs?\n\nString word = \u0022computer\u0022;\nString result = word.substring(2, 6);",
+      "Choices": [
+        "\u0022mpute\u0022",
+        "\u0022mput\u0022",
+        "\u0022omput\u0022",
+        "\u0022pute\u0022"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "substring(2, 6) returns characters starting at index 2 up to but NOT including index 6. word is c(0)o(1)m(2)p(3)u(4)t(5)e(6)r(7), so indices 2,3,4,5 give \u0022mput\u0022. \u0022mpute\u0022 is wrong because it incorrectly includes index 6 (\u0027e\u0027)."
+    },
+    {
+      "Id": "u2.7-q2",
+      "NodeId": "u2.7",
+      "Prompt": "Given String s = \u0022banana\u0022; what is the value of s.indexOf(\u0022na\u0022)?",
+      "Choices": [
+        "1",
+        "2",
+        "3",
+        "-1"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "indexOf searches left to right for the first occurrence of the substring. In \u0022banana\u0022 (b0 a1 n2 a3 n4 a5), \u0022na\u0022 first appears starting at index 2. It is not -1 because \u0022na\u0022 does appear in the string, and 1 is where \u0027a\u0027 starts, not \u0022na\u0022."
+    },
+    {
+      "Id": "u2.7-q3",
+      "NodeId": "u2.7",
+      "Prompt": "Which statement correctly compares two String objects for equal contents, and what does str1.compareTo(str2) return when str1 comes alphabetically before str2?",
+      "Choices": [
+        "str1 == str2; returns 0",
+        "str1.equals(str2); returns a negative number",
+        "str1.equals(str2); returns a positive number",
+        "str1.length() == str2.length(); returns true"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "equals() checks character-by-character content equality, which is the correct way to compare String contents (== compares references, not contents). compareTo returns a negative number when the calling string is alphabetically \u0027less than\u0027 the argument, not a positive number, so that distractor is incorrect."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s declare a String variable named word holding the text \u0022coding\u0022, and picture it as an indexed strip of characters.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "String word = \u0022coding\u0022;"
+          },
+          {
+            "op": "arrayAlloc",
+            "ArrId": "strip",
+            "ElementType": "char",
+            "InitialValues": [
+              "c",
+              "o",
+              "d",
+              "i",
+              "n",
+              "g"
+            ]
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "strip built"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "Each box in the strip has an index label: c is 0, o is 1, d is 2, i is 3, n is 4, g is 5.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "word",
+            "Type": "String",
+            "Value": "\u0022coding\u0022"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "word"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 2,
+      "Caption": "word.length() counts every box on the strip, giving us 6.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "word.length()"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "6"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "len",
+            "Type": "int",
+            "Value": "6"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "Now let\u0027s find word.substring(1, 4). We start copying at index 1 and stop right before index 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "word.substring(1, 4)"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 1,
+            "Value": "o*"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 2,
+            "Value": "d*"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 3,
+            "Value": "i*"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "Index 4 (the \u0027n\u0027) is NOT included, so substring(1,4) gives us the piece \u0022odi\u0022.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "\u0022odi\u0022"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "piece",
+            "Type": "String",
+            "Value": "\u0022odi\u0022"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "piece"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 5,
+      "Caption": "Next, word.indexOf(\u0022in\u0022) scans the strip left to right looking for the pattern \u0027i\u0027 followed by \u0027n\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e4",
+            "Text": "word.indexOf(\u0022in\u0022)"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 3,
+            "Value": "i?"
+          },
+          {
+            "op": "arrayWrite",
+            "ArrId": "strip",
+            "Index": 4,
+            "Value": "n?"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 6,
+      "Caption": "It finds \u0027i\u0027 at index 3 followed immediately by \u0027n\u0027 at index 4, so indexOf returns 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "e4",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e4",
+            "Value": "3"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "pos",
+            "Type": "int",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 7,
+      "Caption": "Now let\u0027s compare word to another String, target, which holds \u0022coding\u0022 too, using equals().",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          },
+          {
+            "op": "arrayAlloc",
+            "ArrId": "strip2",
+            "ElementType": "char",
+            "InitialValues": [
+              "c",
+              "o",
+              "d",
+              "i",
+              "n",
+              "g"
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "target",
+            "Type": "String",
+            "Value": "\u0022coding\u0022"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e5",
+            "Text": "word.equals(target)"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 8,
+      "Caption": "equals() checks every box pair by pair: c=c, o=o, d=d, i=i, n=n, g=g \u2014 all match, so it returns true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "e5",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e5",
+            "Value": "true"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 9,
+      "Caption": "Finally, word.compareTo(\u0022dog\u0022) checks alphabetical order: \u0027c\u0027 comes before \u0027d\u0027, so it returns a negative number.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 6
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e6",
+            "Text": "word.compareTo(\u0022dog\u0022)"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e6",
+            "Value": true
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e6",
+            "Value": "-1 (negative)"
+          }
+        ]
+      },
+      "SourceLine": 6
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:26:42.0224406+00:00",
+  "Model": "claude-sonnet-5"
+}

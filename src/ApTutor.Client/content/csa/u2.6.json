@@ -1,0 +1,266 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.6",
+  "ExampleId": "generated",
+  "WalkthroughText": "In Java, the \u002B operator does two very different jobs depending on its operands: if both sides are numbers, it adds them; if either side is a String, it concatenates (joins) their text. String literals are sequences of characters written between double quotes, and some characters \u2014 like a literal quote mark, backslash, or tab \u2014 can\u0027t be typed directly, so we use escape sequences such as \\\u0022 \\\\\\\\ and \\\\t to represent them inside a literal. Because Strings are objects living on the heap, concatenating two Strings with \u002B doesn\u0027t change either original String \u2014 it builds a brand-new String object containing the combined characters, while any variables still point to their original strings unless reassigned.",
+  "PracticeItems": [
+    {
+      "Id": "u2.6-q1",
+      "NodeId": "u2.6",
+      "Prompt": "What is printed by the following code?\n\nString a = \u00225\u0022;\nint b = 5;\nSystem.out.println(a \u002B b);",
+      "Choices": [
+        "10",
+        "55",
+        "5 \u002B 5",
+        "Error: cannot add String and int"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Once a String appears on the left of a \u0027\u002B\u0027 expression, Java performs string concatenation instead of numeric addition. The int b is converted to the text \u00225\u0022 and joined to a, producing \u002255\u0022. It is not an error because \u0027\u002B\u0027 with a String operand always means concatenation, and it is not \u00225 \u002B 5\u0022 because the actual characters 5 and 5 are joined, not the expression text."
+    },
+    {
+      "Id": "u2.6-q2",
+      "NodeId": "u2.6",
+      "Prompt": "Which line correctly declares a String containing a tab character followed by the word done, with no compiler error?",
+      "Choices": [
+        "String s = \u0022\\tdone\u0022;",
+        "String s = \u0022\\ttdone\u0022;",
+        "String s = \u0022\tdone\u0022; // literal tab key pressed inside quotes",
+        "String s = \u0022/tdone\u0022;"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "\\t is the escape sequence recognized by the compiler for a tab character inside a string literal. Using an actual tab keystroke or a forward slash instead of a backslash does not produce the escape sequence the compiler expects, and \\t means backslash-t, not a doubled t."
+    },
+    {
+      "Id": "u2.6-q3",
+      "NodeId": "u2.6",
+      "Prompt": "int x = 2;\nint y = 3;\nString result = \u0022Sum: \u0022 \u002B x \u002B y;\nSystem.out.println(result);\n\nWhat is printed, and why?",
+      "Choices": [
+        "\u0022Sum: 5\u0022 because Java adds x and y first since they are both int",
+        "\u0022Sum: 23\u0022 because \u002B is evaluated left to right and the String forces concatenation from that point onward",
+        "\u0022Sum: 2\u0022 \u002B \u00223\u0022 with a plus sign shown in the output",
+        "A compiler error because you cannot mix String and int in one expression"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Java evaluates \u002B left to right. \u0022Sum: \u0022 \u002B x concatenates first (since the left operand is a String), producing \u0022Sum: 2\u0022, then that result is concatenated with y to give \u0022Sum: 23\u0022. Numeric addition of x and y never happens because concatenation, once triggered by a String operand, applies to the rest of the chain in that left-to-right order."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with two String variables. We create first, holding the literal \u0022Hi\\n\u0022 \u2014 notice \\n is an escape sequence for a newline, stored as a single character even though it\u0027s typed as two.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "h1",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "Hi\\n"
+              }
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "first",
+            "Type": "String",
+            "Value": "\u2192h1"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "first",
+            "TargetObjId": "h1"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Here\u0027s the indexed strip view of \u0027first\u0027 \u2014 each box holds one character, and the escape sequence \\n collapsed into a single newline character at index 2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "stripFirst",
+            "ElementType": "char",
+            "InitialValues": [
+              "H",
+              "i",
+              "\\n"
+            ]
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now we declare second, holding the literal \u0022Bob\u0022 \u2014 a separate heap object with its own characters.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "h2",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "Bob"
+              }
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "second",
+            "Type": "String",
+            "Value": "\u2192h2"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "second",
+            "TargetObjId": "h2"
+          },
+          {
+            "op": "arrayAlloc",
+            "ArrId": "stripSecond",
+            "ElementType": "char",
+            "InitialValues": [
+              "B",
+              "o",
+              "b"
+            ]
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "We concatenate them with \u002B: String result = first \u002B second. Java sees a String on the left, so this triggers concatenation, not addition.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "first \u002B second"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Concatenation builds a brand-new String object on the heap \u2014 it does NOT modify \u0027first\u0027 or \u0027second\u0027. Their original heap objects stay untouched.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "h3",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "Hi\\nBob"
+              }
+            ]
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "\u2192h3"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "String",
+            "Value": "\u2192h3"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "result",
+            "TargetObjId": "h3"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "The indexed strip for \u0027result\u0027 shows all characters from \u0027first\u0027 followed by all characters from \u0027second\u0027, joined into one continuous sequence.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "stripResult",
+            "ElementType": "char",
+            "InitialValues": [
+              "H",
+              "i",
+              "\\n",
+              "B",
+              "o",
+              "b"
+            ]
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Notice \u0027first\u0027 still points to its original 2-object heap object h1, unchanged \u2014 concatenation created new memory rather than mutating existing Strings.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "first"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:26:21.1382457+00:00",
+  "Model": "claude-sonnet-5"
+}

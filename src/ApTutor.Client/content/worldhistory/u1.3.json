@@ -1,0 +1,185 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "Trans-Saharan trade connected West African gold-producing regions with North African and Middle Eastern markets via camel caravans crossing the Sahara desert. Muslim merchants carried salt, cloth, and manufactured goods south, trading them for gold, ivory, and enslaved people, and in the process introduced Islam to West African commercial centers. Because conversion offered practical advantages\u2014literacy, access to Islamic legal and administrative systems, and stronger diplomatic and trade ties with the wider Muslim world\u2014many West African rulers and merchant elites adopted Islam, often blending it with existing local traditions. Cities like Timbuktu, Gao, and Djenn\u00E9, sitting at the crossroads of caravan routes and the Niger River, grew into thriving hubs of both commerce and Islamic scholarship, home to mosques, libraries, and universities.",
+  "PracticeItems": [
+    {
+      "Id": "u1.3-q1",
+      "NodeId": "u1.3",
+      "Prompt": "Which factor most directly explains why Islam spread widely among the ruling and merchant classes of West African trade cities like Timbuktu and Gao, rather than being imposed by military conquest?",
+      "Choices": [
+        "West African rulers converted to Islam primarily because Muslim armies from North Africa invaded and occupied the Sahel",
+        "Trans-Saharan merchants, many of them Muslim Berbers and Arabs, brought Islam along caravan routes, and West African elites adopted it to strengthen commercial and diplomatic ties with North Africa and the Middle East",
+        "Islam was spread exclusively by European missionaries traveling south from the Mediterranean coast",
+        "West African societies had no prior religious systems, so Islam filled a void with no local resistance"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Islam spread through West Africa mainly via peaceful commercial contact along trans-Saharan routes; rulers in trading centers converted largely for practical benefits like literacy, legal systems, and stronger trade networks with the Muslim world. It was not primarily spread by conquest, and Europeans were not the agents of Islamic spread in this region."
+    },
+    {
+      "Id": "u1.3-q2",
+      "NodeId": "u1.3",
+      "Prompt": "Why did cities such as Timbuktu and Djenn\u00E9 become major centers of both trade and Islamic scholarship during this period?",
+      "Choices": [
+        "They were coastal ports that controlled access to Atlantic shipping lanes",
+        "They sat at key points where trans-Saharan caravan routes met the Niger River, allowing gold, salt, and goods to be exchanged, which also attracted Muslim traders, scholars, and mosques/madrasas",
+        "They were founded directly by the Ottoman Empire as administrative outposts",
+        "Their primary economic activity was manufacturing textiles for export to Europe"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Timbuktu and Djenn\u00E9 grew as hubs where caravan routes crossing the Sahara intersected the Niger River, making them ideal points to exchange gold and salt; this commercial importance also drew Muslim merchants and scholars, turning these cities into centers of Islamic learning. They were inland, not coastal, and were not Ottoman creations."
+    },
+    {
+      "Id": "u1.3-q3",
+      "NodeId": "u1.3",
+      "Prompt": "Gold and salt were the two commodities most central to trans-Saharan trade. What best describes the basic pattern of this exchange?",
+      "Choices": [
+        "Salt was mined in West Africa and traded north for gold mined in the Sahara",
+        "Gold, abundant in West African forest/savanna regions, was traded north across the Sahara in exchange for salt mined in the Sahara, which was scarce but essential in West Africa",
+        "Both gold and salt were produced in North Africa and shipped south to West Africa",
+        "Gold and salt were traded exclusively for enslaved people, with no other goods involved"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "West Africa held rich gold deposits but lacked easy access to salt, which was mined in the Sahara (e.g., at Taghaza) and essential for diet and preservation; caravans carried salt south and gold north, making the two commodities complementary anchors of the trade network. The reverse geographic pairing in the first option is incorrect."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s trace the trans-Saharan trade network step by step, starting with the two ends of the route: North Africa and West Africa.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "northafrica",
+            "Text": "North Africa / Mediterranean world (Muslim merchants, salt, cloth)"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "westafrica",
+            "Text": "West Africa (gold-producing regions, e.g. Ghana/Mali/Songhai)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Camel caravans crossed the Sahara desert carrying salt, cloth, and manufactured goods southward from North Africa.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "caravan1",
+            "Text": "Caravan carrying SALT \u002B goods, heading south"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "caravan1",
+            "Value": "Arrives in West African trading cities"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "At the trading centers, salt and goods were exchanged for gold mined in West Africa\u0027s savanna and forest zones.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "exchange1",
+            "Text": "Trade exchange: Salt \u003C-\u003E Gold"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "exchange1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Caravans then carried gold, ivory, and other goods back north across the Sahara to North African and Mediterranean markets.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "caravan2",
+            "Text": "Caravan carrying GOLD, heading north"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "caravan2",
+            "Value": "Arrives in North Africa / Mediterranean markets"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Along with goods, Muslim merchants\u2014many of them Berber and Arab traders\u2014brought their religion, Islam, into West African commercial centers.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "islam",
+            "Text": "Islam spreads via merchant contact, not conquest"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "islam",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "West African rulers and merchant elites in cities like Timbuktu, Gao, and Djenn\u00E9 adopted Islam to strengthen trade ties, gain literacy, and access Islamic legal systems.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "conversion",
+            "Text": "Elite conversion: political \u002B economic advantages"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "conversion",
+            "Value": "Islam becomes prominent among rulers/merchants"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "As a result, these cities grew into hubs of both commerce and Islamic scholarship, with mosques, libraries, and universities emerging alongside marketplaces.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "citygrowth",
+            "Text": "Timbuktu / Gao / Djenn\u00E9: trade hub \u002B Islamic learning center"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "citygrowth",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:19:35.3967137+00:00",
+  "Model": "claude-sonnet-5"
+}

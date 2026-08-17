@@ -1,0 +1,328 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.frq",
+  "ExampleId": "generated",
+  "WalkthroughText": "When you assign one reference variable to another (like b = a for Strings, or copy = nums for arrays), you are copying the arrow that points into the heap \u2014 not the object itself. Both variables become aliases pointing at the exact same heap object, so changes made through one alias are visible through the other, as long as that object is mutable, like an array. Strings, however, are immutable: methods like toLowerCase() or concat() never change the characters inside an existing String object. Instead they build a brand-new String object somewhere else in the heap and hand back a reference to it, so reassigning a variable to that result breaks the alias rather than mutating shared data. Keeping the refArrow \u002B heapObject \u002B indexedStrip picture in mind \u2014 arrows from variables into boxes in the heap, with indexed array boxes able to change their contents in place \u2014 is the key to correctly reasoning about aliasing versus immutability on the exam.",
+  "PracticeItems": [
+    {
+      "Id": "u2.frq-q1",
+      "NodeId": "u2.frq",
+      "Prompt": "Consider the following code:\n\nString a = \u0022HELLO\u0022;\nString b = a;\nb = b.toLowerCase();\nSystem.out.println(a \u002B \u0022 \u0022 \u002B b);\n\nWhat is printed, and why?",
+      "Choices": [
+        "HELLO hello, because b.toLowerCase() creates a brand-new String object that b now refers to, leaving a\u0027s object unchanged",
+        "hello hello, because a and b are aliases for the same object, so changing b also changes a",
+        "HELLO HELLO, because String methods never actually change the value stored in memory",
+        "hello hello, because toLowerCase() modifies the object in place at the address both a and b point to"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Strings are immutable in Java. b = b.toLowerCase() does not alter the original \u0022HELLO\u0022 object; it creates a new String object \u0022hello\u0022 and reassigns the reference variable b to point at it. The variable a still points to the original \u0022HELLO\u0022 object, so a and b now point to two different heap objects. The correct output is \u0027HELLO hello\u0027. The distractors incorrectly assume aliasing persists after reassignment or that Strings can be mutated in place."
+    },
+    {
+      "Id": "u2.frq-q2",
+      "NodeId": "u2.frq",
+      "Prompt": "int[] nums = {12, 45, 7, 9};\nint[] copy = nums;\ncopy[1] = copy[1] \u002B Math.abs(-3);\nSystem.out.println(nums[1]);\n\nWhat value is printed?",
+      "Choices": [
+        "45",
+        "48",
+        "9",
+        "-3"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Arrays are objects, so copy = nums makes copy an alias for the SAME array object as nums (both refArrows point to the same indexedStrip in the heap). Math.abs(-3) evaluates to 3, so copy[1] becomes 45 \u002B 3 = 48. Since nums and copy reference the identical array, nums[1] is also 48. The distractor \u002745\u0027 would only be correct if copy were an independent deep copy, which it is not."
+    },
+    {
+      "Id": "u2.frq-q3",
+      "NodeId": "u2.frq",
+      "Prompt": "String s1 = \u0022cat\u0022;\nString s2 = new String(\u0022cat\u0022);\ns1 = s1.concat(\u0022nap\u0022);\nSystem.out.println(s1.equals(s2) \u002B \u0022 \u0022 \u002B (s1 == s2));\n\nWhich output is correct?",
+      "Choices": [
+        "true true",
+        "false false",
+        "true false",
+        "false true"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "concat appends \u0022nap\u0022 to produce a brand new String object \u0022catnap\u0022 and reassigns s1\u0027s reference to it, so s1 no longer equals \u0022cat\u0022. s2 still refers to a separate heap object holding \u0022cat\u0022. Since s1 now holds \u0022catnap\u0022 and s2 holds \u0022cat\u0022, s1.equals(s2) is false (different contents) and s1 == s2 is false (different objects entirely, and even different content). The distractor \u0027true false\u0027 wrongly assumes s1 still equals \u0022cat\u0022."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start by declaring a String variable a set to \u0022HELLO\u0022. This creates a heap object holding the characters H-E-L-L-O, and a reference arrow from variable a points to it.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "strHELLO",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "\u0022HELLO\u0022"
+              }
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "a",
+            "Type": "String",
+            "Value": "\u2192strHELLO"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "a",
+            "TargetObjId": "strHELLO"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Now we declare b and assign it a. This does NOT create a new object \u2014 it just copies the arrow, so b becomes an alias pointing at the very same heap object as a.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "String",
+            "Value": "\u2192strHELLO"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "b",
+            "TargetObjId": "strHELLO"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Next we call b.toLowerCase(). Since Strings are immutable, this method cannot change the letters inside the existing HELLO object \u2014 it must build a brand new object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "b.toLowerCase()"
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "strhello",
+            "ClassName": "String",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "\u0022hello\u0022"
+              }
+            ]
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "\u2192strhello"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "The result of toLowerCase() is assigned back to b, so b\u0027s arrow is redirected to point at the new lowercase object, while a\u0027s arrow still points at the original HELLO object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "b",
+            "TargetObjId": "strhello"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "b",
+            "Type": "String",
+            "Value": "\u2192strhello"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Notice the two arrows now point to two separate heap objects: a still points to HELLO, and b points to hello. This is why printing a and b gives different results, even though they started out aliased.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "a"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "b"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Now compare that to an array scenario. We create an int array nums holding 12, 45, 7, 9 \u2014 this is our indexedStrip in the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "nums",
+            "ElementType": "int",
+            "InitialValues": [
+              "12",
+              "45",
+              "7",
+              "9"
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "nums",
+            "Type": "int[]",
+            "Value": "\u2192nums"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "nums",
+            "TargetObjId": "nums"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "We declare copy and assign it nums. Just like before, this only copies the arrow \u2014 copy becomes a true alias for the same array object, not a separate copy of the data.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "copy",
+            "Type": "int[]",
+            "Value": "\u2192nums"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "copy",
+            "TargetObjId": "nums"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Now we compute copy[1] = copy[1] \u002B Math.abs(-3). Math.abs(-3) resolves to 3, and copy[1] was 45, so the new value is 48.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "Math.abs(-3)"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "3"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "copy[1] \u002B 3"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "48"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Because copy and nums are aliases pointing at the SAME indexedStrip, writing 48 into index 1 through copy changes the shared array \u2014 nums[1] becomes 48 too, unlike the String example.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayWrite",
+            "ArrId": "nums",
+            "Index": 1,
+            "Value": "48"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "nums"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "copy"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:27:44.9136361+00:00",
+  "Model": "claude-sonnet-5"
+}

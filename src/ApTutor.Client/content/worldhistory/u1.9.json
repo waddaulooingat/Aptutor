@@ -1,0 +1,219 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.9",
+  "ExampleId": "generated",
+  "WalkthroughText": "After Rome\u0027s centralized empire collapsed, Europe had no single strong government left to keep order, build roads, or collect taxes across wide areas. Into that vacuum stepped feudalism: kings granted land (fiefs) to lords in exchange for military loyalty, and those lords granted land to lesser vassals in exchange for their loyalty, creating a pyramid of personal obligations rather than one central authority. At the very same time, the Catholic Church built its own separate structure of power \u2014 popes, bishops, monasteries, canon law, and control of enormous landholdings \u2014 that operated across all these feudal territories at once. Because the Church\u0027s authority came from religious legitimacy rather than land-for-loyalty deals, it could crown kings, excommunicate rulers, and settle disputes independently of any single lord, making it a genuine rival power center running parallel to, and sometimes in conflict with, the fragmented feudal political map.",
+  "PracticeItems": [
+    {
+      "Id": "u1.9-q1",
+      "NodeId": "u1.9",
+      "Prompt": "Under a fully feudal system of decentralized governance in medieval Europe, which best describes where real political power actually resided?",
+      "Choices": [
+        "In a single national parliament elected by all free citizens",
+        "In a network of local lords and vassals bound by personal oaths of loyalty and land grants",
+        "In an empire-wide bureaucracy of salaried civil servants reporting to one monarch",
+        "In independent city governments with no ties to any lord or king"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Feudalism was a decentralized web of personal, land-based obligations between lords and vassals, so power was scattered locally rather than concentrated in one bureaucracy or elected body. The other options describe centralized systems (a national parliament, a salaried bureaucracy) or autonomous city governments, none of which match feudal decentralization."
+    },
+    {
+      "Id": "u1.9-q2",
+      "NodeId": "u1.9",
+      "Prompt": "Why is the medieval Catholic Church often described as exercising \u0027parallel authority\u0027 alongside feudal kings and lords?",
+      "Choices": [
+        "The Church controlled its own courts, land, and could excommunicate rulers, giving it power that rivaled or checked secular authority",
+        "The Church had no influence outside religious ritual and left all governing to kings",
+        "The Pope was formally elected as a vassal to the Holy Roman Emperor",
+        "Feudal lords appointed all bishops directly, making the Church simply another layer of feudal bureaucracy"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The Church ran its own legal system (canon law), owned vast lands, and could use spiritual weapons like excommunication to pressure or delegitimize kings, making it a genuinely separate power structure. Saying it had no influence or was just a feudal appointee ignores its independent institutional authority."
+    },
+    {
+      "Id": "u1.9-q3",
+      "NodeId": "u1.9",
+      "Prompt": "A history student argues that feudal decentralization and Church authority were the \u0027same thing wearing two names.\u0027 What is the strongest counterargument?",
+      "Choices": [
+        "Feudal lords and the Church never interacted, so they cannot be compared at all",
+        "Both systems used identical written law codes enforced by the same courts",
+        "Feudalism organized power through land-based military/political obligations between individuals, while the Church organized power through religious doctrine, canon law, and a separate clergy hierarchy \u2014 two distinct, sometimes competing, sources of authority",
+        "Kings always outranked both lords and the Church, making the comparison irrelevant"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Feudal ties were secular and land-based (fiefs, homage, military service), while Church authority rested on spiritual legitimacy, canon law, and its own clerical hierarchy \u2014 these are structurally different systems that often clashed (e.g., disputes over appointing bishops). Claiming they never interacted or that kings simply outranked both ignores the well-documented conflicts between crowns and the papacy."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with a blank map of medieval Europe \u2014 no central government controls this whole space.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "map",
+            "Text": "Medieval Europe (no strong central authority)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "A king grants land, called a fief, to a powerful lord in exchange for military service and loyalty.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "king",
+            "Text": "King"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "lord1",
+            "Text": "Lord A (receives fief)"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "lord1",
+            "Value": "loyalty owed to King"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "That lord in turn grants smaller parcels of land to his own vassals, who owe him loyalty and service.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "vassal1",
+            "Text": "Vassal 1"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "vassal2",
+            "Text": "Vassal 2"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "vassal1",
+            "Value": "loyalty owed to Lord A"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "vassal2",
+            "Value": "loyalty owed to Lord A"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "This repeats across the continent: many separate lord-vassal chains, each locally controlled \u2014 this is feudal decentralization.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "lord2",
+            "Text": "Lord B (separate chain, different region)"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "lord2",
+            "Value": "no direct control by Lord A or King\u0027s other vassals"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "map",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Now overlay the Catholic Church: it spans every one of these feudal territories at once, unlike any single king or lord.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "church",
+            "Text": "Catholic Church (spans all territories)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "The Church has its own hierarchy \u2014 Pope, bishops, clergy \u2014 and its own law, canon law, separate from feudal obligations.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "pope",
+            "Text": "Pope"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "bishop",
+            "Text": "Bishops (oversee regions, cross feudal borders)"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "bishop",
+            "Value": "authority from Church, not from King or Lord"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Because its power is religious, not land-based, the Church can even challenge kings \u2014 for example, by threatening excommunication.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "king",
+            "Value": "can be pressured by Church authority"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "church",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "So we end with two overlapping power structures: a fragmented, local feudal pyramid, and one unified, continent-wide Church \u2014 parallel authorities in medieval Europe.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "map",
+            "Value": true
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "church",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:22:14.2175764+00:00",
+  "Model": "claude-sonnet-5"
+}

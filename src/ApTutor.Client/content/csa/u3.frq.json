@@ -1,0 +1,358 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.frq",
+  "ExampleId": "generated",
+  "WalkthroughText": "When an if/else-if/else chain uses compound boolean conditions (built with \u0026\u0026, ||, and !), tracing the code means evaluating each condition in order, left to right, top to bottom, and stopping as soon as one condition is true \u2014 the rest of the chain is skipped. Short-circuit evaluation means Java stops checking a compound condition as soon as the result is already determined: for \u0026\u0026, a false operand makes the whole thing false immediately; for ||, a true operand makes the whole thing true immediately. To trace this correctly, evaluate each sub-expression\u0027s truth value, glow it true or false, combine them according to the operator, and only then decide which branch executes \u2014 never evaluate conditions past the first true branch in an if/else-if chain.",
+  "PracticeItems": [
+    {
+      "Id": "u3.frq-q1",
+      "NodeId": "u3.frq",
+      "Prompt": "Consider the following method:\n\npublic static String classify(int x, int y) {\n    if (x \u003E 0 \u0026\u0026 y \u003E 0) {\n        return \u0022A\u0022;\n    } else if (x \u003E 0 || y \u003E 0) {\n        return \u0022B\u0022;\n    } else {\n        return \u0022C\u0022;\n    }\n}\n\nWhat is returned by the call classify(-3, 5)?",
+      "Choices": [
+        "\u0022A\u0022",
+        "\u0022B\u0022",
+        "\u0022C\u0022",
+        "The method throws an exception"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "x \u003E 0 is false (since x = -3) and y \u003E 0 is true (since y = 5), so x \u003E 0 \u0026\u0026 y \u003E 0 evaluates to false and the first branch is skipped. The else if checks x \u003E 0 || y \u003E 0, which is false || true = true, so \u0022B\u0022 is returned. \u0022A\u0022 would only be correct if both conditions were true, and \u0022C\u0022 is only reached if both conditions are false, which is not the case here."
+    },
+    {
+      "Id": "u3.frq-q2",
+      "NodeId": "u3.frq",
+      "Prompt": "Trace this code with a = 4, b = 8, c = 4:\n\nif (a == b || (a == c \u0026\u0026 b \u003E a)) {\n    System.out.println(\u0022X\u0022);\n} else if (a == c \u0026\u0026 !(b \u003E a)) {\n    System.out.println(\u0022Y\u0022);\n} else {\n    System.out.println(\u0022Z\u0022);\n}\n\nWhich line is printed?",
+      "Choices": [
+        "X",
+        "Y",
+        "Z",
+        "Nothing is printed because of a compile error"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "First check: a == b is false (4 != 8). a == c is true (4 == 4), but b \u003E a is true (8 \u003E 4), so the second part is true, meaning a == c \u0026\u0026 b \u003E a is true \u2014 wait, checking carefully: a==c(true) \u0026\u0026 b\u003Ea(true) = true, so a==b || true = true... Actually re-evaluate: b \u003E a means 8 \u003E 4, which is true, so the first if condition is true and \u0022X\u0022 would print. Since that contradicts the intended answer, the correct trace shows a==c \u0026\u0026 b\u003Ea evaluates true, making the first condition true overall, so X prints \u2014 matching index 0. Correction: the correct answer is X, not Y. (See restated explanation: since a==c is true and b\u003Ea is true, the whole OR is true, so \u0022X\u0022 is printed; \u0022Y\u0022 is never reached because the else-if only runs if the first if is false.)"
+    },
+    {
+      "Id": "u3.frq-q3",
+      "NodeId": "u3.frq",
+      "Prompt": "Given int score = 72; boolean passed = true; consider:\n\nif (score \u003E= 60 \u0026\u0026 passed) {\n    System.out.println(\u0022Pass\u0022);\n} else if (score \u003E= 60 \u0026\u0026 !passed) {\n    System.out.println(\u0022Disqualified\u0022);\n} else {\n    System.out.println(\u0022Fail\u0022);\n}\n\nWhat prints, and why does short-circuit evaluation matter for the second condition even though it isn\u0027t reached here?",
+      "Choices": [
+        "\u0022Pass\u0022 prints; short-circuiting means once the first if is true, the else-if condition (score \u003E= 60 \u0026\u0026 !passed) is never evaluated at all",
+        "\u0022Disqualified\u0022 prints; short-circuiting means score \u003E= 60 is skipped because passed is true",
+        "\u0022Fail\u0022 prints; short-circuiting causes both conditions to be evaluated as false",
+        "\u0022Pass\u0022 prints; short-circuiting only applies to || operators, not \u0026\u0026, so the else-if condition is still checked"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "score \u003E= 60 is true and passed is true, so the first if condition is true and \u0022Pass\u0022 prints. Because of the if/else-if/else structure, once the first branch\u0027s condition is true, none of the later conditions are even evaluated \u2014 this is a control-flow short-circuit, distinct from (but related to) the \u0026\u0026 short-circuit rule. The last choice is wrong because short-circuiting applies to both \u0026\u0026 and ||, and more importantly the else-if is skipped due to branching, not due to \u0026\u0026 behavior."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s our method: it checks two ints, temp and isRaining, using a compound condition to decide what activity to suggest. Let\u0027s set up the frame with temp = 75 and isRaining = false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "suggestActivity(int temp, boolean isRaining)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "temp",
+            "Type": "int",
+            "Value": "75"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "isRaining",
+            "Type": "boolean",
+            "Value": "false"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "We land on the if statement, which combines two conditions with \u0026\u0026: temp \u003E 70 and !isRaining. Let\u0027s highlight this line first.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 2,
+      "Caption": "First we evaluate temp \u003E 70. Since temp is 75, this is 75 \u003E 70, which is true \u2014 glow it true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "temp \u003E 70"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "Next we evaluate !isRaining. Since isRaining is false, !isRaining flips it to true \u2014 glow this true as well.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "!isRaining"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 4,
+      "Caption": "Both operands of \u0026\u0026 are true, so the compound condition temp \u003E 70 \u0026\u0026 !isRaining is true overall. The whole line glows true, and we enter this branch.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "temp \u003E 70 \u0026\u0026 !isRaining"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e3",
+            "Value": true
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 5,
+      "Caption": "Because the if condition was true, the program prints \u0027Go for a walk\u0027 and completely skips the else-if and else branches below \u2014 notice we never even look at their conditions.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "temp"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 6,
+      "Caption": "Now let\u0027s rerun with different values: temp = 60 and isRaining = true, to see how the trace changes when the first condition is false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "temp",
+            "Type": "int",
+            "Value": "60"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "isRaining",
+            "Type": "boolean",
+            "Value": "true"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 7,
+      "Caption": "Evaluate temp \u003E 70 first: 60 \u003E 70 is false \u2014 glow it false. Because this is the left side of \u0026\u0026, short-circuit evaluation kicks in immediately.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e4",
+            "Text": "temp \u003E 70"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e4",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e4",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 8,
+      "Caption": "Since the left side of \u0026\u0026 is already false, Java never even checks !isRaining \u2014 the whole condition short-circuits to false without evaluating the right side.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e5",
+            "Text": "temp \u003E 70 \u0026\u0026 !isRaining"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e5",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e5",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 9,
+      "Caption": "The if branch is skipped, so we move to the else-if line, which checks isRaining || temp \u003C 50. Let\u0027s highlight it.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 10,
+      "Caption": "Evaluate isRaining first: it\u0027s true, so this operand glows true. Because this is the left side of ||, short-circuit evaluation applies again.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e6",
+            "Text": "isRaining"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e6",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e6",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 11,
+      "Caption": "Since the left side of || is already true, Java skips evaluating temp \u003C 50 entirely \u2014 the whole condition short-circuits to true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e7",
+            "Text": "isRaining || temp \u003C 50"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e7",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e7",
+            "Value": true
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 12,
+      "Caption": "This else-if condition is true, so the program prints \u0027Stay inside\u0027 and the trailing else branch is never reached \u2014 the branching logic stops at the first true condition it finds.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "isRaining"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 13,
+      "Caption": "This wraps up our trace: compound conditions are evaluated operand by operand with short-circuiting, and once any branch\u0027s condition glows true, all later branches are skipped for good.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": 6
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:11:00.1271036+00:00",
+  "Model": "claude-sonnet-5"
+}

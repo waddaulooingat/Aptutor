@@ -1,0 +1,236 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "When you write \u0060new ClassName(...)\u0060, Java does two things: it allocates a brand-new object on the heap with its own space for each field, and it calls the constructor to initialize those fields. The variable you assign it to (like \u0060Dog myDog\u0060) does NOT hold the object itself \u2014 it holds a reference, essentially an arrow pointing to that object\u0027s location on the heap. If a variable is instead set to \u0060null\u0060, its arrow points to nothing, meaning there is no object to access. Trying to use a field or method through a null reference causes a NullPointerException, because Java has no object to follow the arrow to.",
+  "PracticeItems": [
+    {
+      "Id": "u2.2-q1",
+      "NodeId": "u2.2",
+      "Prompt": "Given the class below:\n\npublic class Dog {\n    String name;\n    int age;\n\n    public Dog(String n, int a) {\n        name = n;\n        age = a;\n    }\n}\n\nWhat happens when the following line executes?\n\nDog myDog = new Dog(\u0022Rex\u0022, 3);",
+      "Choices": [
+        "A new Dog object is allocated on the heap, its constructor runs setting name to \u0022Rex\u0022 and age to 3, and myDog stores a reference to that object",
+        "The variable myDog directly stores the text \u0022Rex\u0022 and the number 3 inside the stack frame",
+        "A new Dog object is created but myDog remains null until a separate assignment statement links them",
+        "The Dog constructor creates two separate objects, one for name and one for age"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The \u0027new\u0027 keyword allocates a Dog object on the heap and invokes the constructor to initialize its fields; the reference to that heap object is then stored in the variable myDog. It\u0027s incorrect to say myDog holds the raw values, since object variables in Java hold references, not the data itself. There\u0027s also no separate linking step needed\u2014the assignment happens as part of the single statement."
+    },
+    {
+      "Id": "u2.2-q2",
+      "NodeId": "u2.2",
+      "Prompt": "Consider this code:\n\nDog d1 = null;\nDog d2 = new Dog(\u0022Milo\u0022, 5);\n\nWhat is true about d1 and d2 immediately after these lines run?",
+      "Choices": [
+        "d1 points to nothing (no heap object), while d2 holds a reference to a Dog object on the heap with name \u0022Milo\u0022 and age 5",
+        "Both d1 and d2 point to the same Dog object, since null is a placeholder for the next object created",
+        "d1 causes a compile-time error because variables cannot be set to null",
+        "d2 is null until the constructor finishes running, then automatically becomes a valid reference to Milo"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Setting d1 = null means d1 does not reference any object at all \u2014 the arrow from d1 simply points to nothing. d2, however, is assigned a genuine heap object created by \u0027new Dog(...)\u0027, so it holds a valid reference. It\u0027s a common misconception that null acts as a \u0027placeholder\u0027 for whatever object is created next, but null and d2\u0027s object are entirely unrelated."
+    },
+    {
+      "Id": "u2.2-q3",
+      "NodeId": "u2.2",
+      "Prompt": "What happens if you try to run the following code?\n\nDog d3 = null;\nSystem.out.println(d3.name);",
+      "Choices": [
+        "It throws a NullPointerException at runtime because d3 does not reference any object whose field can be accessed",
+        "It prints the word \u0022null\u0022 to the console",
+        "It automatically creates a new Dog object with default field values and prints its name",
+        "It causes a compile-time error because d3 was never given a value"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Since d3 stores no reference to any heap object (it\u0027s null), trying to access d3.name attempts to follow a reference that doesn\u0027t exist, causing a NullPointerException at runtime. This compiles fine, since null is a legal value for an object reference, so there\u0027s no compile-time error, and Java never auto-creates an object to bail you out of a null reference."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with a Dog class that has a constructor setting name and age. We begin with an empty stack frame for main.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We declare a variable named d1 of type Dog, but haven\u0027t assigned it a value yet \u2014 it\u0027s uninitialized.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d1",
+            "Type": "Dog",
+            "Value": "?"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "We set d1 equal to null. This means d1 exists as a variable, but its arrow points to nothing \u2014 there is no heap object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d1",
+            "Type": "Dog",
+            "Value": "null"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "d1",
+            "TargetObjId": null
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now we declare a second variable, d2, also of type Dog, and prepare to run \u0027new Dog(\u0022Milo\u0022, 5)\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d2",
+            "Type": "Dog",
+            "Value": "?"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "The \u0027new\u0027 keyword allocates a brand-new Dog object on the heap. It starts with default field values before the constructor runs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog1",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "null"
+              },
+              {
+                "Key": "age",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "The constructor now runs, using the arguments \u0022Milo\u0022 and 5 to set the object\u0027s fields.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "name",
+            "Value": "\u0022Milo\u0022"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "age",
+            "Value": "5"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Finally, the reference to this new Dog object is stored in d2 \u2014 now d2\u0027s arrow points directly at the heap object we just built.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "d2",
+            "TargetObjId": "dog1"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "d2",
+            "Type": "Dog",
+            "Value": "\u2192dog1"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "d2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Notice the contrast: d1\u0027s arrow points to nothing (null), while d2\u0027s arrow points to a real Dog object on the heap with name \u0022Milo\u0022 and age 5.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "d1IsNull",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "If we tried to access d1.name right now, Java would have no object to follow \u2014 this throws a NullPointerException, since d1\u0027s arrow leads nowhere.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "npe",
+            "Text": "d1.name -\u003E NullPointerException"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:24:58.6074338+00:00",
+  "Model": "claude-sonnet-5"
+}

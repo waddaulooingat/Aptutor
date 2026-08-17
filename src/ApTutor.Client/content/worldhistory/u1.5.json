@@ -1,0 +1,194 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.5",
+  "ExampleId": "generated",
+  "WalkthroughText": "This node has no diagram or code to trace, so instead we\u0027ll walk through a mental comparison, listing the environmental problem, the adaptation invented to solve it, and the society responsible, for two unrelated regions of the Americas. Notice that neither society ever had contact with the other, or with Afro-Eurasia, when these technologies were developed. The point of this walkthrough is to build a clear before-and-after picture in your mind: unusable land on one side, engineered farmland on the other, achieved through two completely independent inventions.",
+  "PracticeItems": [
+    {
+      "Id": "u1.5-q1",
+      "NodeId": "u1.5",
+      "Prompt": "Which pair correctly matches an agricultural adaptation with the American Indigenous society most associated with developing and relying on it, in the absence of Afro-Eurasian contact or technology?",
+      "Choices": [
+        "Chinampas \u2014 Mexica (Aztec) in the Valley of Mexico",
+        "Terracing \u2014 Mississippian peoples along the Mississippi River",
+        "Chinampas \u2014 Inca in the Andes Mountains",
+        "Terracing \u2014 Mexica (Aztec) in the Valley of Mexico"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Chinampas, artificial floating garden plots built up from lakebed mud and reeds, were developed by the Mexica in the shallow lakes of the Valley of Mexico, particularly around Tenochtitlan, to grow food for a dense urban population. The Inca are associated with terracing in the mountainous Andes, not chinampas, and the Mississippian peoples relied on river floodplain farming rather than either of these two specific techniques, so the other pairings misattribute the innovation to the wrong society."
+    },
+    {
+      "Id": "u1.5-q2",
+      "NodeId": "u1.5",
+      "Prompt": "Both chinampas and Andean terracing solved a similar underlying problem despite arising independently and without any contact between Afro-Eurasia and the Americas. What was that shared problem?",
+      "Choices": [
+        "A lack of any labor force capable of large-scale construction projects",
+        "Land that was naturally unsuitable for farming as it existed, requiring modification to create usable, productive soil",
+        "The need to defend farmland from constant raids by rival empires",
+        "A shortage of any domesticated food crops in the Americas"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Chinampas turned unusable swampy lake water into fertile raised plots, while terraces turned steep, erosion-prone mountainsides into flat, arable steps; both are engineering responses to geography that resisted farming in its natural state. This shows convergent problem-solving rather than diffusion. The other options are incorrect: both societies actually had substantial labor forces (a requirement for building these systems), defense was not the primary purpose of either technique, and the Americas had crops like maize, beans, and potatoes long before these systems were built."
+    },
+    {
+      "Id": "u1.5-q3",
+      "NodeId": "u1.5",
+      "Prompt": "A student argues that because chinampas in Mesoamerica and terracing in the Andes both increased agricultural yield to support large populations, one civilization must have taught the technique to the other through trade contact. What is the strongest objection to this claim?",
+      "Choices": [
+        "Trade contact between Mesoamerica and the Andes was common, but agricultural techniques were never shared because of religious taboos",
+        "There is no evidence of direct or indirect Afro-Eurasian or trans-American contact needed for diffusion, so the similarity is better explained by independent adaptation to local environments",
+        "Chinampas and terracing are actually the same technique with different names, so no diffusion needs to be explained",
+        "Only one of the two techniques actually increased crop yields, so the comparison is invalid to begin with"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Historians point to independent invention (convergent development) as the explanation when two distant societies solve a similar environmental challenge in analogous ways without documented contact or trade networks connecting them; both chinampas and terracing arose from local necessity, not shared knowledge. The claim about religious taboos preventing sharing is fabricated and not a recognized historical explanation, and the other two distractors misstate facts: the techniques are structurally different, and both did in fact substantially raise crop yields."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with the Valley of Mexico, home to the Mexica people, long before any Afro-Eurasian contact existed.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "region1",
+            "Text": "Valley of Mexico \u2014 shallow lake environment"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "The lake environment posed a problem: too much water and soft mud meant very little solid, farmable land for a growing population.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "problem1",
+            "Text": "Problem: swampy lake, no dry farmland"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "problem1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "The Mexica\u0027s adaptation was the chinampa: a raised bed built from lakebed mud, plant matter, and stakes, forming an artificial island that could be farmed intensively.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "solution1",
+            "Text": "Solution: chinampa (raised, engineered farmland)"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "solution1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now let\u0027s shift far away, to the steep Andes Mountains, where a completely different society, the Inca, faced their own farming challenge.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "region2",
+            "Text": "Andes Mountains \u2014 steep, sloped terrain"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Here the problem was the opposite kind of geography: mountainsides too steep to hold soil, with heavy rain washing away any planted crops.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "problem2",
+            "Text": "Problem: steep slopes, erosion, no flat land"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "problem2",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "The Inca\u0027s adaptation was terracing: carving flat, stepped platforms into the mountainside, each supported by stone walls to hold soil in place and manage water flow.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "solution2",
+            "Text": "Solution: terracing (stepped, retained farmland)"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "solution2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Comparing both cases side by side: two societies, two very different landscapes, two different techniques, but the same underlying goal of turning unusable land into productive farmland.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "solution1",
+            "Value": "Chinampas: Mexica response to lake environment"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "solution2",
+            "Value": "Terracing: Inca response to mountain environment"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Because there is no evidence either group ever contacted the other, historians describe this as independent invention, or convergent adaptation, arising purely from local environmental necessity.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "conclusion",
+            "Text": "No contact needed: independent invention explains the similarity"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "conclusion",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:20:29.6053251+00:00",
+  "Model": "claude-sonnet-5"
+}

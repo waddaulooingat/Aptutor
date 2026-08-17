@@ -1,0 +1,243 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.6",
+  "ExampleId": "generated",
+  "WalkthroughText": "Two boolean expressions are equivalent if they produce the exact same true/false result for every possible combination of their variables\u0027 values \u2014 you can verify this by checking a truth table row by row. De Morgan\u0027s laws give us a reliable way to rewrite negated compound expressions: !(A \u0026\u0026 B) is always equivalent to !A || !B, and !(B || A) is always equivalent to !A \u0026\u0026 !B. Notice the pattern \u2014 negating flips \u0027\u0026\u0026\u0027 to \u0027||\u0027 (and vice versa) AND negates each individual piece inside. We\u0027ll use the boolTruthGlow visualization to watch two expressions light up in identical patterns across all four true/false combinations of two variables, proving they\u0027re equivalent.",
+  "PracticeItems": [
+    {
+      "Id": "u3.6-q1",
+      "NodeId": "u3.6",
+      "Prompt": "Which expression is equivalent to !(a \u003E 5 \u0026\u0026 b \u003C 10) using De Morgan\u0027s laws?",
+      "Choices": [
+        "a \u003C= 5 || b \u003E= 10",
+        "a \u003C= 5 \u0026\u0026 b \u003E= 10",
+        "a \u003E 5 || b \u003C 10",
+        "a \u003C= 5 || b \u003C 10"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "De Morgan\u0027s law states !(P \u0026\u0026 Q) is equivalent to !P || !Q. Negating \u0027\u0026\u0026\u0027 flips it to \u0027||\u0027, and each condition is negated: a \u003E 5 becomes a \u003C= 5, and b \u003C 10 becomes b \u003E= 10. The second choice keeps \u0027\u0026\u0026\u0027 instead of switching to \u0027||\u0027, which is the classic De Morgan mistake. The third and fourth choices fail to negate one or both of the inner conditions."
+    },
+    {
+      "Id": "u3.6-q2",
+      "NodeId": "u3.6",
+      "Prompt": "Which expression is equivalent to !(x == 0 || y == 0)?",
+      "Choices": [
+        "x != 0 \u0026\u0026 y != 0",
+        "x != 0 || y != 0",
+        "x == 0 \u0026\u0026 y == 0",
+        "x != 0 \u0026\u0026 y == 0"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "De Morgan\u0027s law states !(P || Q) is equivalent to !P \u0026\u0026 !Q. So \u0027||\u0027 becomes \u0027\u0026\u0026\u0027, and each equality is negated to become an inequality. The second choice incorrectly keeps \u0027||\u0027 instead of switching to \u0027\u0026\u0026\u0027. The fourth choice only negates one of the two conditions, so it is not fully equivalent."
+    },
+    {
+      "Id": "u3.6-q3",
+      "NodeId": "u3.6",
+      "Prompt": "A boolean expression is tested for all four combinations of true/false values of its two variables p and q, and it glows true in exactly the same rows as (p \u0026\u0026 q). Which of the following expressions must produce that same truth pattern?",
+      "Choices": [
+        "!(!p || !q)",
+        "!p || !q",
+        "p || q",
+        "!(p \u0026\u0026 !q)"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "By De Morgan\u0027s law, !(!p || !q) simplifies to p \u0026\u0026 q, which matches the required truth pattern exactly (true only when both p and q are true). The choice \u0027!p || !q\u0027 is actually the negation of p \u0026\u0026 q, so it glows true in the opposite rows. \u0027p || q\u0027 is true whenever at least one is true, which glows true in more rows than p \u0026\u0026 q. \u0027!(p \u0026\u0026 !q)\u0027 simplifies to !p || q, which does not match either."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s compare two expressions: !(p \u0026\u0026 q) and !p || !q. We\u0027ll test them against every combination of p and q to see if they always agree.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "!(p \u0026\u0026 q)"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "!p || !q"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Row 1: p is true, q is true. First let\u0027s evaluate p \u0026\u0026 q, which is true, so !(p \u0026\u0026 q) becomes false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "p1",
+            "Text": "p=true, q=true"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now check !p || !q for the same row: !p is false and !q is false, so false || false is also false. They match!",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Row 2: p is true, q is false. p \u0026\u0026 q is false, so !(p \u0026\u0026 q) becomes true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "p2",
+            "Text": "p=true, q=false"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Check !p || !q here: !p is false, !q is true, so false || true is true. Still matching.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Row 3: p is false, q is true. p \u0026\u0026 q is false, so !(p \u0026\u0026 q) is true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "p3",
+            "Text": "p=false, q=true"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Check !p || !q: !p is true, !q is false, so true || false is true. Matches again.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Row 4: p is false, q is false. p \u0026\u0026 q is false, so !(p \u0026\u0026 q) is true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "p4",
+            "Text": "p=false, q=false"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Check !p || !q: !p is true, !q is true, so true || true is true. They match on all four rows, so !(p \u0026\u0026 q) is truly equivalent to !p || !q \u2014 this is De Morgan\u0027s law in action.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:10:05.3920337+00:00",
+  "Model": "claude-sonnet-5"
+}

@@ -1,0 +1,150 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.8",
+  "ExampleId": "generated",
+  "WalkthroughText": "The Delhi Sultanate (established in the early 1200s) was a Muslim-ruled state governing a huge, mostly non-Muslim population in South Asia. Rather than trying to convert or eliminate this population, sultans generally practiced pragmatic religious pluralism: non-Muslims could practice their faiths, often in exchange for a special tax called the jizya, and local elites were sometimes incorporated into the administration to help govern effectively. This mirrors a broader pattern you\u0027ve seen with other Islamic states (built on your prereq knowledge of early state-building), where rulers balanced religious identity with the practical need to administer diverse, populous territories. Understanding this tension between religious identity and pragmatic governance is key to explaining how such states maintained control for centuries.",
+  "PracticeItems": [
+    {
+      "Id": "u1.8-q1",
+      "NodeId": "u1.8",
+      "Prompt": "Which practice best characterizes how most Delhi Sultanate rulers generally governed their large non-Muslim (primarily Hindu) population?",
+      "Choices": [
+        "They imposed forced conversion to Islam on the entire population within one generation of conquest.",
+        "They generally allowed non-Muslims to practice their religion in exchange for payment of the jizya tax, while incorporating some local elites into administration.",
+        "They exiled all non-Muslim religious leaders and destroyed every temple in the sultanate\u0027s territory.",
+        "They required all administrative positions to be filled exclusively by Arab-born Muslims, excluding local converts and non-Muslims alike."
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The Delhi Sultanate, like many Islamic states of the era, typically extended a degree of tolerance to \u0027People of the Book\u0027 and other non-Muslims through the jizya tax system, and pragmatically used local elites and administrators to help govern a vast, religiously diverse population. Forced universal conversion and total exclusion of non-Muslims from administration did not reflect the actual governing practice, which was more pragmatic than absolute."
+    },
+    {
+      "Id": "u1.8-q2",
+      "NodeId": "u1.8",
+      "Prompt": "A student is comparing the Delhi Sultanate to other Islamic empires studied in Unit 1 (such as the Abbasid Caliphate) in terms of managing religious diversity. Which statement most accurately reflects a similarity between them?",
+      "Choices": [
+        "Both empires relied on taxing non-Muslim subjects and permitting continued religious practice as a method of maintaining stability across a diverse population.",
+        "Both empires required that only Muslims could own land or engage in trade within their territories.",
+        "Both empires eliminated all pre-existing legal systems and replaced them entirely with a single unified code derived only from religious law.",
+        "Both empires refused any interaction or administrative cooperation with non-Muslim populations under their rule."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "A recurring pattern across Islamic states in this period, including the Abbasid Caliphate and the Delhi Sultanate, was using taxation (like the jizya) on non-Muslims as a mechanism of both revenue and toleration, rather than demanding uniform religious conversion or excluding non-Muslims from economic and administrative life. The other options describe practices not generally supported by the historical pattern of pragmatic governance in these empires."
+    },
+    {
+      "Id": "u1.8-q3",
+      "NodeId": "u1.8",
+      "Prompt": "Which of the following is the strongest piece of evidence that religious pluralism, not uniform enforcement of Islam, characterized state-building in the Delhi Sultanate?",
+      "Choices": [
+        "The continued presence of large Hindu populations, temples, and local Hindu administrative elites throughout the sultanate\u0027s centuries of rule.",
+        "The fact that the sultanate\u0027s official language was Persian rather than Arabic.",
+        "The sultanate\u0027s military reliance on cavalry and fortified capital cities.",
+        "The construction of large mosques and Islamic architecture in Delhi and other major cities."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The persistence of Hindu religious life, temple communities, and the continued political role of Hindu elites over centuries is direct evidence that the sultanate practiced pluralistic accommodation rather than forced uniformity. Language use, military structure, and mosque-building reflect other aspects of state-building (administration, warfare, and Islamic cultural expression) but do not by themselves demonstrate religious pluralism toward the majority population."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s think through how the Delhi Sultanate governed its very diverse population. We start with the basic fact: a Muslim ruling class sits atop a huge, mostly Hindu population in South Asia.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "pop",
+            "Text": "Delhi Sultanate: Muslim rulers govern majority non-Muslim population"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "One option would have been forced conversion or elimination of other religions \u2014 let\u0027s test that idea.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "opt1",
+            "Text": "Option: Force conversion of all subjects to Islam"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Historically, this was NOT the general practice \u2014 mass forced conversion across the whole population did not occur, so this option resolves to false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "opt1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Instead, consider the actual practiced policy: allowing continued religious practice in exchange for the jizya tax.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "opt2",
+            "Text": "Option: Tolerate other religions, collect jizya tax, use local elites in administration"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "This matches the historical record \u2014 temples continued to exist, Hindu elites held local power, and jizya was collected as both revenue and a tool of accommodation. This resolves to true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "opt2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "So the sultanate\u0027s approach to state-building combined military and political control with religious pragmatism rather than uniformity.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "pop",
+            "Value": "Result: pragmatic religious pluralism enabled long-term stability"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "This pattern \u2014 taxation and toleration rather than forced conversion \u2014 helped the Delhi Sultanate maintain rule over centuries despite deep religious diversity.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "opt2",
+            "Value": "Confirmed governing strategy"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:21:48.9261549+00:00",
+  "Model": "claude-sonnet-5"
+}

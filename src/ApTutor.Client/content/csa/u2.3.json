@@ -1,0 +1,183 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "A void method performs an action but hands back no value, so you call it as its own statement \u2014 just its name and parentheses followed by a semicolon, never assigned to a variable. When the call executes, Java pauses the current method, pushes a brand-new stack frame for the called method with its own parameters, runs that method\u0027s statements line by line, and then pops the frame off the stack once it finishes, returning control to the exact line right after the call in the caller. Watching the stack frame appear and disappear, alongside the highlighted line jumping between caller and callee, is the key to understanding how void calls actually work under the hood.",
+  "PracticeItems": [
+    {
+      "Id": "u2.3-q1",
+      "NodeId": "u2.3",
+      "Prompt": "Consider the following class:\n\npublic class Printer {\n    public static void printLine(String text) {\n        System.out.println(\u0022Line: \u0022 \u002B text);\n    }\n\n    public static void main(String[] args) {\n        printLine(\u0022Hello\u0022);\n        System.out.println(\u0022Done\u0022);\n    }\n}\n\nWhat is printed when main runs?",
+      "Choices": [
+        "Line: Hello\nDone",
+        "Done\nLine: Hello",
+        "Line: Hello",
+        "Compile error because printLine has no return statement"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Calling printLine(\u0022Hello\u0022) pushes a new frame that runs its body, printing \u0022Line: Hello\u0022, and then that frame is popped and control returns to main, which then prints \u0022Done\u0022. A void method never needs a return statement, so there is no compile error, and both lines are printed in order."
+    },
+    {
+      "Id": "u2.3-q2",
+      "NodeId": "u2.3",
+      "Prompt": "public class Greeter {\n    public static void greet() {\n        System.out.println(\u0022Hi there\u0022);\n    }\n\n    public static void main(String[] args) {\n        int x = greet();\n        System.out.println(x);\n    }\n}\n\nWhat happens when this code is compiled?",
+      "Choices": [
+        "It compiles and prints \u0022Hi there\u0022 then 0",
+        "It compiles and prints \u0022Hi there\u0022 then some garbage value",
+        "It fails to compile because greet() returns void and cannot be assigned to an int",
+        "It fails to compile because greet() is missing parameters"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "greet() is declared void, meaning the call produces no value at all. Trying to store the result of a void call in a variable (int x = greet();) is a compile-time error, not a runtime issue, so nothing ever prints."
+    },
+    {
+      "Id": "u2.3-q3",
+      "NodeId": "u2.3",
+      "Prompt": "public class Counter {\n    public static void showCount(int n) {\n        System.out.println(\u0022Count is \u0022 \u002B n);\n    }\n\n    public static void main(String[] args) {\n        int a = 3;\n        showCount(a);\n        showCount(a \u002B 2);\n    }\n}\n\nHow many times does control leave main to run showCount\u0027s frame, and what are the two lines printed?",
+      "Choices": [
+        "Once; Count is 3",
+        "Twice; Count is 3 then Count is 5",
+        "Twice; Count is 3 then Count is 3",
+        "Once; Count is 5"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Each call to showCount(a) and showCount(a \u002B 2) pushes its own separate frame with its own copy of parameter n (3, then 5), runs to completion, prints its line, and pops back to main before the next call happens. So control leaves main twice, printing \u0027Count is 3\u0027 then \u0027Count is 5\u0027."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a main method about to call a void method named printMessage. Right now only main\u0027s frame exists on the stack.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main(String[] args)"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Main reaches the statement printMessage(\u0022hi\u0022); this is a call to a void method, so it\u0027s written as a stand-alone statement, not assigned to anything.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Java pauses main right here and pushes a brand-new stack frame for printMessage, since a method call always creates its own frame.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "printMessage",
+            "MethodSig": "printMessage(String text)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "The argument \u0022hi\u0022 is copied into printMessage\u0027s own parameter variable named text, living only inside this new frame.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "printMessage",
+            "Name": "text",
+            "Type": "String",
+            "Value": "\u0022hi\u0022"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "printMessage",
+            "Name": "text"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Execution now highlights the first line inside printMessage\u0027s body \u2014 control has fully moved into the callee\u0027s frame.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "printMessage runs its System.out.println statement, printing \u0027Message: hi\u0027 to the console, using its local text variable.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "printMessage has no more statements and no return value to send back, so its frame is popped right off the stack.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "printMessage"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Control returns to main at the exact line right after the call, and main\u0027s frame is still exactly as it was before the call.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Main continues executing its next statement, showing that calling a void method simply pauses the caller, runs the callee to completion, then resumes right where it left off.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:25:16.4166393+00:00",
+  "Model": "claude-sonnet-5"
+}

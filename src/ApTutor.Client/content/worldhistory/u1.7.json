@@ -1,0 +1,184 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.7",
+  "ExampleId": "generated",
+  "WalkthroughText": "Chinese emperors after roughly 1000 CE faced a huge challenge: how do you administer a massive, diverse empire without simply handing power to hereditary nobles who might become rivals? Their solution combined two tools working together. First, Neo-Confucianism, a revived and updated version of classical Confucian philosophy, taught that everyone had fixed duties within a hierarchy\u2014subjects obeyed rulers, children obeyed parents, and self-cultivation through study of moral texts made someone fit to govern. Second, the civil service examination system tested candidates on exactly this Neo-Confucian curriculum, so passing required deeply internalizing ideas that supported loyalty and order. Together, these tools let the emperor recruit talented, ideologically loyal administrators from a wider pool than the old aristocracy, centralizing power while presenting the system as fair and merit-based.",
+  "PracticeItems": [
+    {
+      "Id": "u1.7-q1",
+      "NodeId": "u1.7",
+      "Prompt": "During the Song dynasty, why did the imperial government promote Neo-Confucianism as an official ideology while also expanding the civil service examination system?",
+      "Choices": [
+        "Both institutions reinforced a merit-based bureaucracy loyal to Confucian ethics, strengthening central control over the vast empire",
+        "Neo-Confucianism replaced the need for taxation, so the examination system funded the military instead",
+        "The examination system was designed to recruit merchants who would fund Neo-Confucian temples",
+        "Neo-Confucianism rejected classical texts, so the exams tested only mathematics and engineering skills"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Neo-Confucianism revived classical Confucian values (loyalty, filial piety, hierarchy, moral self-cultivation) and became the philosophical basis for exam content, meaning officials who passed exams internalized ideas that reinforced obedience to the emperor and social order. This let the state recruit administrators through merit while ensuring their worldview supported imperial authority. The other options invent unrelated economic or military functions not connected to the actual relationship between ideology and examination content."
+    },
+    {
+      "Id": "u1.7-q2",
+      "NodeId": "u1.7",
+      "Prompt": "A peasant family in Song China scrapes together resources to educate a son for the civil service exams instead of apprenticing him to a trade. What does this decision reveal about the exam system\u0027s role in imperial administration?",
+      "Choices": [
+        "It shows the exams were open only to hereditary aristocrats, so the family\u0027s effort would be wasted",
+        "It shows the exams created a (limited) path for social mobility, which helped the state draw talent from beyond the traditional aristocracy and tie ambitious families\u0027 loyalty to the imperial system",
+        "It shows the government banned peasants from taking exams to protect noble families\u0027 status",
+        "It shows Neo-Confucianism discouraged education in favor of manual labor for lower classes"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The exam system, at least in theory and increasingly in practice, allowed men outside the hereditary aristocracy to earn government office through merit, which broadened the pool of talent available to the state and encouraged families across classes to invest in Confucian education, binding them ideologically and practically to the imperial order. The other choices contradict the historically expanding (if imperfect) accessibility of the exams."
+    },
+    {
+      "Id": "u1.7-q3",
+      "NodeId": "u1.7",
+      "Prompt": "Which statement best explains how Neo-Confucian ideas about hierarchy and duty specifically supported the goals of centralized imperial administration, beyond just providing exam content?",
+      "Choices": [
+        "Neo-Confucianism argued that emperors should be elected, which justified regular civil service turnover",
+        "Neo-Confucianism emphasized fixed roles and obligations (ruler-subject, parent-child, etc.), which normalized obedience to authority and made bureaucrats and subjects alike more accepting of the emperor\u0027s centralized rule",
+        "Neo-Confucianism focused entirely on trade regulation, which let the state control merchant guilds directly",
+        "Neo-Confucianism rejected all hierarchy, promoting equality that undermined imperial authority"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Neo-Confucian philosophy reinforced a structured social order with clear duties at every level, from family to state, which made hierarchical obedience seem natural and moral\u2014directly useful for legitimizing a centralized emperor and his officials. The distractors either invent unrelated content (trade regulation, elections) or state the opposite of Neo-Confucianism\u0027s actual emphasis on hierarchy."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s think through why an emperor ruling a huge empire needs a reliable way to staff the government with loyal, capable officials.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "q",
+            "Text": "Problem: How does the emperor administer a vast empire without relying only on hereditary nobles?"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "One old option is to just appoint relatives and nobles, but that risks divided loyalty and weak talent.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "opt1",
+            "Text": "Option A: Hereditary aristocracy fills government posts"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "opt1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Instead, the imperial state builds a merit-based civil service examination system open to educated men across the empire.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "exam",
+            "Text": "Tool 1: Civil service examinations test candidates on classical texts"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "But what should the exams actually test? The content itself needs to shape officials into loyal, orderly administrators.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "content",
+            "Text": "Exam content = Neo-Confucian philosophy (hierarchy, duty, self-cultivation)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Neo-Confucianism teaches that everyone has fixed roles: ruler and subject, parent and child, each with moral obligations.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "nc1",
+            "Text": "Neo-Confucian idea: fixed hierarchical duties (ruler-subject, parent-child)"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "nc1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "A candidate who masters these texts to pass the exam has also internalized respect for hierarchy and obedience to the emperor.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "link",
+            "Text": "Passing exam --\u003E internalizing Neo-Confucian loyalty and order"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "link",
+            "Value": "Official is both capable AND ideologically loyal"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "So the two tools reinforce each other: exams supply merit-based talent, Neo-Confucianism supplies the loyal, hierarchical mindset that talent brings with it.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "combo",
+            "Text": "Result: Exam system \u002B Neo-Confucianism = centralized, stable imperial bureaucracy"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "combo",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "This combination also opened a narrow path for social mobility, since even non-noble families could study and test in, tying more of society to the imperial system\u0027s legitimacy.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "mobility",
+            "Text": "Side effect: limited social mobility ties ambitious families to the imperial order"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:21:24.451119+00:00",
+  "Model": "claude-sonnet-5"
+}

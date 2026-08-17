@@ -1,0 +1,186 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "An if statement lets your program choose whether to run a block of code based on a boolean condition. Java evaluates the condition in the parentheses to true or false; if it\u0027s true, the code inside the if-block runs, and if it\u0027s false, that block is skipped and, when present, the else block runs instead. With if/else if/else chains, Java checks each condition top to bottom and runs the first block whose condition is true, skipping all the rest \u2014 so exactly one block (or none, if there\u0027s no matching else) ever executes. Tracing this kind of code means highlighting each line as it runs and watching each boolean condition \u0022glow\u0022 true or false to see which path the program takes.",
+  "PracticeItems": [
+    {
+      "Id": "u3.2-q1",
+      "NodeId": "u3.2",
+      "Prompt": "What is printed by the following code?\n\nint x = 7;\nif (x \u003E 5) {\n    System.out.println(\u0022A\u0022);\n}\nif (x \u003E 10) {\n    System.out.println(\u0022B\u0022);\n} else {\n    System.out.println(\u0022C\u0022);\n}",
+      "Choices": [
+        "A\nB",
+        "A\nC",
+        "B\nC",
+        "C"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The first condition x \u003E 5 (7 \u003E 5) is true, so \u0022A\u0022 prints. The second condition x \u003E 10 (7 \u003E 10) is false, so the else branch runs and \u0022C\u0022 prints. \u0022A\nB\u0022 is wrong because the second if\u0027s condition is false, so B never prints."
+    },
+    {
+      "Id": "u3.2-q2",
+      "NodeId": "u3.2",
+      "Prompt": "Which condition correctly causes the code to print \u0022Pass\u0022 only when a student\u0027s score is at least 60?\n\nint score = 60;\nif ( /* condition */ ) {\n    System.out.println(\u0022Pass\u0022);\n} else {\n    System.out.println(\u0022Fail\u0022);\n}",
+      "Choices": [
+        "score \u003E 60",
+        "score \u003E= 60",
+        "score \u003C 60",
+        "score == 61"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "\u0022At least 60\u0022 means score \u003E= 60, which includes 60 itself. score \u003E 60 would be false when score is exactly 60, incorrectly printing \u0022Fail\u0022."
+    },
+    {
+      "Id": "u3.2-q3",
+      "NodeId": "u3.2",
+      "Prompt": "int a = 4, b = 9;\nif (a \u003E b) {\n    System.out.println(\u0022X\u0022);\n} else if (a == b) {\n    System.out.println(\u0022Y\u0022);\n} else {\n    System.out.println(\u0022Z\u0022);\n}\n\nWhat is printed?",
+      "Choices": [
+        "X",
+        "Y",
+        "Z",
+        "Nothing is printed"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "a \u003E b (4 \u003E 9) is false, so we check a == b (4 == 9), which is also false. Since both are false, control falls to the final else, printing \u0022Z\u0022. Only one branch of an if/else if/else chain ever executes."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a simple program that declares a temperature variable and will decide what to print based on it.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main(String[] args)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "temp",
+            "Type": "int",
+            "Value": "85"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Line 2 is our first if statement: it checks whether temp is greater than 90.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "c1",
+            "Text": "temp \u003E 90"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "We substitute temp\u0027s value: 85 \u003E 90. That expression evaluates to false, so it glows red.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "c1",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "c1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Since the condition on line 2 is false, we skip its body entirely and jump down to check the else-if condition on line 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "c2",
+            "Text": "temp \u003E 70"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Substituting again: 85 \u003E 70. This is true, so the condition glows green.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "c2",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "c2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Because this condition is true, control flow enters this branch\u0027s body on line 5, and the rest of the chain (any later else) is skipped.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "temp"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "The program prints \u0022Warm\u0022 and then jumps past the remaining else block, since only one branch in an if/else-if/else chain ever runs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 8
+          },
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:08:51.8761666+00:00",
+  "Model": "claude-sonnet-5"
+}

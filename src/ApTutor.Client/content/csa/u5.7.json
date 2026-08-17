@@ -1,0 +1,235 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.7",
+  "ExampleId": "generated",
+  "WalkthroughText": "A static variable belongs to the class itself, not to any individual object \u2014 there is exactly one copy of it, stored in a special class-level pane in memory, and every object of that class reads and writes that same shared copy. A static method also belongs to the class rather than to an object: it runs without needing an instance, so it can only directly use static variables and its own local variables \u2014 it has no access to instance fields and no \u0027this\u0027. This is different from instance variables, where each object gets its own separate copy living inside that object\u0027s own memory. In this walkthrough, watch the class-level pane hold the single shared static variable while each object\u0027s stack frame and heap box only track its own instance data.",
+  "PracticeItems": [
+    {
+      "Id": "u5.7-q1",
+      "NodeId": "u5.7",
+      "Prompt": "Consider this class:\n\npublic class Counter {\n    private static int count = 0;\n    private int id;\n\n    public Counter() {\n        count\u002B\u002B;\n        id = count;\n    }\n\n    public int getId() {\n        return id;\n    }\n}\n\nIf three Counter objects are created in this order \u2014 c1, c2, c3 \u2014 what does c3.getId() return?",
+      "Choices": [
+        "0",
+        "1",
+        "3",
+        "It cannot be determined without more information"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "count is static, so all Counter objects share the exact same class-level variable. Each constructor call increments the shared count once: after c1 it\u0027s 1, after c2 it\u0027s 2, after c3 it\u0027s 3. Since id = count is assigned inside the constructor, c3\u0027s id becomes 3. The answer 1 would be wrong because that confuses id (instance-specific, set once) with count continuing to change afterward."
+    },
+    {
+      "Id": "u5.7-q2",
+      "NodeId": "u5.7",
+      "Prompt": "Which of the following is a valid reason to declare a method as static in a class?",
+      "Choices": [
+        "The method needs to access and modify instance variables of a specific object",
+        "The method performs a calculation that does not depend on any instance data and should be callable without creating an object",
+        "The method must be able to use the keyword \u0027this\u0027 to refer to the calling object",
+        "The method overrides a method from a superclass"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Static methods belong to the class itself, not to any object, so they are appropriate when no instance data is needed and you want to call the method via the class name alone (e.g., Math.sqrt(x)). The first choice is wrong because static methods cannot directly access instance variables \u2014 there\u0027s no implicit object. The third choice is wrong because \u0027this\u0027 refers to the calling object, and static methods have no calling object."
+    },
+    {
+      "Id": "u5.7-q3",
+      "NodeId": "u5.7",
+      "Prompt": "public class Bank {\n    private static double totalDeposits = 0;\n\n    public static void deposit(double amt) {\n        totalDeposits \u002B= amt;\n    }\n\n    public static double getTotal() {\n        return totalDeposits;\n    }\n}\n\nIn client code, Bank.deposit(100) is called, then Bank.deposit(50) is called. What does Bank.getTotal() return?",
+      "Choices": [
+        "0",
+        "50",
+        "100",
+        "150"
+      ],
+      "CorrectIndex": 3,
+      "Explanation": "totalDeposits is a static (class-level) variable, so it persists across separate calls and is shared \u2014 there\u0027s only one copy no matter how many times deposit() is called or how many Bank objects (if any) exist. The two calls add 100 and then 50 to the same variable, giving 150. Answer 50 would incorrectly assume each call resets or uses a fresh totalDeposits."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s our class: Counter has a static variable count shared by the whole class, and an instance variable id that belongs to each individual object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count",
+            "Type": "static int",
+            "Value": "0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We call \u0027new Counter()\u0027 for c1. A stack frame for the constructor is pushed, and a new Counter object is allocated on the heap with its own id field.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "ctor1",
+            "MethodSig": "Counter()"
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "c1",
+            "ClassName": "Counter",
+            "Fields": [
+              {
+                "Key": "id",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Inside the constructor, count\u002B\u002B modifies the ONE shared static variable in the class pane, not anything inside c1\u0027s object box.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count",
+            "Type": "static int",
+            "Value": "1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Then id = count copies the current shared value (1) into c1\u0027s own instance field \u2014 this copy now lives inside c1\u0027s heap box, separate from the class pane.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "c1",
+            "Field": "id",
+            "Value": "1"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "ctor1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Now we call \u0027new Counter()\u0027 again for c2. A fresh stack frame and a fresh heap object appear, but notice: there is still only ONE count in the class pane.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "ctor2",
+            "MethodSig": "Counter()"
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "c2",
+            "ClassName": "Counter",
+            "Fields": [
+              {
+                "Key": "id",
+                "Value": "0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "count\u002B\u002B runs again \u2014 it updates the same shared class-level variable, now becoming 2. Both c1 and c2 \u0027see\u0027 this same cell if they ever read it directly.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count",
+            "Type": "static int",
+            "Value": "2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "id = count copies 2 into c2\u0027s own id field. c2\u0027s id is independent of c1\u0027s id \u2014 each object keeps its own instance copy, even though they both read from the same static source.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "fieldSet",
+            "ObjId": "c2",
+            "Field": "id",
+            "Value": "2"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "ctor2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Finally, imagine a static method Counter.getCount() is called directly on the class \u2014 no object needed at all. It pushes a stack frame but there\u0027s no heap object tied to it.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "staticCall",
+            "MethodSig": "Counter.getCount()"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "staticCall"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Summary: the class pane holds one shared static count that every object updates and reads, while each object\u0027s own heap box holds its private id \u2014 that\u0027s the key difference between static and instance data.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "ClassPane:Counter",
+            "Name": "count"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:24:54.7315887+00:00",
+  "Model": "claude-sonnet-5"
+}

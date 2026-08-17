@@ -1,0 +1,192 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "An else-if chain lets a program test several conditions in order and take exactly one action, the one attached to the first condition that turns out true. Java checks the conditions from top to bottom; as soon as one is true, it runs that branch\u0027s body and then jumps past the entire rest of the chain, never even looking at the later conditions. If none of the conditions are true, an optional final else runs as a catch-all. Because only one branch ever executes, else-if chains are perfect for mutually exclusive categories, like grade cutoffs, where you don\u0027t want multiple messages printed for one input.",
+  "PracticeItems": [
+    {
+      "Id": "u3.4-q1",
+      "NodeId": "u3.4",
+      "Prompt": "What does the following method return when score is 82?\n\npublic String getGrade(int score) {\n    if (score \u003E= 90) {\n        return \u0022A\u0022;\n    } else if (score \u003E= 80) {\n        return \u0022B\u0022;\n    } else if (score \u003E= 70) {\n        return \u0022C\u0022;\n    } else {\n        return \u0022F\u0022;\n    }\n}",
+      "Choices": [
+        "\u0022A\u0022",
+        "\u0022B\u0022",
+        "\u0022C\u0022",
+        "\u0022F\u0022"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The chain checks conditions top to bottom and stops at the first true one. 82 is not \u003E= 90, so Java moves to the next branch: 82 \u003E= 80 is true, so \u0022B\u0022 is returned and the remaining else-if/else branches are skipped entirely."
+    },
+    {
+      "Id": "u3.4-q2",
+      "NodeId": "u3.4",
+      "Prompt": "public void classify(int x) {\n    if (x \u003E 0) {\n        System.out.println(\u0022positive\u0022);\n    } else if (x \u003E -10) {\n        System.out.println(\u0022small negative\u0022);\n    } else if (x \u003C -100) {\n        System.out.println(\u0022very negative\u0022);\n    }\n    System.out.println(\u0022done\u0022);\n}\n\nWhat is printed when classify(-5) is called?",
+      "Choices": [
+        "positive\ndone",
+        "small negative\ndone",
+        "very negative\ndone",
+        "small negative\nvery negative\ndone"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "x = -5 fails x \u003E 0, but passes x \u003E -10, so \u0022small negative\u0022 prints and the rest of the else-if chain (including the very negative check) is skipped. Then the line after the whole chain, \u0022done\u0022, always executes since it isn\u0027t part of the chain."
+    },
+    {
+      "Id": "u3.4-q3",
+      "NodeId": "u3.4",
+      "Prompt": "A student rewrites an else-if chain into separate, independent if statements (removing all \u0022else\u0022) that test the same conditions in the same order. For which input could the two versions behave differently?",
+      "Choices": [
+        "An input that makes only the first condition true",
+        "An input that makes only the last condition true",
+        "An input that makes none of the conditions true",
+        "An input that makes two of the conditions true, where the earlier one is listed first"
+      ],
+      "CorrectIndex": 3,
+      "Explanation": "In an else-if chain, only the first true branch runs. With separate independent ifs, every condition is evaluated and every true one runs its body. If two conditions could both be true for some input, the chain executes just the first matching branch while the separate-ifs version executes both, producing different behavior."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here is our else-if chain: it checks a score and decides which letter grade to report. Let\u0027s trace it with score = 82.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "m",
+            "MethodSig": "getGrade(int score)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "m",
+            "Name": "score",
+            "Type": "int",
+            "Value": "82"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "First we check the very first condition: is score \u003E= 90?",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "score \u003E= 90"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "82 \u003E= 90"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e1",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 2,
+      "Caption": "That\u0027s false, so the body on line 3 is skipped, and Java moves down to the next condition in the chain instead of stopping.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 3,
+      "Caption": "Now we check the else-if condition: is score \u003E= 80?",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "score \u003E= 80"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "82 \u003E= 80"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 4,
+      "Caption": "This condition is true! Java runs this branch\u0027s body and will skip every remaining else-if and else below it, no matter what they say.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "m",
+            "Name": "score"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 5,
+      "Caption": "The method returns \u0022B\u0022 right here \u2014 notice lines 6 through 9 (the \u003E=70 check and the final else) are never even evaluated.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeNode",
+            "NodeId": "call1",
+            "ParentId": null,
+            "Label": "getGrade(82)"
+          },
+          {
+            "op": "callTreeReturn",
+            "NodeId": "call1",
+            "ReturnValue": "\u0022B\u0022"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "m"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 6,
+      "Caption": "That\u0027s the key idea of an else-if chain: the conditions are checked in order, and the very first true one wins \u2014 everything after it is skipped, even if it would also have been true.",
+      "Delta": {
+        "Ops": []
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:09:27.1013603+00:00",
+  "Model": "claude-sonnet-5"
+}

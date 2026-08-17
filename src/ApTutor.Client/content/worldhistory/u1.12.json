@@ -1,0 +1,232 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.12",
+  "ExampleId": "generated",
+  "WalkthroughText": "Before sustained contact between the Eastern and Western Hemispheres, human societies developed along different environmental and demographic paths shaped largely by agriculture, animals, and settlement patterns. Where farmers could reliably grow more food than their own families needed, that surplus freed some people to become craftspeople, priests, soldiers, or rulers, and these specialists tended to cluster together, giving rise to cities. Afro-Eurasia also had many species of large mammals suitable for domestication, and centuries of close human-animal contact in dense settlements allowed several serious diseases to become endemic there. The Americas, with fewer domesticable large animals and different settlement histories, did not develop the same disease environment, which mattered enormously once sustained contact began.",
+  "PracticeItems": [
+    {
+      "Id": "u1.12-q1",
+      "NodeId": "u1.12",
+      "Prompt": "In many Mesoamerican and Andean societies before sustained European contact, agricultural surplus most directly contributed to urbanization by:",
+      "Choices": [
+        "Eliminating the need for any social hierarchy since food was equally distributed to all households",
+        "Freeing a portion of the population from full-time farming so they could specialize as artisans, priests, or administrators concentrated in dense settlements",
+        "Forcing all farmers to migrate permanently to coastal areas to trade excess crops",
+        "Reducing the total population because fewer farmers were needed to feed the community"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "When farmers produce more food than their own households need, that extra food can support non-farming specialists (craftspeople, religious leaders, rulers, builders) who cluster in cities. This specialization and concentration of people is the essence of urbanization. The distractor about equal distribution is wrong because surplus actually enabled social stratification, not equality; surplus also allowed population growth, not decline, since more people could be fed by fewer farmers."
+    },
+    {
+      "Id": "u1.12-q2",
+      "NodeId": "u1.12",
+      "Prompt": "A key demographic difference between Afro-Eurasia and the Americas before 1492 was the density and variety of domesticated large mammals living closely with humans. This difference mattered most because it:",
+      "Choices": [
+        "Determined which continent had better weather for growing maize and wheat",
+        "Made Afro-Eurasian populations biologically superior to Indigenous American populations",
+        "Led to the development of a wider range of epidemic diseases in Afro-Eurasia, to which Indigenous Americans had little prior immunity",
+        "Prevented any agricultural surplus from developing in the Americas"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Long-term close contact with many domesticated animal species in Afro-Eurasia allowed diseases like smallpox and measles to jump to humans and become endemic, so many Afro-Eurasians developed some population-level immunity over generations. The Americas had far fewer domesticable large mammals, so these disease environments didn\u0027t develop there, leaving Indigenous populations highly vulnerable later. The \u0027biologically superior\u0027 choice is incorrect and reflects a discredited and offensive idea, not the actual historical/scientific explanation, which centers on prior exposure, not innate biology."
+    },
+    {
+      "Id": "u1.12-q3",
+      "NodeId": "u1.12",
+      "Prompt": "Which statement best describes the relationship between regional disease environments and population patterns in the Americas versus Afro-Eurasia before sustained contact?",
+      "Choices": [
+        "Both regions had identical disease environments because all humans descend from common ancestors",
+        "The Americas had more epidemic diseases than Afro-Eurasia because of their tropical climates",
+        "Afro-Eurasia\u0027s long history of dense urban populations and animal domestication created endemic diseases largely absent from the pre-contact Americas",
+        "Disease environments had no meaningful effect on population patterns in either region before contact"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Afro-Eurasia\u0027s combination of dense cities and many domesticated animals over millennia allowed several crowd diseases to become endemic there. The comparatively lower density of domesticated large mammals and different settlement patterns in the pre-contact Americas meant these specific diseases hadn\u0027t developed in the same way, a fact that became devastating once contact began. The choice claiming no meaningful effect is incorrect because disease environment differences are a major factor historians use to explain later demographic collapse."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s reason through this concept step by step, without any code or diagram \u2014 just building up the logic of surplus, cities, and disease environments in our minds.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "start",
+            "Text": "Concept: Surplus \u2192 Cities \u2192 Disease Environments"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We start with a farming community that produces just enough food to feed itself \u2014 no extra, no specialists.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "farm",
+            "Text": "Farming community: food produced = food needed"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now imagine better tools, irrigation, or fertile soil let that same community produce more food than it needs. This extra food is called agricultural surplus.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "surplus",
+            "Text": "Agricultural surplus = food produced \u003E food needed"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "surplus",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Because not everyone has to farm anymore, some people can specialize \u2014 becoming artisans, priests, soldiers, or administrators.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "surplus",
+            "Value": "Frees some people from farming"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "specialize",
+            "Text": "Non-farmers specialize in other roles"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "These specialists tend to gather together for trade, protection, and shared institutions \u2014 this clustering is what we call urbanization.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "specialize",
+            "Value": "People cluster into dense settlements"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "urban",
+            "Text": "Urbanization: dense cities form"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "urban",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Now let\u0027s look at a second, parallel chain: what happens when dense human settlements exist alongside many domesticated large animals, as in much of Afro-Eurasia.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "animals",
+            "Text": "Afro-Eurasia: many domesticated large mammals \u002B dense cities"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Close, sustained contact between humans and animals in crowded cities allowed certain animal diseases to jump to humans and spread widely.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "animals",
+            "Value": "Diseases jump from animals to humans"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "disease",
+            "Text": "Endemic diseases develop (e.g., smallpox, measles)"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "disease",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Over many generations, Afro-Eurasian populations built up some population-level immunity, since survivors and their descendants had faced these diseases repeatedly.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "disease",
+            "Value": "Some population-level immunity develops over centuries"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Now compare: the Americas had far fewer domesticable large mammals, so this same disease-building process did not happen there in the same way.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "americas",
+            "Text": "Americas: fewer domesticable large mammals"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "americas",
+            "Value": "Fewer endemic crowd diseases develop"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "americas",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "So before sustained contact, both hemispheres had agricultural surplus and impressive cities, but very different disease environments \u2014 a difference with enormous consequences once contact occurred.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "summary",
+            "Text": "Surplus \u002B cities: shared pattern. Disease environment: key difference."
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:23:36.7041733+00:00",
+  "Model": "claude-sonnet-5"
+}

@@ -1,0 +1,156 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.frq",
+  "ExampleId": "generated",
+  "WalkthroughText": "This node has no code or diagram to trace \u2014 instead, \u0022none\u0022 here means the walkthrough itself models the thinking process for writing a comparative historical argument. We\u0027ll build a mental outline the same way you\u0027d build a scene: start empty, then add one claim, then evidence for each region, then a comparison sentence that ties them together. This mirrors exactly what a strong AP synthesis/compare FRQ response does: state a defensible claim, support it with specific evidence from two-plus regions, and explicitly compare rather than just describe two things side by side.",
+  "PracticeItems": [
+    {
+      "Id": "u1.frq-q1",
+      "NodeId": "u1.frq",
+      "Prompt": "Which pairing best illustrates two different strategies of state-building used by empires in the period c. 1200-1450?",
+      "Choices": [
+        "Mali\u0027s use of Islamic administrative practices and control of trans-Saharan trade versus the Mongols\u0027 use of a meritocratic military hierarchy and relay communication system to govern a vast, ethnically diverse empire",
+        "The Mongols relying entirely on hereditary aristocracy while Mali relied entirely on a professional bureaucracy staffed by foreign scholars",
+        "Song China abandoning centralized bureaucracy in favor of a decentralized feudal system similar to Western Europe",
+        "The Byzantine Empire and the Mongol Khanates both adopting identical tribute systems with no local variation"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Correct: Mali centralized power partly through control of gold-salt trade routes and adoption of Islamic law/administration to legitimize rule, while the Mongols built an empire through military meritocracy, religious tolerance, and infrastructure (the yam system) to manage diverse conquered peoples\u2014two distinct strategies. The other choices misstate these empires\u0027 actual practices (Mongols did use some hereditary elements but also meritocratic promotion; Song China intensified rather than abandoned centralization; tribute systems varied by region)."
+    },
+    {
+      "Id": "u1.frq-q2",
+      "NodeId": "u1.frq",
+      "Prompt": "A student writing a comparison essay argues: \u0027Both the Mali Empire and the Song Dynasty strengthened central authority by incorporating a shared religious or philosophical tradition into government administration, though they drew on different traditions.\u0027 Which piece of evidence best supports this claim?",
+      "Choices": [
+        "Mali rulers like Mansa Musa promoted Islam and used Islamic scholars/qadis in governance, while Song emperors reinforced Confucian civil service examinations to staff the bureaucracy",
+        "Mali rulers rejected all outside religious influence, while Song China imported Islamic legal codes wholesale",
+        "Both states eliminated any use of religion or philosophy in government and relied solely on military coercion",
+        "The Song Dynasty adopted Islam as a state religion identical to Mali\u0027s practice"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Correct: Mali integrated Islamic officials and law to support trade and legitimacy, while Song China expanded the Confucian examination system to recruit loyal, educated officials\u2014both used belief systems to reinforce centralized rule, but the traditions differed. The other options invent facts not supported by the historical record (Song did not adopt Islam; Mali did not reject Islam)."
+    },
+    {
+      "Id": "u1.frq-q3",
+      "NodeId": "u1.frq",
+      "Prompt": "Which of the following would be the strongest thesis statement for a comparative essay on state-building strategies c. 1200-1450?",
+      "Choices": [
+        "While the Mongols expanded their empire primarily through military conquest, administrative flexibility, and toleration of local customs, the Mali Empire built state power through control of lucrative trade networks and integration of Islamic institutions, showing that empires used both coercive and economic/religious strategies to consolidate authority",
+        "Empires in this era all used the same methods to build states, so there is nothing to compare",
+        "The Mongols and Mali empires never interacted, so no meaningful comparison can be drawn between their state-building methods",
+        "State-building in this period only involved military conquest, with no role for trade, religion, or administration"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Correct: This thesis identifies specific, differentiated strategies (military/administrative flexibility vs. trade/religious integration) and makes a defensible comparative claim linking them to a broader pattern. The other choices either deny any meaningful difference exists or oversimplify state-building to a single factor, which would earn no credit on an FRQ."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a blank planning space \u2014 no claim, no evidence yet \u2014 just like starting an essay outline from scratch.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "outline",
+            "Text": "Essay Outline: (empty)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, we place a working thesis: two regions used different strategies to build strong, centralized states between 1200 and 1450.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "thesis",
+            "Text": "Thesis: Mali (trade \u002B religion) vs. Mongols (military \u002B admin) built centralized states differently"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "outline",
+            "Value": "Outline now has a thesis"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Next we add evidence for Region 1 \u2014 Mali\u0027s control of trans-Saharan gold-salt trade and use of Islamic legal/administrative practices under rulers like Mansa Musa.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "evidence1",
+            "Text": "Evidence: Mali \u2014 trade control \u002B Islamic administration"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "evidence1",
+            "Value": "Added under Region 1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now we add evidence for Region 2 \u2014 the Mongols\u0027 meritocratic military structure, religious tolerance, and the yam relay system linking a huge empire.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "evidence2",
+            "Text": "Evidence: Mongols \u2014 meritocracy \u002B tolerance \u002B yam system"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "evidence2",
+            "Value": "Added under Region 2"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "The key move: we don\u0027t just list both \u2014 we write a sentence that directly compares them, showing one used economic/religious leverage while the other used military/administrative flexibility.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "comparison",
+            "Text": "Comparison sentence: both centralized power, but through different levers \u2014 trade/religion vs. military/logistics"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "comparison",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "With thesis, evidence for each region, and an explicit comparison in place, the outline is complete and ready to become a full paragraph \u2014 this is the full \u0027compare state-building strategies\u0027 move in miniature.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "outline",
+            "Value": "Complete: thesis \u002B 2 evidence sets \u002B explicit comparison"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:24:03.6823264+00:00",
+  "Model": "claude-sonnet-5"
+}

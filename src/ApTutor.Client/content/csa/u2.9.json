@@ -1,0 +1,276 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.9",
+  "ExampleId": "generated",
+  "WalkthroughText": "The Math class provides static methods you can call directly using the class name, like Math.abs(), Math.pow(), Math.sqrt(), and Math.random(), without needing to create a Math object. Math.abs(x) returns the absolute value of x, Math.pow(base, exp) returns base raised to a power, Math.sqrt(x) returns the square root as a double, and Math.random() returns a random double in the range [0.0, 1.0). Each call is an expression that evaluates down to a single value, which you can picture as a bubble that shows the method call and then \u0022pops\u0022 into its computed result. Combining these with casting and arithmetic lets you build useful random ranges and calculations.",
+  "PracticeItems": [
+    {
+      "Id": "u2.9-q1",
+      "NodeId": "u2.9",
+      "Prompt": "What value is stored in result after this code runs?\n\nint result = Math.abs(-7) \u002B Math.abs(3);",
+      "Choices": [
+        "-10",
+        "-4",
+        "4",
+        "10"
+      ],
+      "CorrectIndex": 3,
+      "Explanation": "Math.abs(-7) returns 7, and Math.abs(3) returns 3, since abs() always returns the non-negative version of the number. 7 \u002B 3 = 10. The answer -4 mistakenly treats abs(-7) as -7, and -10 mistakenly adds the original signed values."
+    },
+    {
+      "Id": "u2.9-q2",
+      "NodeId": "u2.9",
+      "Prompt": "What is the value of x after this statement executes?\n\ndouble x = Math.pow(2, 3);",
+      "Choices": [
+        "6.0",
+        "8.0",
+        "9.0",
+        "5.0"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Math.pow(base, exponent) returns base raised to the exponent power. Math.pow(2, 3) means 2 * 2 * 2 = 8.0. The choice 6.0 confuses pow with multiplication (2*3), and 9.0 confuses base and exponent (3*3)."
+    },
+    {
+      "Id": "u2.9-q3",
+      "NodeId": "u2.9",
+      "Prompt": "Which expression correctly generates a random integer between 1 and 10, inclusive?",
+      "Choices": [
+        "(int)(Math.random() * 10)",
+        "(int)(Math.random() * 10) \u002B 1",
+        "(int)(Math.random() * 11)",
+        "(int)(Math.random() * 9) \u002B 1"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Math.random() returns a double in [0.0, 1.0), so Math.random() * 10 gives [0.0, 10.0). Casting to int truncates it to a whole number from 0 to 9, and adding 1 shifts the range to 1 through 10. The first choice only produces 0-9, missing 10."
+    },
+    {
+      "Id": "u2.9-q4",
+      "NodeId": "u2.9",
+      "Prompt": "What does Math.sqrt(49) evaluate to, and what is its return type?",
+      "Choices": [
+        "7, int",
+        "7.0, double",
+        "7.0, int",
+        "49.0, double"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Math.sqrt always returns a double, even when the result is a whole number, so it returns 7.0 rather than the int 7. The last choice incorrectly computes the square root as if it were squaring 49."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s trace this line: int result = Math.abs(-5) \u002B Math.pow(2, 2) reduced to an int-friendly example. We start with the statement highlighted.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "First, Java sees the call Math.abs(-5) as an expression bubble waiting to be evaluated.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "Math.abs(-5)"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 2,
+      "Caption": "Math.abs strips the sign from -5, so the bubble resolves to 5.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "5"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 3,
+      "Caption": "Next, Java sees the call Math.pow(2, 2) as another expression bubble.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "Math.pow(2, 2)"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 4,
+      "Caption": "Math.pow multiplies 2 by itself, so this bubble resolves to 4.0 (a double).",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e2",
+            "Value": "4.0"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 5,
+      "Caption": "Now Java combines the two resolved bubbles: 5 \u002B 4.0, forming a new addition bubble.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e3",
+            "Text": "5 \u002B 4.0"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 6,
+      "Caption": "Adding an int and a double promotes the result to a double, so this bubble resolves to 9.0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e3",
+            "Value": "9.0"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 7,
+      "Caption": "Since result is declared as an int, Java would need an explicit cast here \u2014 this reminds us to match variable types with Math method return types.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 8,
+      "Caption": "Now let\u0027s look at generating a random number. Math.random() forms a bubble that resolves to some double between 0.0 (inclusive) and 1.0 (exclusive).",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e4",
+            "Text": "Math.random()"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 9,
+      "Caption": "Suppose this call happens to produce 0.732 \u2014 the bubble resolves to that value.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e4",
+            "Value": "0.732"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 10,
+      "Caption": "We multiply that bubble\u0027s value by 10, forming a new bubble: 0.732 * 10.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e5",
+            "Text": "0.732 * 10"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 11,
+      "Caption": "This resolves to 7.32, still a double.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e5",
+            "Value": "7.32"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 12,
+      "Caption": "Casting to (int) truncates the decimal part, forming a bubble around (int) 7.32.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e6",
+            "Text": "(int) 7.32"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 13,
+      "Caption": "That bubble resolves to the whole number 7, giving us a random int from 0 to 9.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "e6",
+            "Value": "7"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 14,
+      "Caption": "Finally we store 7 into our variable, completing the random number generation pattern.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "randomVal",
+            "Type": "int",
+            "Value": "7"
+          }
+        ]
+      },
+      "SourceLine": 2
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:27:19.3988288+00:00",
+  "Model": "claude-sonnet-5"
+}

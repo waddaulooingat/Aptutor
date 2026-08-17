@@ -1,0 +1,309 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u6.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "Array algorithms like finding the min/max, summing, counting, and reversing all follow the same pattern: you walk through the array index by index with a loop, and you keep a running \u0022tracker\u0022 variable in memory that updates based on what you see at each index. The indexedStrip shows the array\u0027s boxes and the current index pointer, while a memCell shows the tracker variable (like max, sum, or count) changing value as the loop progresses. Reversing is slightly different \u2014 instead of tracking one running value, you swap pairs of elements using a temporary memCell, working from both ends toward the middle. Watching the index pointer move alongside the memCell values is the key to understanding why these algorithms work correctly.",
+  "PracticeItems": [
+    {
+      "Id": "u6.4-q1",
+      "NodeId": "u6.4",
+      "Prompt": "Consider the method below, which is intended to return the maximum value in the array arr.\n\npublic static int findMax(int[] arr) {\n    int max = 0;\n    for (int i = 0; i \u003C arr.length; i\u002B\u002B) {\n        if (arr[i] \u003E max) {\n            max = arr[i];\n        }\n    }\n    return max;\n}\n\nWhich of the following describes a problem with this method?",
+      "Choices": [
+        "It will return an incorrect result if all elements in arr are negative.",
+        "It will throw an ArrayIndexOutOfBoundsException for any non-empty array.",
+        "It will return 0 whenever the array is empty, which is correct in every case.",
+        "It fails to update max correctly when arr[i] equals max."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Initializing max to 0 fails when every element is negative, because no element will ever be greater than 0, so max incorrectly stays 0 instead of becoming the true (negative) maximum. The loop bounds are correct (i \u003C arr.length), so no exception occurs. The equal-value case is irrelevant since the condition only needs to trigger on strictly greater values, which it does correctly."
+    },
+    {
+      "Id": "u6.4-q2",
+      "NodeId": "u6.4",
+      "Prompt": "A student writes this method to count how many elements in an array of integers are even:\n\npublic static int countEvens(int[] arr) {\n    int count = 0;\n    for (int i = 0; i \u003C arr.length; i\u002B\u002B) {\n        if (arr[i] % 2 = 0) {\n            count\u002B\u002B;\n        }\n    }\n    return count;\n}\n\nAssuming the single syntax error is fixed, what does this method correctly compute, and why is count initialized to 0?",
+      "Choices": [
+        "It counts even elements; count starts at 0 because no evens have been found yet before the loop begins.",
+        "It counts odd elements; count starts at 0 because Java requires all int variables to start at 0.",
+        "It sums the even elements; count starts at 0 to avoid adding an initial garbage value.",
+        "It counts even elements; count must start at 0 or the loop will not execute at all."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "count is an accumulator that tallies how many times arr[i] % 2 == 0 is true, so it must start at 0 to represent \u0027zero evens found so far\u0027 before any elements are examined. It has nothing to do with sums, and Java does not require int variables to be zero-initialized (local variables must be explicitly initialized) \u2014 the loop\u0027s execution doesn\u0027t depend on count\u0027s starting value."
+    },
+    {
+      "Id": "u6.4-q3",
+      "NodeId": "u6.4",
+      "Prompt": "Consider the following method intended to reverse the contents of array arr in place:\n\npublic static void reverseArray(int[] arr) {\n    for (int i = 0; i \u003C arr.length / 2; i\u002B\u002B) {\n        int temp = arr[i];\n        arr[i] = arr[arr.length - 1 - i];\n        arr[arr.length - 1 - i] = temp;\n    }\n}\n\nWhy does the loop use i \u003C arr.length / 2 instead of i \u003C arr.length?",
+      "Choices": [
+        "Using i \u003C arr.length / 2 stops the loop after each pair of elements has been swapped once, preventing the elements from being swapped back to their original order.",
+        "Using i \u003C arr.length / 2 is required because arrays in Java can only be traversed halfway before causing an error.",
+        "Using i \u003C arr.length / 2 makes the method run in constant time instead of linear time.",
+        "Using i \u003C arr.length / 2 ensures temp is not overwritten before its value is used."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Each iteration swaps a pair of elements (one from the front, one from the back), so only half of the array\u0027s length worth of iterations are needed; continuing past the midpoint would swap each pair back to its original positions, undoing the reversal. There\u0027s no such restriction on array traversal in Java, and the loop bound doesn\u0027t affect time complexity in the way described (it\u0027s still O(n) overall) or protect temp\u0027s value, which is protected simply by using a local variable correctly."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s trace findMax on the array {3, 7, 2, 9, 5}. We start by creating the array on our indexedStrip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "arr",
+            "ElementType": "int",
+            "InitialValues": [
+              "3",
+              "7",
+              "2",
+              "9",
+              "5"
+            ]
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "We set up the method\u0027s stack frame and initialize max to the first element\u0027s value... wait, actually this version initializes max to 0, so let\u0027s watch what happens.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "findMax",
+            "MethodSig": "findMax(int[] arr)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "max",
+            "Type": "int",
+            "Value": "0"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 2,
+      "Caption": "We also create the loop counter i, starting at 0, and highlight the loop line.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "i",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 3,
+      "Caption": "At index 0, arr[0] is 3. We compare 3 to max (0): since 3 \u003E 0 is true, max updates to 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "cmp0",
+            "Text": "arr[0] \u003E max"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cmp0",
+            "Value": true
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "max",
+            "Type": "int",
+            "Value": "3"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "findMax",
+            "Name": "max"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 4,
+      "Caption": "We move the index pointer to 1. arr[1] is 7. Since 7 \u003E 3 is true, max updates to 7.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "i",
+            "Type": "int",
+            "Value": "1"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "cmp1",
+            "Text": "arr[1] \u003E max"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cmp1",
+            "Value": true
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "max",
+            "Type": "int",
+            "Value": "7"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "findMax",
+            "Name": "max"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 5,
+      "Caption": "Index moves to 2. arr[2] is 2. Since 2 \u003E 7 is false, max stays at 7 \u2014 no update happens.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "i",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "cmp2",
+            "Text": "arr[2] \u003E max"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cmp2",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 6,
+      "Caption": "Index moves to 3. arr[3] is 9. Since 9 \u003E 7 is true, max updates to 9, the new running maximum.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "i",
+            "Type": "int",
+            "Value": "3"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "cmp3",
+            "Text": "arr[3] \u003E max"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cmp3",
+            "Value": true
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "max",
+            "Type": "int",
+            "Value": "9"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "findMax",
+            "Name": "max"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 7,
+      "Caption": "Index moves to 4, the last index. arr[4] is 5. Since 5 \u003E 9 is false, max stays at 9.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "findMax",
+            "Name": "i",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "cmp4",
+            "Text": "arr[4] \u003E max"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cmp4",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 8,
+      "Caption": "The loop ends because i would become 5, which is not less than arr.length. We return the final value of max, which is 9 \u2014 the correct maximum of the array.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 8
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "findMax",
+            "Name": "max"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "findMax"
+          }
+        ]
+      },
+      "SourceLine": 8
+    },
+    {
+      "Index": 9,
+      "Caption": "Notice the pattern: at every index, we compared the current element to our tracker (max) and updated it only when the new element was larger \u2014 this same \u0027index \u002B tracker\u0027 pattern works for sum (add every element) and count (increment when a condition is true).",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "findMax",
+            "Name": "max"
+          }
+        ]
+      },
+      "SourceLine": 8
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:27:57.8260041+00:00",
+  "Model": "claude-sonnet-5"
+}

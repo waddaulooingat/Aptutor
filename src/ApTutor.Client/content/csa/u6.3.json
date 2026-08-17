@@ -1,0 +1,340 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u6.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "The enhanced for loop, or for-each loop, lets you visit every element of an array in order without managing an index variable yourself. Its syntax is \u0060for (type varName : arrayName)\u0060, and each time through the loop, varName is automatically set to the next element\u0027s value, from the first slot to the last. This is perfect for reading through an array \u2014 like summing values or finding a maximum \u2014 but since varName only holds a copy of the value, changing it never changes the array, and you never get direct access to the index. Watch how the loop variable \u0022slides\u0022 across the strip, picking up one value per pass, while the array itself is never touched.",
+  "PracticeItems": [
+    {
+      "Id": "u6.3-q1",
+      "NodeId": "u6.3",
+      "Prompt": "What does the following code print?\n\nint[] nums = {4, 9, 2, 7};\nint total = 0;\nfor (int n : nums) {\n    total \u002B= n;\n}\nSystem.out.println(total);",
+      "Choices": [
+        "4",
+        "22",
+        "4927",
+        "Compile-time error"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The for-each loop visits each element of nums in order (4, 9, 2, 7) and adds each one to total, giving 4\u002B9\u002B2\u002B7 = 22. Choice \u00224927\u0022 wrongly treats the numbers as concatenated strings, and \u00224\u0022 only reflects the first element, ignoring the rest of the loop."
+    },
+    {
+      "Id": "u6.3-q2",
+      "NodeId": "u6.3",
+      "Prompt": "Which statement about the enhanced for-each loop below is TRUE?\n\nint[] arr = {10, 20, 30};\nfor (int x : arr) {\n    x = x * 2;\n}\nSystem.out.println(arr[0]);",
+      "Choices": [
+        "It prints 20, because x is a copy of arr[0] and modifying x does not change the array",
+        "It prints 10, because the loop never actually runs",
+        "It prints 20, because for-each loops modify arrays by reference automatically",
+        "It causes a runtime exception because x cannot be reassigned"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "In a for-each loop, the loop variable x holds a copy of each element\u0027s value, not a reference back into the array. Reassigning x only changes the local copy, so arr[0] remains 10. The claim that for-each modifies the array automatically is false \u2014 that\u0027s a common misconception."
+    },
+    {
+      "Id": "u6.3-q3",
+      "NodeId": "u6.3",
+      "Prompt": "A student wants to print the index of the largest value in an array of ints called scores. Which loop structure should they use, and why?",
+      "Choices": [
+        "A for-each loop, because it automatically tracks the index of each element",
+        "A traditional indexed for loop, because for-each loops don\u0027t expose the index of the current element",
+        "A for-each loop, because arrays always know their own maximum index",
+        "Either works identically since for-each loops also provide an index variable"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The for-each loop only gives you the value at each position, never the index itself, so you can\u0027t report \u0027which index\u0027 using it alone. A traditional for loop with an int i lets you track and print the index directly. The other options incorrectly claim for-each provides index access."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s our array, nums, holding four values. We\u0027ll sum them using a for-each loop.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "nums",
+            "ElementType": "int",
+            "InitialValues": [
+              "4",
+              "9",
+              "2",
+              "7"
+            ]
+          },
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "nums",
+            "Type": "int[]",
+            "Value": "\u2192nums"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "We declare total and initialize it to 0 before the loop starts.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "The for-each loop begins: for (int n : nums). Java automatically points n at the first element of the strip, index 0, value 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "n",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "n"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Inside the loop, total \u002B= n adds 4 to total, making it 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": "4"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "The loop automatically advances: n now takes on the next value on the strip, index 1, value 9. No index variable was written by us \u2014 Java handles the advancing.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "n",
+            "Type": "int",
+            "Value": "9"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "n"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "total \u002B= n adds 9, so total becomes 13.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": "13"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "n moves to index 2 on the strip, picking up the value 2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "n",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "n"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "total \u002B= n adds 2, making total 15.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": "15"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "n reaches the last slot on the strip, index 3, value 7 \u2014 the final element to visit.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "n",
+            "Type": "int",
+            "Value": "7"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "n"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "total \u002B= n adds 7, giving a final total of 22.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": "22"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 10,
+      "Caption": "There are no more elements on the strip, so the for-each loop ends automatically \u2014 we never had to write or check an index ourselves.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 11,
+      "Caption": "Printing total shows 22 \u2014 the sum of every value the loop variable visited along the strip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 6
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:27:28.5884069+00:00",
+  "Model": "claude-sonnet-5"
+}

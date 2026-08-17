@@ -1,0 +1,196 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u6.1",
+  "ExampleId": "generated",
+  "WalkthroughText": "An array is a fixed-size, ordered collection of values of the same type, stored in consecutive slots. Each slot has an index, and in Java indexing always starts at 0, so an array with n elements has valid indices 0 through n-1. You create an array either by listing values in curly braces or by using the new keyword with a size, like new int[4], which reserves 4 slots all set to a default value (0 for int). Accessing arr[i] retrieves the value at position i, but if i is negative or i is greater than or equal to the array\u0027s length, Java throws an ArrayIndexOutOfBoundsException instead of silently giving you a wrong answer.",
+  "PracticeItems": [
+    {
+      "Id": "u6.1-q1",
+      "NodeId": "u6.1",
+      "Prompt": "What is printed by the following code?\n\nint[] nums = {10, 20, 30, 40};\nSystem.out.println(nums[2]);",
+      "Choices": [
+        "10",
+        "20",
+        "30",
+        "40"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Array indices start at 0, so nums[0]=10, nums[1]=20, nums[2]=30, nums[3]=40. nums[2] is 30, not 20 (that would be nums[1]) or 40 (that would be nums[3])."
+    },
+    {
+      "Id": "u6.1-q2",
+      "NodeId": "u6.1",
+      "Prompt": "Which line of code correctly creates an array of 5 integers, all initialized to 0?",
+      "Choices": [
+        "int[] arr = new int[5];",
+        "int[] arr = new int(5);",
+        "int arr[] = new int[4];",
+        "int[5] arr = new int[];"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The correct syntax uses new int[5] with square brackets to specify the size, producing an array of 5 elements all defaulted to 0. new int(4) is invalid because arrays use brackets not parentheses, and int[4] would only make 4 elements, off by one from the required 5, while int[5] arr is invalid syntax for declaring an array."
+    },
+    {
+      "Id": "u6.1-q3",
+      "NodeId": "u6.1",
+      "Prompt": "int[] vals = {5, 15, 25};\nSystem.out.println(vals[3]);\n\nWhat happens when this code runs?",
+      "Choices": [
+        "It prints 25, the last element.",
+        "It prints 0, the default value.",
+        "It throws an ArrayIndexOutOfBoundsException.",
+        "It prints null."
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "The array vals has valid indices 0, 1, and 2 (length 3). Index 3 is out of bounds, which causes an ArrayIndexOutOfBoundsException at runtime rather than printing 25 (the last valid element, at index 2) or a default value."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s declare and create an array of 4 integers using new int[4]. This reserves 4 consecutive slots, all starting at the default value 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayAlloc",
+            "ArrId": "arr1",
+            "ElementType": "int",
+            "InitialValues": [
+              "0",
+              "0",
+              "0",
+              "0"
+            ]
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "Each slot in the strip has an index label starting at 0, so the valid indices here are 0, 1, 2, and 3 \u2014 never 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now let\u0027s write the value 10 into index 0 using arr[0] = 10.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayWrite",
+            "ArrId": "arr1",
+            "Index": 0,
+            "Value": "10"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "Next we write 20 into index 1 with arr[1] = 20.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayWrite",
+            "ArrId": "arr1",
+            "Index": 1,
+            "Value": "20"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "We write 30 into index 2 with arr[2] = 30.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayWrite",
+            "ArrId": "arr1",
+            "Index": 2,
+            "Value": "30"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 5,
+      "Caption": "Finally we write 40 into index 3 with arr[3] = 40. Notice the last valid index is 3, which is one less than the length (4).",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "arrayWrite",
+            "ArrId": "arr1",
+            "Index": 3,
+            "Value": "40"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 6,
+      "Caption": "To read a value, we use the same index notation. arr[2] resolves to 30 \u2014 the value stored in slot 2 of the strip.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "arr[2]"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "30"
+          }
+        ]
+      },
+      "SourceLine": 6
+    },
+    {
+      "Index": 7,
+      "Caption": "But what if we try arr[4]? There is no slot 4 on this strip \u2014 the highest index is 3. Accessing it throws an ArrayIndexOutOfBoundsException.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e2",
+            "Text": "arr[4]"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "e2",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 7
+    },
+    {
+      "Index": 8,
+      "Caption": "The rule to remember: for an array of length n, valid indices run from 0 to n-1. Stepping outside that range always crashes the program.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 7
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:26:43.1797782+00:00",
+  "Model": "claude-sonnet-5"
+}

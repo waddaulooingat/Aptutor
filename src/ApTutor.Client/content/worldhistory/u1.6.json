@@ -1,0 +1,170 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.6",
+  "ExampleId": "generated",
+  "WalkthroughText": "Song China\u0027s rulers came to power after decades of fragmentation caused by overly powerful regional military governors at the end of the Tang dynasty. To prevent that from happening again, Song emperors centralized authority in the imperial court: they expanded the civil service examination system so officials were chosen by merit and Confucian learning rather than birth, and they placed civilian officials above military generals so no general could build an independent power base. The tradeoff was a huge, loyal bureaucracy paired with a comparatively weaker military footing against nomadic neighbors. This node has no diagram primitive, so the walkthrough below narrates the logic step by step as if sketching a concept map in words.",
+  "PracticeItems": [
+    {
+      "Id": "u1.6-q1",
+      "NodeId": "u1.6",
+      "Prompt": "Which practice best exemplifies the Song dynasty\u0027s strategy of bureaucratic centralization to strengthen imperial authority?",
+      "Choices": [
+        "Expanding the civil service examination system to recruit scholar-officials based on merit rather than aristocratic birth",
+        "Granting hereditary military governors (jiedushi) full control over regional taxation and armies",
+        "Dividing the empire into feudal fiefs ruled by the emperor\u0027s relatives",
+        "Outsourcing tax collection to independent merchant guilds with no imperial oversight"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The Song rulers, reacting to the chaos caused by powerful regional military governors in the late Tang, expanded and formalized the civil service examinations so that officials owed their positions to the emperor and demonstrated Confucian merit, not inherited status or military power. Choice B describes the exact opposite trend, the decentralizing jiedushi system that Song rulers deliberately dismantled, so it is incorrect. Choices C and D describe feudal or private-sector delegation of authority, which undermines rather than centralizes imperial control."
+    },
+    {
+      "Id": "u1.6-q2",
+      "NodeId": "u1.6",
+      "Prompt": "Song China\u0027s emperors placed civilian scholar-officials in command positions above military generals. What was the primary political goal of this policy?",
+      "Choices": [
+        "To reduce the risk that regional military commanders could challenge or overthrow the central government",
+        "To increase the size and combat effectiveness of frontier armies against nomadic invaders",
+        "To eliminate the need for a standing bureaucracy by relying on local elites",
+        "To transfer tax collection authority from the state to hereditary noble families"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "By subordinating generals to civilian officials loyal to the throne, the Song court reduced the chance that any single military leader could accumulate enough independent power to rebel, a lesson learned from the An Lushan Rebellion and the fall of the Tang. This choice is correct because it directly addresses centralization of political control. The distractor about military effectiveness is misleading because this policy actually weakened Song frontier military strength, a well-known tradeoff, so it is incorrect."
+    },
+    {
+      "Id": "u1.6-q3",
+      "NodeId": "u1.6",
+      "Prompt": "A key feature of Song bureaucratic centralization was the growth of the civil service examination system. How did this system reinforce imperial power compared to earlier reliance on aristocratic birthright?",
+      "Choices": [
+        "It tied career advancement to loyalty and knowledge of Confucian texts controlled and tested by the state, weakening independent hereditary elites",
+        "It guaranteed government posts exclusively to wealthy landowning families regardless of test performance",
+        "It abolished all forms of education, forcing officials to be selected purely by military rank",
+        "It transferred appointment power to regional governors instead of the emperor"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Because the exams were standardized and administered by the central government, success depended on mastering state-sanctioned Confucian curriculum, making officials dependent on and loyal to the imperial court rather than to independent noble lineages, which is why this choice is correct. The choice claiming posts went automatically to wealthy families ignores the meritocratic intent and increasing (if imperfect) social mobility the exams enabled, making it incorrect."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with the problem the Song founders inherited: after the Tang dynasty collapsed, regional military governors called jiedushi held independent armies and taxation power, and they had torn the empire apart in civil wars.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "problem",
+            "Text": "Late Tang: powerful regional jiedushi fragment the empire"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "The first Song emperor\u0027s core insight was that political fragmentation stemmed from military men holding too much independent regional power, so the fix had to reduce military autonomy.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "problem",
+            "Value": "Military governors = threat to central authority"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Step one of centralization: Song rulers placed civilian scholar-officials in charge of provinces and armies, subordinating generals to court-appointed civilians loyal to the emperor.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "step1",
+            "Text": "Civilian officials placed above military commanders"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "step1",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Step two: to staff this civilian bureaucracy with loyal, capable officials, the Song dramatically expanded the civil service examination system based on Confucian classics.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "step2",
+            "Text": "Expanded civil service exams recruit scholar-officials by merit"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "step2",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Because exam success required years of state-sponsored education in Confucian texts, officials\u0027 careers depended on the emperor\u0027s approval, not on inherited noble titles, tightening loyalty to the throne.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "step2",
+            "Value": "Officials owe status to the state, not birth"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Putting it together: fewer independent military strongmen plus a merit-based, loyal bureaucracy equals a much more centralized imperial government than existed under the fragmented late Tang.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "result",
+            "Text": "Result: Song bureaucratic centralization"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "result",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "The tradeoff was real: with generals sidelined and armies underfunded relative to the bureaucracy, Song China often struggled militarily against northern nomadic states, a cost of prioritizing internal political stability.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "tradeoff",
+            "Text": "Tradeoff: strong internal control, weaker frontier military"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "tradeoff",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:20:55.9855427+00:00",
+  "Model": "claude-sonnet-5"
+}

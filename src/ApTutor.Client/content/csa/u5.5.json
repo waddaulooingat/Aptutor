@@ -1,0 +1,191 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.5",
+  "ExampleId": "generated",
+  "WalkthroughText": "A mutator method, often called a setter, is a method whose job is to change the value stored in one of an object\u0027s fields. Because objects live on the heap, calling a mutator method reaches into that specific object\u0027s memory and overwrites a field\u0027s value, permanently changing the object\u0027s state until it is changed again. The key mechanic to watch is how a parameter passed into the method gets assigned to the object\u0027s field, usually using this.fieldName = parameterName, so the field on the heap actually changes rather than just the local parameter variable.",
+  "PracticeItems": [
+    {
+      "Id": "u5.5-q1",
+      "NodeId": "u5.5",
+      "Prompt": "A BankAccount class has a private field double balance and a mutator method:\n\npublic void setBalance(double balance) {\n    balance = balance;\n}\n\nA client calls account.setBalance(500.0); on an account whose balance was 100.0. What is the balance after the call?",
+      "Choices": [
+        "500.0, because the parameter value is correctly stored into the field",
+        "100.0, because balance = balance; assigns the parameter to itself, not to the field",
+        "0.0, because the parameter shadows the field and both become 0",
+        "This code will not compile"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Because the parameter is named balance, it shadows the field balance. The statement balance = balance; just assigns the local parameter to itself and never touches the object\u0027s field. To fix it, the method should use this.balance = balance; The field remains 100.0, so the second choice is correct and the first is wrong because no field assignment actually occurs."
+    },
+    {
+      "Id": "u5.5-q2",
+      "NodeId": "u5.5",
+      "Prompt": "Which of the following mutator methods correctly changes the state of a Dog object\u0027s private field int age when called as myDog.setAge(5)?",
+      "Choices": [
+        "public void setAge(int age) { this.age = age; }",
+        "public int setAge(int age) { return age; }",
+        "public void setAge() { age = 5; }",
+        "public void getAge(int age) { this.age = age; }"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "A proper mutator takes the new value as a parameter and assigns it to the object\u0027s field using this.age = age; to distinguish the field from the parameter. The second choice doesn\u0027t change any field, it just returns a value (that\u0027s a getter-like behavior). The third choice ignores the parameter entirely and hardcodes 5, so it can\u0027t set arbitrary values, and the last option is named like a getter but behaves like a setter, which is misleading and not what was asked."
+    },
+    {
+      "Id": "u5.5-q3",
+      "NodeId": "u5.5",
+      "Prompt": "Consider this class:\n\npublic class Point {\n    private int x;\n    private int y;\n    public void setX(int x) { this.x = x; }\n    public void setY(int y) { this.y = y; }\n}\n\nPoint p = new Point();\np.setX(3);\np.setY(7);\np.setX(10);\n\nWhat are the final values of p\u0027s fields x and y?",
+      "Choices": [
+        "x = 3, y = 7",
+        "x = 10, y = 7",
+        "x = 10, y = 10",
+        "x = 0, y = 0, because setters don\u0027t change fields"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Each call to a mutator method updates the object\u0027s field in place on the heap. setX(3) sets x to 3, setY(7) sets y to 7, and the later call setX(10) overwrites x again, changing it from 3 to 10, while y remains 7 since setY was not called again. The object\u0027s state persists between method calls because it lives on the heap, not in a temporary variable, which rules out the last choice."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a Car object already sitting on the heap, with its field speed set to 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "car1",
+            "ClassName": "Car",
+            "Fields": [
+              {
+                "Key": "speed",
+                "Value": "0"
+              }
+            ]
+          },
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "myCar",
+            "Type": "Car",
+            "Value": "\u2192car1"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "myCar",
+            "TargetObjId": "car1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "In main, we call myCar.setSpeed(60), passing the value 60 as an argument.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "call1",
+            "Text": "myCar.setSpeed(60)"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 2,
+      "Caption": "A new method frame for setSpeed opens, with its parameter speed initialized to 60 \u2014 notice this is a separate variable from the object\u0027s field.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "setSpeed",
+            "MethodSig": "setSpeed(int speed)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "setSpeed",
+            "Name": "speed",
+            "Type": "int",
+            "Value": "60"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "Inside the method, the statement this.speed = speed; reaches back to the Car object on the heap and overwrites its speed field.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "car1",
+            "Field": "speed",
+            "Value": "60"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "setSpeed",
+            "Name": "speed"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "The setSpeed method finishes and its frame is popped off \u2014 the local parameter speed disappears, but the change to the heap object remains.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "call1",
+            "Value": "void"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "setSpeed"
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 5,
+      "Caption": "Back in main, myCar still points to the same object on the heap, and that object\u0027s speed field is now permanently 60 \u2014 the object\u0027s state has changed.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myCar"
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "car1",
+            "Field": "speed",
+            "Value": "60"
+          }
+        ]
+      },
+      "SourceLine": 5
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:24:06.8500887+00:00",
+  "Model": "claude-sonnet-5"
+}

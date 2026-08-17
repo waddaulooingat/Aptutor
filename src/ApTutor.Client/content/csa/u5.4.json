@@ -1,0 +1,196 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "An accessor method, often called a getter, is a method whose only job is to report the current value of an object\u0027s private field back to whoever called it. Because it reports a value, its return type must match the type of the field it returns, and the method body must use the return keyword to send that value out. Getters should not change any fields \u2014 they just read and hand back data. When a getter runs, Java creates a new stack frame for that method call; inside that frame there\u0027s a memory cell that temporarily holds the value being computed, and that value flows out through the return statement into the memory cell of whoever called the method.",
+  "PracticeItems": [
+    {
+      "Id": "u5.4-q1",
+      "NodeId": "u5.4",
+      "Prompt": "A class Rectangle has private fields int width and int height. Which method correctly returns the area without modifying any fields?",
+      "Choices": [
+        "public int getArea() { return width * height; }",
+        "public void getArea() { return width * height; }",
+        "public int getArea() { width * height; }",
+        "public int getArea(int width, int height) { return width * height; }"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "An accessor method must have a return type that matches what it returns (int) and use the return keyword to send the value back to the caller. Choice B uses void, which cannot return a value, and choice C is missing the return keyword entirely, so it won\u0027t compile. Choice D shadows the instance fields with parameters instead of using the object\u0027s actual state."
+    },
+    {
+      "Id": "u5.4-q2",
+      "NodeId": "u5.4",
+      "Prompt": "Consider a class Student with a private field String name and this method:\n\npublic String getName() {\n    name = \u0022Unknown\u0022;\n    return name;\n}\n\nWhat is true about this getter?",
+      "Choices": [
+        "It compiles and returns a String, but it violates good accessor design because it mutates the field\u0027s value",
+        "It will not compile because getters cannot contain assignment statements",
+        "It will not compile because the return type does not match the field type",
+        "It behaves correctly because getters are allowed to change fields as long as they return a value"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "This code compiles fine syntactically \u2014 a getter can technically contain any statements. However, well-designed accessor methods should only observe and return state, never modify it. Changing name before returning it breaks the expectation that calling a getter leaves the object unchanged, which is a design flaw rather than a compiler error."
+    },
+    {
+      "Id": "u5.4-q3",
+      "NodeId": "u5.4",
+      "Prompt": "public class Circle {\n    private double radius;\n\n    public Circle(double radius) {\n        this.radius = radius;\n    }\n\n    public double getRadius() {\n        return radius;\n    }\n}\n\nIn client code: Circle c = new Circle(5.0); double r = c.getRadius();\n\nWhat value is stored in r, and why?",
+      "Choices": [
+        "5.0, because getRadius() returns the value of the object\u0027s radius field",
+        "0.0, because getRadius() returns the default value of a double, not the field",
+        "5.0, because r is automatically initialized to the constructor argument",
+        "This code does not compile because getRadius() has no parameters"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Wait \u2014 this explanation should support the correct choice. getRadius() returns radius, which the constructor set to 5.0 when c was created, so r correctly stores 5.0. The default-value distractor is wrong because the field was explicitly initialized in the constructor before getRadius() was ever called; accessor methods with no parameters are perfectly valid and common."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s an object of class Circle sitting on the heap, with its private field radius set to 5.0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "c1",
+            "ClassName": "Circle",
+            "Fields": [
+              {
+                "Key": "radius",
+                "Value": "5.0"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "In main, we call c.getRadius(). This pushes a brand new stack frame for the getRadius method on top of main\u0027s frame.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "framePush",
+            "FrameId": "getRadius",
+            "MethodSig": "getRadius()"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Inside the getRadius frame, we highlight the method\u0027s only line: return radius;",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "To evaluate \u0027radius\u0027, Java looks at the object this getter was called on and reads its radius field, which is 5.0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "radius"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "5.0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "That resolved value, 5.0, is placed into a temporary memory cell inside the getRadius frame \u2014 this is the value the method is about to send back.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "getRadius",
+            "Name": "return value",
+            "Type": "double",
+            "Value": "5.0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "We flash that memory cell to emphasize it\u0027s the exact value leaving this method.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "getRadius",
+            "Name": "return value"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "The return statement fires: the getRadius frame is popped off the stack, since the method is finished executing.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "getRadius"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "The returned value, 5.0, now lands in a memory cell back in main\u0027s frame \u2014 the double variable r.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "r",
+            "Type": "double",
+            "Value": "5.0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "We flash r in main to show the getter successfully reported the object\u0027s state without changing it at all.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "r"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:23:46.5439897+00:00",
+  "Model": "claude-sonnet-5"
+}

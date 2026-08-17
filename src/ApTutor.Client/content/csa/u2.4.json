@@ -1,0 +1,268 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "When you call a void method and pass it an object, Java copies the reference \u2014 the arrow that points to the object on the heap \u2014 into the method\u0027s parameter variable. Both the caller\u0027s variable and the parameter now point to the exact same object, so any change you make to that object\u0027s fields through the parameter (like calling a setter) is visible back in the caller. However, if inside the method you reassign the parameter itself to point to a different object, you\u0027re only redirecting that parameter\u0027s arrow; the caller\u0027s original variable still points at the original object, completely unaffected. This is the key distinction between mutating an object versus reassigning a reference variable.",
+  "PracticeItems": [
+    {
+      "Id": "u2.4-q1",
+      "NodeId": "u2.4",
+      "Prompt": "Consider the code below.\n\npublic static void changeName(Dog d) {\n    d.setName(\u0022Rex\u0022);\n    d = new Dog(\u0022Buddy\u0022);\n}\n\npublic static void main(String[] args) {\n    Dog myDog = new Dog(\u0022Fido\u0022);\n    changeName(myDog);\n    System.out.println(myDog.getName());\n}\n\nWhat is printed?",
+      "Choices": [
+        "Fido",
+        "Rex",
+        "Buddy",
+        "null"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "myDog and the parameter d both start out pointing to the same Dog object because Java copies the reference (its address), not the object. Calling d.setName(\u0022Rex\u0022) follows that shared reference and changes the object\u0027s field, so myDog also sees the change. But the line d = new Dog(\u0022Buddy\u0022) only reassigns the local variable d to a brand-new object; it does not affect what myDog points to, since myDog\u0027s own stack cell was never touched. So the answer is Rex, not Buddy or Fido."
+    },
+    {
+      "Id": "u2.4-q2",
+      "NodeId": "u2.4",
+      "Prompt": "public static void resetCounter(Counter c) {\n    c = new Counter();\n}\n\npublic static void main(String[] args) {\n    Counter myCounter = new Counter();\n    myCounter.increment();\n    myCounter.increment();\n    resetCounter(myCounter);\n    System.out.println(myCounter.getCount());\n}\n\nAssuming increment() adds 1 to a count field starting at 0, what is printed?",
+      "Choices": [
+        "0",
+        "1",
+        "2",
+        "2 followed by an error"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "When resetCounter(myCounter) is called, the parameter c is a separate stack variable that is initialized with a copy of the reference stored in myCounter \u2014 both point to the same Counter object at first. Inside the method, c = new Counter() only changes where the local variable c points; it creates a new object on the heap and points c\u0027s arrow at it, but myCounter\u0027s arrow in the caller\u0027s frame is untouched and still points at the original object whose count is 2. Therefore 2 is printed, not 0."
+    },
+    {
+      "Id": "u2.4-q3",
+      "NodeId": "u2.4",
+      "Prompt": "Which statement correctly describes what happens on the call stack when a reference-type argument (like an object) is passed to a void method parameter in Java?",
+      "Choices": [
+        "A brand-new copy of the entire object is created on the heap for the method to use",
+        "The parameter variable in the new stack frame stores a copy of the reference (arrow) to the same heap object as the argument",
+        "The method parameter becomes an alias that shares the same stack memory cell as the argument variable",
+        "No new stack frame is created since void methods do not return a value"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Java always passes arguments by value. For reference types, the \u0027value\u0027 that gets copied into the new stack frame\u0027s parameter cell is the reference itself (the arrow to the heap object), not the object\u0027s data and not a shared memory cell. This is why mutating the object through the parameter affects the caller\u0027s object, but reassigning the parameter to a new object does not. Every method call, void or not, creates its own new stack frame."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start in main with a Dog object already created; myDog points to it on the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main(String[] args)"
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog1",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "\u0022Fido\u0022"
+              }
+            ]
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "myDog",
+            "Type": "Dog",
+            "Value": "\u2192dog1"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "myDog",
+            "TargetObjId": "dog1"
+          }
+        ]
+      },
+      "SourceLine": 8
+    },
+    {
+      "Index": 1,
+      "Caption": "We call changeName(myDog), so a new stack frame is pushed for the method.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 9
+          },
+          {
+            "op": "framePush",
+            "FrameId": "changeName",
+            "MethodSig": "changeName(Dog d)"
+          }
+        ]
+      },
+      "SourceLine": 9
+    },
+    {
+      "Index": 2,
+      "Caption": "The parameter d is initialized by copying myDog\u0027s reference \u2014 d now points to the SAME Dog object, dog1.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "changeName",
+            "Name": "d",
+            "Type": "Dog",
+            "Value": "\u2192dog1"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "changeName",
+            "VarName": "d",
+            "TargetObjId": "dog1"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "changeName",
+            "Name": "d"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 3,
+      "Caption": "Notice: myDog in main and d in changeName are two separate stack cells, but their arrows point to the exact same heap object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myDog"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "changeName",
+            "Name": "d"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 4,
+      "Caption": "Inside the method, d.setName(\u0022Rex\u0022) follows d\u0027s arrow to dog1 and changes its name field directly.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "name",
+            "Value": "\u0022Rex\u0022"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 5,
+      "Caption": "Since myDog\u0027s arrow also points to dog1, this change is visible to main too \u2014 the object was mutated, not replaced.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myDog"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 6,
+      "Caption": "Now the method executes d = new Dog(\u0022Buddy\u0022), creating a brand-new Dog object on the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog2",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "\u0022Buddy\u0022"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 7,
+      "Caption": "This assignment only redirects d\u0027s own arrow to point at the new object dog2 \u2014 it does not touch myDog\u0027s stack cell at all.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "refSet",
+            "FrameId": "changeName",
+            "VarName": "d",
+            "TargetObjId": "dog2"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "changeName",
+            "Name": "d"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 8,
+      "Caption": "The method finishes and its stack frame is popped off; d disappears entirely, along with its arrow to dog2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePop",
+            "FrameId": "changeName"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 9,
+      "Caption": "Back in main, myDog\u0027s arrow was never redirected \u2014 it still points to dog1, which now has the name \u0027Rex\u0027 because that field was mutated earlier.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myDog"
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "myDog.getName()"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "\u0022Rex\u0022"
+          }
+        ]
+      },
+      "SourceLine": 10
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:25:39.3600725+00:00",
+  "Model": "claude-sonnet-5"
+}

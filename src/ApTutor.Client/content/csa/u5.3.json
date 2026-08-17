@@ -1,0 +1,191 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u5.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "Comments are notes written into code, ignored by the compiler, that explain what code does to human readers. Two special kinds of comments describe a method\u0027s contract with whoever calls it: a precondition is something that must be true before the method runs (usually about the parameters or object state), and a postcondition is something guaranteed to be true after the method finishes (usually about the return value or changed state). Writing these clearly lets other programmers \u2014 or you, later \u2014 use a method correctly without having to read every line inside it.",
+  "PracticeItems": [
+    {
+      "Id": "u5.3-q1",
+      "NodeId": "u5.3",
+      "Prompt": "A method\u0027s documentation states: \u0022Precondition: n must be greater than or equal to 0.\u0022 What does this tell a programmer who wants to call the method?",
+      "Choices": [
+        "The method will automatically fix n if it is negative before running",
+        "The caller is responsible for making sure n is 0 or positive before calling the method",
+        "The method will return 0 if n is negative",
+        "The method has no parameters named n"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "A precondition is a stated requirement that must be true BEFORE the method is called, and it is the caller\u0027s job to satisfy it. The method itself does not check or fix violations \u2014 it simply assumes the condition holds, so choices about the method \u0027fixing\u0027 or \u0027returning 0\u0027 are incorrect; those describe behavior, not a precondition."
+    },
+    {
+      "Id": "u5.3-q2",
+      "NodeId": "u5.3",
+      "Prompt": "Which of the following is the best example of a postcondition comment for a method called removeSmallest that removes the smallest value from an ArrayList?",
+      "Choices": [
+        "// Precondition: list must not be empty",
+        "// This method loops through the list to find the minimum",
+        "// Postcondition: the smallest value has been removed from the list",
+        "// Parameter: list is an ArrayList of integers"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "A postcondition describes what is guaranteed to be true AFTER the method finishes executing \u2014 here, that the smallest value is gone from the list. The first option describes a precondition (a requirement before calling), and the other two describe implementation details or parameters, not the guaranteed result."
+    },
+    {
+      "Id": "u5.3-q3",
+      "NodeId": "u5.3",
+      "Prompt": "Why do programmers write preconditions and postconditions as comments instead of relying only on the code itself?",
+      "Choices": [
+        "Comments make the program run faster because the compiler skips checking",
+        "They let another programmer understand how to correctly use a method without reading its internal implementation",
+        "Java requires every method to have a precondition and postcondition comment or it will not compile",
+        "They replace the need for parameter and return type declarations"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Preconditions and postconditions act as a contract: they tell a caller what must be true before calling and what will be true after, without forcing them to trace through the method\u0027s internal logic. Comments do not affect compilation speed or runtime performance, and Java has no such compiler requirement, so those options are incorrect."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here is a method header with a comment above it describing what it needs and promises. Let\u0027s look at line 1, the precondition comment.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "Line 1 says: Precondition: score must be between 0 and 100. This is a requirement the CALLER must satisfy before calling the method.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "pre",
+            "Text": "Precondition: 0 \u003C= score \u003C= 100"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 2,
+      "Caption": "Now line 2 is the postcondition comment: Postcondition: returns true if score is passing, false otherwise. This tells us what\u0027s guaranteed AFTER the method runs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "post",
+            "Text": "Postcondition: returns true/false for passing"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "Line 3 is the method signature itself: public boolean isPassing(int score). The comments above explain its contract, not its code.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "Suppose a caller calls isPassing(85). Since 85 satisfies the precondition (it\u0027s between 0 and 100), the call is valid.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "pre",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 5,
+      "Caption": "Line 4 checks the condition inside the method: if (score \u003E= 60). This is the implementation that fulfills the promised postcondition.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": 4
+    },
+    {
+      "Index": 6,
+      "Caption": "Since score is 85, which is \u003E= 60, the condition is true, so line 5 executes: return true.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "post",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 7,
+      "Caption": "The method returns true, exactly matching the postcondition comment we read at the start \u2014 the contract has been honored.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "post",
+            "Value": "true"
+          }
+        ]
+      },
+      "SourceLine": 5
+    },
+    {
+      "Index": 8,
+      "Caption": "If a caller had instead called isPassing(150), that would violate the precondition on line 1 \u2014 the method\u0027s behavior would then be unreliable, since its contract was broken by the caller, not the method.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "pre",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 1
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:23:26.9440309+00:00",
+  "Model": "claude-sonnet-5"
+}

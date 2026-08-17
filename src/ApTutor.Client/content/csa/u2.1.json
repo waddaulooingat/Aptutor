@@ -1,0 +1,229 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.1",
+  "ExampleId": "generated",
+  "WalkthroughText": "In Java, a class is a blueprint, and an object is a specific instance built from that blueprint, living on the heap. When you create a variable of a class type, that variable doesn\u0027t hold the object itself \u2014 it holds a reference, essentially an arrow pointing to where the object lives in memory. This is different from a primitive variable like int or double, which stores its actual value directly, with no arrow involved. Understanding this reference-vs-primitive distinction explains why two object variables can end up pointing to the very same object, so a change made through one variable is visible through the other.",
+  "PracticeItems": [
+    {
+      "Id": "u2.1-q1",
+      "NodeId": "u2.1",
+      "Prompt": "What is stored in a reference variable in Java, such as a Dog variable named myDog?",
+      "Choices": [
+        "The actual Dog object with all of its fields",
+        "A memory address (reference) that points to where the Dog object lives on the heap",
+        "A copy of the Dog object made every time the variable is used",
+        "Nothing until the object is printed to the console"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Reference variables don\u0027t hold the object itself; they hold a reference (like an arrow) that points to the object\u0027s location on the heap. Choice A is wrong because copying the whole object would waste memory and isn\u0027t how Java works; choice C confuses references with value copies of primitives."
+    },
+    {
+      "Id": "u2.1-q2",
+      "NodeId": "u2.1",
+      "Prompt": "Given the code: Dog a = new Dog(\u0022Rex\u0022); Dog b = a; b.setName(\u0022Max\u0022); What is a.getName() after this runs?",
+      "Choices": [
+        "\u0022Rex\u0022, because a and b are separate objects",
+        "\u0022Max\u0022, because a and b both refer to the same Dog object on the heap",
+        "\u0022Max\u0022, because Java copies the object when assigning b = a",
+        "An error occurs because you cannot assign one object variable to another"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Assigning b = a copies the reference, not the object, so both a and b point to the same heap object. Changing the object through b also changes what a sees. Choice A wrongly assumes objects are copied on assignment, which only happens with primitives."
+    },
+    {
+      "Id": "u2.1-q3",
+      "NodeId": "u2.1",
+      "Prompt": "Which statement correctly distinguishes primitive variables from reference variables in Java?",
+      "Choices": [
+        "Primitive variables store data values directly; reference variables store an address pointing to an object",
+        "Both primitive and reference variables store the actual data directly in the variable",
+        "Reference variables are only used for arrays, never for objects",
+        "Primitive variables can point to heap objects just like reference variables"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Primitives like int or double hold their actual value directly in the variable\u0027s memory slot, while reference variables (for objects) hold an arrow/address pointing to a separate heap location where the object\u0027s data lives. The other choices misstate this fundamental distinction."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s start with an empty program state: no variables, no objects yet.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, we declare a primitive variable: int age = 12; It stores the value 12 directly in its own memory cell \u2014 no arrow needed.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "age",
+            "Type": "int",
+            "Value": "12"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now we create an object: Dog myDog = new Dog(\u0022Rex\u0022); The \u0027new Dog(...)\u0027 part builds an actual Dog object on the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "heapAlloc",
+            "ObjId": "dog1",
+            "ClassName": "Dog",
+            "Fields": [
+              {
+                "Key": "name",
+                "Value": "\u0022Rex\u0022"
+              }
+            ]
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "The variable myDog itself does not hold the Dog object \u2014 it holds a reference, drawn as an arrow pointing from myDog to the Dog object on the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "myDog",
+            "Type": "Dog",
+            "Value": "ref"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "myDog",
+            "TargetObjId": "dog1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Compare the two variables side by side: age directly contains 12, but myDog contains an arrow pointing to a separate Dog object with its own field \u0027name\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "age"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myDog"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Now let\u0027s assign a second variable: Dog otherDog = myDog; This copies the arrow, not the object \u2014 otherDog points to the exact same Dog on the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "otherDog",
+            "Type": "Dog",
+            "Value": "ref"
+          },
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "otherDog",
+            "TargetObjId": "dog1"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Both myDog and otherDog now have arrows pointing to the same single heap object \u2014 there is still only one Dog, with one \u0027name\u0027 field.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myDog"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "otherDog"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "If we change the name through otherDog, like otherDog.setName(\u0022Max\u0022), the field on the shared heap object updates.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          },
+          {
+            "op": "fieldSet",
+            "ObjId": "dog1",
+            "Field": "name",
+            "Value": "\u0022Max\u0022"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Since myDog points to that same object, myDog.getName() now also returns \u0022Max\u0022 \u2014 proving both references share one object, unlike the independent primitive \u0027age\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "myDog"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:24:37.6360893+00:00",
+  "Model": "claude-sonnet-5"
+}

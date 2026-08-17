@@ -1,0 +1,264 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u4.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "Nested iteration means placing one loop inside the body of another loop. The outer loop controls how many times the entire inner loop runs from start to finish, while the inner loop\u0027s own counter resets and runs completely before the outer loop advances even once. This is why the total number of inner-loop executions equals the outer loop\u0027s count multiplied by the inner loop\u0027s count, not added together. Tracking the two loop variables separately in memory as they update is the key to predicting nested loop behavior correctly.",
+  "PracticeItems": [
+    {
+      "Id": "u4.4-q1",
+      "NodeId": "u4.4",
+      "Prompt": "What is printed by the following code?\n\nfor (int i = 1; i \u003C= 3; i\u002B\u002B) {\n    for (int j = 1; j \u003C= 2; j\u002B\u002B) {\n        System.out.print(i * j \u002B \u0022 \u0022);\n    }\n}",
+      "Choices": [
+        "1 2 2 4 3 6 ",
+        "1 2 3 4 5 6 ",
+        "1 1 2 2 3 3 ",
+        "2 4 6 "
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "For each value of i (1,2,3), the inner loop runs j=1,2 and prints i*j. i=1: 1*1=1, 1*2=2. i=2: 2*1=2, 2*2=4. i=3: 3*1=3, 3*2=6. So the output is \u00271 2 2 4 3 6 \u0027. The choice \u00271 2 3 4 5 6 \u0027 is wrong because it just counts up instead of multiplying i and j."
+    },
+    {
+      "Id": "u4.4-q2",
+      "NodeId": "u4.4",
+      "Prompt": "How many total times does the innermost print statement execute in this nested loop?\n\nfor (int i = 0; i \u003C 4; i\u002B\u002B) {\n    for (int j = 0; j \u003C 3; j\u002B\u002B) {\n        System.out.println(\u0022x\u0022);\n    }\n}",
+      "Choices": [
+        "7",
+        "12",
+        "4",
+        "3"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The outer loop runs 4 times (i = 0,1,2,3), and for each of those, the inner loop runs 3 times (j = 0,1,2). Total executions = 4 * 3 = 12, not 4 \u002B 3 = 7, which would be the sum instead of the product."
+    },
+    {
+      "Id": "u4.4-q3",
+      "NodeId": "u4.4",
+      "Prompt": "Consider this nested loop meant to print a pattern of stars, one row per value of i, with i\u002B1 stars per row for i from 0 to 2:\n\nfor (int i = 0; i \u003C 3; i\u002B\u002B) {\n    for (int j = 0; j \u003C= i; j\u002B\u002B) {\n        System.out.print(\u0022*\u0022);\n    }\n    System.out.println();\n}\n\nWhat is printed?",
+      "Choices": [
+        "*\n**\n***\n",
+        "***\n***\n***\n",
+        "*\n*\n*\n",
+        "*\n**\n***\n****\n"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "When i=0, inner loop runs j=0 only, printing one star, then a newline. When i=1, inner loop runs j=0,1, printing two stars. When i=2, inner loop runs j=0,1,2, printing three stars. This produces \u0027*\u0027, \u0027**\u0027, \u0027***\u0027 on separate lines. The option with four rows is wrong because the outer loop only runs for i=0,1,2 (three rows total)."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a method frame for main, and we\u0027re about to run a nested loop that prints i and j pairs.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "The outer loop initializes i to 0, so we create a memory cell for i.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Now we enter the inner loop, which initializes its own variable j to 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "j",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "With i=0 and j=0, the inner loop body runs once, printing \u0027i=0 j=0\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "j"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "The inner loop increments j to 1 \u2014 notice i has not changed at all.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "j",
+            "Type": "int",
+            "Value": "1"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "With i still 0 and now j=1, the inner body runs again, printing \u0027i=0 j=1\u0027.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "j"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "j increments to 2, which now fails the inner loop\u0027s condition (j \u003C 2), so the inner loop finishes completely for this value of i.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "j",
+            "Type": "int",
+            "Value": "2"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "innerCond",
+            "Value": false
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Control returns to the outer loop, which increments i to 1 \u2014 only now does i\u0027s memory cell change.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "1"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "The inner loop resets completely: j is set back to 0 to begin its full run again under the new i.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "j",
+            "Type": "int",
+            "Value": "0"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "Now with i=1 and j=0, the inner body runs, printing \u0027i=1 j=0\u0027 \u2014 the inner loop always finishes its full cycle before i changes again.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "j"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:21:36.4652628+00:00",
+  "Model": "claude-sonnet-5"
+}

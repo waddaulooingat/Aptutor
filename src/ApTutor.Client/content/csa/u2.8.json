@@ -1,0 +1,214 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u2.8",
+  "ExampleId": "generated",
+  "WalkthroughText": "Wrapper classes like Integer and Double let a primitive value be treated as an object, which matters because objects live on the heap and are accessed through references, while primitives live directly in memory cells. Autoboxing is the compiler\u0027s automatic conversion of a primitive into its wrapper object (e.g., turning an int into an Integer) whenever an object is expected. Unboxing is the reverse: pulling the primitive value back out of a wrapper object automatically. Watching how a memory cell holding a primitive becomes a reference arrow pointing to a heap object \u2014 and back again \u2014 is the key to understanding autoboxing.",
+  "PracticeItems": [
+    {
+      "Id": "u2.8-q1",
+      "NodeId": "u2.8",
+      "Prompt": "What will be the output of the following code?\n\nInteger a = 100;\nInteger b = 100;\nSystem.out.println(a.equals(b));",
+      "Choices": [
+        "true",
+        "false",
+        "A compile-time error occurs",
+        "A NullPointerException is thrown"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "a and b are autoboxed Integer objects wrapping the int value 100. The equals() method for Integer compares the wrapped values, not references, so it correctly returns true. It would be a mistake to think this always fails just because they might be different objects \u2014 equals() is designed to compare content, unlike ==."
+    },
+    {
+      "Id": "u2.8-q2",
+      "NodeId": "u2.8",
+      "Prompt": "Which line of code correctly demonstrates autoboxing?",
+      "Choices": [
+        "Integer num = new Integer(5);",
+        "int num = Integer.valueOf(5);",
+        "Integer num = 5;",
+        "Integer num = (Integer) 5.0;"
+      ],
+      "CorrectIndex": 2,
+      "Explanation": "Autoboxing is when the compiler automatically converts a primitive value (5, an int) into its wrapper object (Integer) without an explicit cast or constructor call. \u0027Integer num = new Integer(5);\u0027 is manual boxing with a constructor, not autoboxing, and \u0027int num = Integer.valueOf(5);\u0027 is actually unboxing an Integer back to a primitive."
+    },
+    {
+      "Id": "u2.8-q3",
+      "NodeId": "u2.8",
+      "Prompt": "Consider this code:\n\nDouble d1 = 3.5;\ndouble d2 = d1;\nSystem.out.println(d2 \u002B 1.5);\n\nWhat happens when d2 is assigned the value of d1?",
+      "Choices": [
+        "A compile-time error, since Double cannot be assigned to double",
+        "Unboxing occurs, extracting the primitive double value from the Double object",
+        "Autoboxing occurs, wrapping d1 into another object",
+        "d2 becomes a reference to the same heap object as d1"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "d1 is a Double object on the heap holding 3.5. Assigning it to a primitive double variable requires unboxing \u2014 the compiler automatically calls d1.doubleValue() to extract the primitive. Since d2 is a primitive type, it cannot hold a heap reference, ruling out the \u0027reference to the same object\u0027 choice."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start by declaring a primitive int variable named score and assigning it the value 42. It lives directly inside the stack frame as a memory cell.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main(String[] args)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "score",
+            "Type": "int",
+            "Value": "42"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Now we declare an Integer variable named boxedScore and assign it the primitive value 42. Because Integer is an object type, the compiler must autobox this int into an Integer object.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "boxedScore",
+            "Type": "Integer",
+            "Value": null
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Autoboxing happens: the compiler creates a new Integer object on the heap that stores the value 42.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "heapAlloc",
+            "ObjId": "intObj1",
+            "ClassName": "Integer",
+            "Fields": [
+              {
+                "Key": "value",
+                "Value": "42"
+              }
+            ]
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "The boxedScore memory cell doesn\u0027t hold the number directly \u2014 instead it holds a reference arrow pointing to the new Integer object on the heap.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "refSet",
+            "FrameId": "main",
+            "VarName": "boxedScore",
+            "TargetObjId": "intObj1"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "boxedScore"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Next we declare a primitive int called total and assign it boxedScore. Since boxedScore is an object reference but total needs a primitive, unboxing must occur.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": null
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Unboxing happens: Java follows the reference arrow to the Integer object on the heap and reads its wrapped value, 42.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "e1",
+            "Text": "boxedScore.intValue()"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "e1",
+            "Value": "42"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "That unboxed value, 42, is copied directly into the primitive memory cell total \u2014 no reference arrow this time, just the raw number.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "total",
+            "Type": "int",
+            "Value": "42"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "total"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "So we end with score and total holding raw primitive values in their own memory cells, while boxedScore holds a reference arrow pointing to a separate Integer object on the heap \u2014 the visual heart of autoboxing and unboxing.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T16:26:59.3293422+00:00",
+  "Model": "claude-sonnet-5"
+}

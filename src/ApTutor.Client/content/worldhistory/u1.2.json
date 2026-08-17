@@ -1,0 +1,186 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "Mansa Musa ruled the Mali Empire in the early-to-mid 1300s and built one of the most effective administrative systems in medieval West Africa. Rather than trying to personally control every corner of a vast empire, he combined a strong central authority with regional governors and local leaders who retained some autonomy in exchange for tribute, loyalty, and cooperation. Wealth from taxing trans-Saharan trade in gold and salt funded the military and administration, while his famous pilgrimage to Mecca broadcast Mali\u0027s power and Islamic scholarship abroad, drawing scholars and architects back to cities like Timbuktu. Together, this mix of provincial governance, trade control, and religious/cultural prestige is what \u0022state-building\u0022 looked like in imperial Mali.",
+  "PracticeItems": [
+    {
+      "Id": "u1.2-q1",
+      "NodeId": "u1.2",
+      "Prompt": "Mansa Musa expanded and administered the Mali Empire in the 14th century primarily by combining military conquest with which governing strategy?",
+      "Choices": [
+        "Appointing loyal governors and local officials to oversee provinces while allowing regional leaders some autonomy in exchange for tribute and loyalty",
+        "Eliminating all existing local leadership structures and replacing them with a single centralized bureaucracy staffed entirely by foreign officials",
+        "Relying solely on hereditary succession within one family to control every province directly",
+        "Dividing the empire into fully independent city-states that operated without any connection to the central Mansa"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Mansa Musa\u0027s administration relied on a layered system: he placed trusted governors and officials in key provinces and trade cities, while local rulers retained some authority as long as they paid tribute and recognized his overall sovereignty. This let Mali govern a huge, diverse territory without needing to micromanage every region directly. The other options misrepresent this system \u2014 Mali did not erase local leadership entirely, did not rely only on family succession for provincial control, and provinces were not fully independent city-states."
+    },
+    {
+      "Id": "u1.2-q2",
+      "NodeId": "u1.2",
+      "Prompt": "Why was control over trans-Saharan trade routes and cities like Timbuktu and Gao central to Mansa Musa\u0027s administrative power?",
+      "Choices": [
+        "Taxing and regulating trade in gold and salt provided the wealth needed to fund administration, the military, and infrastructure that held the empire together",
+        "These cities were purely religious centers with no economic function, so they mattered only for spiritual legitimacy",
+        "Trade routes were controlled entirely by outside empires, so Mali\u0027s government had no real influence over them",
+        "The cities were unimportant to administration and were left completely outside Mansa Musa\u0027s authority"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "By taxing and regulating the flow of gold, salt, and other goods through key trade cities, Mansa Musa generated the revenue that funded his administrative apparatus, army, and public works, reinforcing centralized authority. The distractors are wrong because these cities were economically vital (not purely religious), Mali actively controlled these routes rather than ceding control to outsiders, and the cities were integrated into, not excluded from, his governance."
+    },
+    {
+      "Id": "u1.2-q3",
+      "NodeId": "u1.2",
+      "Prompt": "Which statement best describes how Mansa Musa\u0027s famous hajj (pilgrimage) to Mecca connected to his state-building efforts back in Mali?",
+      "Choices": [
+        "It had no effect on Mali\u0027s government or administration since it was purely a personal religious journey",
+        "It brought increased international recognition and scholarly/religious connections that helped legitimize and strengthen his administrative and economic influence",
+        "It caused Mali to lose control over its trade routes because Mansa Musa was absent from the empire",
+        "It resulted in the empire being permanently divided among rival governors while he was away"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "The hajj publicized Mali\u0027s wealth and Islamic faith across North Africa and the Middle East, drawing scholars, architects, and merchants to Mali and boosting its prestige, which reinforced Mansa Musa\u0027s authority and administrative legitimacy at home. It was not merely a personal trip disconnected from statecraft, nor did it cause loss of trade control or permanent fragmentation of the empire."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s picture the Mali Empire under Mansa Musa as a network of regions connected to one central authority \u2014 the Mansa himself, sitting at the top.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeNode",
+            "NodeId": "mansa",
+            "ParentId": null,
+            "Label": "Mansa Musa (Central Authority)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Mansa Musa didn\u0027t govern alone \u2014 he appointed provincial governors to run key regions of the empire on his behalf.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeNode",
+            "NodeId": "gov1",
+            "ParentId": "mansa",
+            "Label": "Provincial Governor: Timbuktu"
+          },
+          {
+            "op": "callTreeNode",
+            "NodeId": "gov2",
+            "ParentId": "mansa",
+            "Label": "Provincial Governor: Gao"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Local leaders within those provinces kept some of their traditional authority, as long as they stayed loyal and paid tribute upward.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeNode",
+            "NodeId": "local1",
+            "ParentId": "gov1",
+            "Label": "Local Leader (pays tribute, keeps some autonomy)"
+          },
+          {
+            "op": "callTreeNode",
+            "NodeId": "local2",
+            "ParentId": "gov2",
+            "Label": "Local Leader (pays tribute, keeps some autonomy)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "This layered structure let Mansa Musa control a huge empire without micromanaging every village \u2014 tribute and loyalty flowed up, authority and protection flowed down.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "structure",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Now let\u0027s add the economic engine: trade cities like Timbuktu and Gao taxed the flow of gold and salt across the Sahara.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeNode",
+            "NodeId": "trade",
+            "ParentId": "mansa",
+            "Label": "Trans-Saharan Trade Revenue (gold \u0026 salt taxes)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "That trade revenue funded the military and administration, reinforcing the Mansa\u0027s central power over the whole system.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeReturn",
+            "NodeId": "trade",
+            "ReturnValue": "Funds army \u0026 bureaucracy"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Finally, Mansa Musa\u0027s hajj to Mecca spread Mali\u0027s reputation abroad, drawing scholars and architects back home and boosting his legitimacy as a ruler.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "callTreeNode",
+            "NodeId": "hajj",
+            "ParentId": "mansa",
+            "Label": "Hajj to Mecca (prestige \u0026 scholarly ties)"
+          },
+          {
+            "op": "callTreeReturn",
+            "NodeId": "hajj",
+            "ReturnValue": "Increases legitimacy \u0026 cultural influence"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Together \u2014 provincial governance, trade-based wealth, and religious prestige \u2014 these are the pillars of Mansa Musa\u0027s imperial state-building in Mali.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "stateBuilding",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:19:11.001958+00:00",
+  "Model": "claude-sonnet-5"
+}

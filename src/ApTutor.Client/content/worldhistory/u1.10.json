@@ -1,0 +1,211 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.10",
+  "ExampleId": "generated",
+  "WalkthroughText": "The Silk Roads, Indian Ocean network, and trans-Saharan routes were the three great arteries of premodern long-distance trade, and each depended on specific infrastructure suited to its geography. The Silk Roads used overland caravans moving between oasis towns and caravanserai across Central Asia. The Indian Ocean network used monsoon winds and coastal port cities to move ships full of bulk goods between East Africa, Arabia, India, and Southeast Asia. The trans-Saharan routes used camel caravans guided by peoples like the Berbers to cross the desert between West African goldfields and Mediterranean North Africa. Together these three systems formed connective tissue linking Afro-Eurasia, spreading goods, technologies, religions, and ideas far beyond any single empire\u0027s borders.",
+  "PracticeItems": [
+    {
+      "Id": "u1.10-q1",
+      "NodeId": "u1.10",
+      "Prompt": "A merchant traveling from Mombasa to Baghdad in the 13th century most likely relied on which factor unique to the Indian Ocean network (as opposed to the trans-Saharan routes) to time voyages efficiently?",
+      "Choices": [
+        "Predictable seasonal monsoon winds that reverse direction",
+        "The presence of camel caravans organized by Berber guides",
+        "Fixed overland caravanserai spaced every day\u0027s journey",
+        "A single unifying empire controlling the entire route"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Monsoon winds blow reliably in one direction for part of the year and reverse for the rest, letting sailors plan round trips across the Indian Ocean. Camel caravans and Berber guides describe trans-Saharan travel, not maritime routes, and no single empire controlled the whole Indian Ocean network."
+    },
+    {
+      "Id": "u1.10-q2",
+      "NodeId": "u1.10",
+      "Prompt": "Which statement best explains why the trans-Saharan routes could not move nearly as much bulk cargo per trip as the Indian Ocean maritime network?",
+      "Choices": [
+        "Trans-Saharan trade used camels as pack animals across land, while ships could carry far larger loads across water",
+        "Trans-Saharan traders lacked any pack animals at all",
+        "The Sahara route was shorter, so less cargo was needed",
+        "Indian Ocean sailors avoided carrying goods, focusing only on people"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Land transport by camel caravan is limited by what an animal can carry, while a single ship can carry vastly more tonnage, which is why maritime networks like the Indian Ocean routes moved bulkier goods such as grain and timber more efficiently. The Sahara route being shorter and the claim about avoiding cargo are both false."
+    },
+    {
+      "Id": "u1.10-q3",
+      "NodeId": "u1.10",
+      "Prompt": "Caravanserai along the Silk Roads and coastal port cities along the Indian Ocean network served a similar underlying function. What was it?",
+      "Choices": [
+        "Providing rest, storage, and exchange points that reduced the risks and costs of long-distance trade",
+        "Serving as permanent military garrisons with no economic role",
+        "Acting as religious pilgrimage sites unrelated to commerce",
+        "Functioning as capitals of unified trading empires"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Both caravanserai and port cities acted as infrastructure nodes\u2014places to rest, resupply, store goods, and exchange cargo or currency\u2014lowering the risks of long trade journeys. They were not primarily military garrisons, pilgrimage sites, or imperial capitals, even though some overlap with religion or politics could occur."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s build a mental map of the three great trade networks connecting Afro-Eurasia before 1450: the Silk Roads, the Indian Ocean network, and the trans-Saharan routes.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, the Silk Roads: overland routes across Central Asia linking China to the Mediterranean, relying on camel caravans moving between oasis towns.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "silk",
+            "Text": "Silk Roads: overland, oasis towns, camel caravans"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Caravanserai were roadside inns spaced along these routes, giving merchants a safe place to rest, store goods, and trade currency before continuing on.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "caravanserai",
+            "Text": "Caravanserai = rest stop \u002B storage \u002B exchange"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "caravanserai",
+            "Value": "reduces risk of long overland travel"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Next, the Indian Ocean network: a maritime system connecting East Africa, Arabia, India, and Southeast Asia by ship rather than by land.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "indian",
+            "Text": "Indian Ocean network: maritime, port cities, ships"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "This network depended on monsoon winds, which blow one direction for part of the year and reverse later, letting sailors plan predictable round-trip voyages.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "monsoon",
+            "Text": "Monsoon winds: seasonal, reversing direction"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "monsoon",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Because ships carry far more cargo than pack animals, the Indian Ocean network moved bulk goods like grain, timber, and porcelain more efficiently than any land route could.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "indian",
+            "Value": "high-volume bulk cargo capacity"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "Finally, the trans-Saharan routes: overland paths crossing the Sahara Desert, linking West African gold and salt sources to Mediterranean North Africa.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "saharan",
+            "Text": "Trans-Saharan routes: desert crossing, gold-salt trade"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "Berber guides and their knowledge of desert oases made camel caravans possible, turning a seemingly impassable desert into a connective highway.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "berber",
+            "Text": "Berber guides \u002B camels = desert crossing enabled"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "berber",
+            "Value": "connects West Africa to Mediterranean"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "Now step back: all three networks share the same underlying purpose. Oasis towns, caravanserai, port cities, and desert waystations all function as infrastructure nodes.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "tissue",
+            "Text": "Silk Roads \u002B Indian Ocean \u002B Trans-Saharan = connective tissue"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "This infrastructure reduced risk and cost, letting goods, religions, technologies, and ideas travel far beyond any single empire\u0027s borders, linking distant regions of Afro-Eurasia into one interconnected world.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "tissue",
+            "Value": "interregional connectivity across Afro-Eurasia"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "tissue",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:22:39.0091207+00:00",
+  "Model": "claude-sonnet-5"
+}

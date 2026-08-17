@@ -1,0 +1,182 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u3.3",
+  "ExampleId": "generated",
+  "WalkthroughText": "An if-else statement lets your program choose between two paths based on a boolean condition. Java first evaluates the condition in the if\u0027s parentheses; if it\u0027s true, only the if block\u0027s statements run and the else block is skipped entirely. If the condition is false, the if block is skipped and only the else block runs. Because the program jumps between these blocks rather than running every line top to bottom, tracing execution means highlighting only the lines that actually run for a given condition.",
+  "PracticeItems": [
+    {
+      "Id": "u3.3-q1",
+      "NodeId": "u3.3",
+      "Prompt": "What is printed by the following code?\n\nint temp = 68;\nif (temp \u003E 75) {\n    System.out.println(\u0022Hot\u0022);\n} else {\n    System.out.println(\u0022Not hot\u0022);\n}",
+      "Choices": [
+        "Hot",
+        "Not hot",
+        "Nothing is printed",
+        "Both \u0022Hot\u0022 and \u0022Not hot\u0022 are printed"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Since temp (68) is not greater than 75, the condition is false, so the else branch runs, printing \u0022Not hot\u0022. Only one branch of an if-else can ever execute, so the last choice is impossible."
+    },
+    {
+      "Id": "u3.3-q2",
+      "NodeId": "u3.3",
+      "Prompt": "Which statement about an if-else statement is true?",
+      "Choices": [
+        "Both the if block and the else block always execute, in order.",
+        "Exactly one of the if block or the else block executes, depending on the boolean condition.",
+        "The else block only runs if the if condition throws an error.",
+        "The if block runs first no matter what, then the else block checks a second condition."
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "An if-else statement evaluates one boolean condition and executes exactly one of the two branches: the if block runs when the condition is true, and the else block runs when it is false. The other choices misdescribe control flow \u2014 both blocks never run together, and else doesn\u0027t depend on errors."
+    },
+    {
+      "Id": "u3.3-q3",
+      "NodeId": "u3.3",
+      "Prompt": "int score = 82;\nString result;\nif (score \u003E= 90) {\n    result = \u0022A\u0022;\n} else if (score \u003E= 80) {\n    result = \u0022B\u0022;\n} else {\n    result = \u0022C\u0022;\n}\nSystem.out.println(result);\n\nWhat is printed?",
+      "Choices": [
+        "A",
+        "B",
+        "C",
+        "Nothing, this code does not compile"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "score is 82, so the first condition (score \u003E= 90) is false, but the second condition (score \u003E= 80) is true, so result is set to \u0022B\u0022 and that branch stops checking further conditions. \u0022C\u0022 would only print if both prior conditions were false."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Here\u0027s our method: it checks whether a number is even or odd using an if-else statement. Let\u0027s trace it line by line starting at the top.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "checkParity(int n)"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "n",
+            "Type": "int",
+            "Value": "7"
+          },
+          {
+            "op": "lineHighlight",
+            "Line": 1
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "Line 2 is the if statement. Java evaluates the condition n % 2 == 0 to decide which branch to take.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "exprPush",
+            "ExprId": "cond",
+            "Text": "n % 2 == 0"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "n is 7, so n % 2 is 1, and 1 == 0 is false. The condition resolves to false.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Because the condition is false, the if block on line 3 is skipped completely \u2014 notice we do NOT highlight that line at all.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Line 4 is the else keyword. Since the if condition was false, control jumps here to run the else block instead.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 4
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Line 5, inside the else block, executes: it prints \u0022Odd\u0022. This is the only branch that runs for this input.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 5
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "result",
+            "Type": "String",
+            "Value": "\u0022Odd\u0022"
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "result"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "After the else block finishes, execution continues after the whole if-else, skipping any remaining branches \u2014 the method returns.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 7
+          },
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:09:08.3090528+00:00",
+  "Model": "claude-sonnet-5"
+}

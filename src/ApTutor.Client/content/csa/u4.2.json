@@ -1,0 +1,355 @@
+{
+  "CourseId": "csa",
+  "NodeId": "u4.2",
+  "ExampleId": "generated",
+  "WalkthroughText": "A for loop lets you repeat a block of code a set number of times using a compact header with three parts: initialization, a boolean condition, and an update. The initialization runs once at the very start, creating and setting the loop variable. Before each iteration, Java checks the condition \u2014 if it\u0027s true, the loop body runs; if it\u0027s false, the loop ends. After every iteration, the update statement runs (often incrementing or decrementing the loop variable), and then the condition is checked again. Tracing a for loop means watching the loop variable\u0027s value change in memory at each of these three steps, step by step, until the condition finally becomes false.",
+  "PracticeItems": [
+    {
+      "Id": "u4.2-q1",
+      "NodeId": "u4.2",
+      "Prompt": "What is printed by the following code?\n\nint sum = 0;\nfor (int i = 1; i \u003C= 4; i\u002B\u002B) {\n    sum \u002B= i;\n}\nSystem.out.println(sum);",
+      "Choices": [
+        "10",
+        "6",
+        "4",
+        "15"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The loop runs with i = 1, 2, 3, 4, adding each value to sum: 0\u002B1=1, 1\u002B2=3, 3\u002B3=6, 6\u002B4=10. So sum ends at 10. 15 would include i=5, which never happens because the loop stops once i is no longer \u003C= 4."
+    },
+    {
+      "Id": "u4.2-q2",
+      "NodeId": "u4.2",
+      "Prompt": "How many times will the loop body execute?\n\nfor (int i = 0; i \u003C 5; i\u002B\u002B) {\n    System.out.println(\u0022Hi\u0022);\n}",
+      "Choices": [
+        "4",
+        "5",
+        "6",
+        "0"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "i starts at 0 and the loop continues while i \u003C 5, so i takes the values 0,1,2,3,4 \u2014 that is 5 iterations. It does NOT run 6 times because once i becomes 5, the condition i \u003C 5 is false and the loop stops."
+    },
+    {
+      "Id": "u4.2-q3",
+      "NodeId": "u4.2",
+      "Prompt": "What value does count have after this loop finishes?\n\nint count = 0;\nfor (int i = 10; i \u003E 0; i -= 2) {\n    count\u002B\u002B;\n}\nSystem.out.println(count);",
+      "Choices": [
+        "10",
+        "5",
+        "6",
+        "4"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "i starts at 10 and decreases by 2 each time while i \u003E 0, taking values 10, 8, 6, 4, 2 \u2014 that\u0027s 5 iterations, so count ends at 5. Choice 10 mistakenly counts every integer instead of every step of 2."
+    },
+    {
+      "Id": "u4.2-q4",
+      "NodeId": "u4.2",
+      "Prompt": "Which for loop header correctly prints the numbers 3, 6, 9, 12 (in that order)?",
+      "Choices": [
+        "for (int i = 3; i \u003C= 12; i\u002B\u002B)",
+        "for (int i = 3; i \u003C= 12; i \u002B= 3)",
+        "for (int i = 12; i \u003E= 3; i -= 3)",
+        "for (int i = 0; i \u003C= 12; i \u002B= 3)"
+      ],
+      "CorrectIndex": 1,
+      "Explanation": "Starting at 3 and increasing by 3 each time while i \u003C= 12 produces 3, 6, 9, 12 in increasing order. The third option would produce them in decreasing order (12, 9, 6, 3), and the fourth would start with 0, which is not in the desired sequence."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "We start with a for loop that sums numbers from 1 to 3. Let\u0027s push a frame for main and set up an int variable sum, initialized to 0.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "framePush",
+            "FrameId": "main",
+            "MethodSig": "main()"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "sum",
+            "Type": "int",
+            "Value": "0"
+          }
+        ]
+      },
+      "SourceLine": 1
+    },
+    {
+      "Index": 1,
+      "Caption": "Now we hit the for loop header. The initialization part runs first: int i = 1. This creates the loop variable i and sets it to 1 \u2014 this only happens once.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "1"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 2,
+      "Caption": "Before running the body, Java checks the condition i \u003C= 3. Right now i is 1, so 1 \u003C= 3 is true, and the loop body will execute.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "cond",
+            "Text": "i \u003C= 3"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 3,
+      "Caption": "The condition was true, so we enter the loop body: sum \u002B= i executes, adding the current i (1) to sum, making sum 1.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "sum",
+            "Type": "int",
+            "Value": "1"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 4,
+      "Caption": "After the body finishes, the update part of the header runs: i\u002B\u002B. This increases i from 1 to 2.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "2"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 5,
+      "Caption": "Java rechecks the condition: is i \u003C= 3? Now i is 2, so 2 \u003C= 3 is still true, meaning the loop runs again.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "cond",
+            "Text": "i \u003C= 3"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 6,
+      "Caption": "The body runs again: sum \u002B= i adds the current i (2) to sum, so sum becomes 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "sum",
+            "Type": "int",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 7,
+      "Caption": "The update runs once more: i\u002B\u002B changes i from 2 to 3.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "3"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 8,
+      "Caption": "Checking the condition again: i is 3, and 3 \u003C= 3 is true, so the loop body runs one final time.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "cond",
+            "Text": "i \u003C= 3"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "true"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 9,
+      "Caption": "The body executes: sum \u002B= i adds 3 to sum, making sum equal to 6.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 3
+          },
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "i"
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "sum",
+            "Type": "int",
+            "Value": "6"
+          }
+        ]
+      },
+      "SourceLine": 3
+    },
+    {
+      "Index": 10,
+      "Caption": "The update runs again: i\u002B\u002B changes i from 3 to 4.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "lineHighlight",
+            "Line": 2
+          },
+          {
+            "op": "memCellSet",
+            "FrameId": "main",
+            "Name": "i",
+            "Type": "int",
+            "Value": "4"
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 11,
+      "Caption": "Now Java checks the condition one more time: i is 4, and 4 \u003C= 3 is false, so the loop stops here without running the body again.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "cond",
+            "Text": "i \u003C= 3"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "cond",
+            "Value": "false"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "cond",
+            "Value": false
+          }
+        ]
+      },
+      "SourceLine": 2
+    },
+    {
+      "Index": 12,
+      "Caption": "The loop is finished. sum holds its final value of 6, which is exactly 1 \u002B 2 \u002B 3. The frame for main can now be popped.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "memCellFlash",
+            "FrameId": "main",
+            "Name": "sum"
+          },
+          {
+            "op": "framePop",
+            "FrameId": "main"
+          }
+        ]
+      },
+      "SourceLine": 4
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-14T15:20:48.249493+00:00",
+  "Model": "claude-sonnet-5"
+}

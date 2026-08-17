@@ -1,0 +1,161 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.11",
+  "ExampleId": "generated",
+  "WalkthroughText": "When comparing belief systems as tools for organizing governance, focus on three questions for each system: Who holds authority (a single religious leader, a class of officials, or diffuse local leaders)? How is authority justified (divine right, moral order, merit)? And how directly does the belief system control political institutions versus simply influencing them? Islam often fused religious and political authority (caliphates), Christianity created a separate but powerful church hierarchy that crowned and legitimized monarchs, Confucianism supplied an ethical code that trained and justified a bureaucratic class without being a devotional religion, and Buddhism generally spread through decentralized monastic communities that relied on ruler patronage rather than ruling directly. Comparing these systems means noticing both what they share\u2014each legitimizes social hierarchy and political order\u2014and what makes their structures distinct.",
+  "PracticeItems": [
+    {
+      "Id": "u1.11-q1",
+      "NodeId": "u1.11",
+      "Prompt": "During the early modern period, both Islamic caliphates and Confucian-based Chinese dynasties used a belief system to legitimize centralized rule, but they differed in one key structural way. Which statement best captures that difference?",
+      "Choices": [
+        "Islamic governance often fused religious and political authority in a single ruler or institution (e.g., a caliph), while Confucianism provided an ethical code for a separate, merit-based bureaucracy that legitimized the emperor without claiming divine religious authority for officials.",
+        "Islamic governance rejected any role for religion in law, while Confucian China required all officials to be ordained religious clergy.",
+        "Confucianism was practiced only by peasants and had no influence on the imperial government, while Islam directly controlled tax collection in all Muslim states.",
+        "Both systems were purely secular philosophies with no connection to political legitimacy or the ruling class."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Islam frequently merged religious and political leadership (as with caliphs, who claimed both spiritual and temporal authority), whereas Confucianism functioned as an ethical-philosophical system that legitimized imperial rule and structured a merit-based scholar-bureaucracy without itself being a devotional religion tied to a single divine ruler. The other choices misrepresent both systems: Islam did not reject religion\u0027s role in law (it\u0027s central), and Confucian officials were scholars, not clergy."
+    },
+    {
+      "Id": "u1.11-q2",
+      "NodeId": "u1.11",
+      "Prompt": "A historian argues that Buddhism, unlike Christianity in medieval Europe, generally did not establish a single centralized religious hierarchy that directly ruled territory or crowned monarchs. Which piece of evidence best supports this argument?",
+      "Choices": [
+        "Buddhist monasteries in various Asian societies often operated as centers of learning and moral influence under local rulers\u0027 patronage, rather than as a unified church with authority to crown or depose kings, unlike the Roman Catholic Church\u0027s role with European monarchs.",
+        "Buddhist monks personally controlled the imperial treasury in every East Asian dynasty.",
+        "The Pope had no involvement in medieval European politics, making the comparison invalid.",
+        "Christianity in medieval Europe was entirely decentralized with no popes or bishops holding authority."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Correct: Buddhism spread through diverse, regionally adapted institutions (monasteries, sanghas) that relied on ruler patronage rather than forming one centralized hierarchy with king-making power, contrasting with the Catholic Church\u0027s papal authority over coronations and excommunication in medieval Europe. The distractor about the Pope is false\u2014papal political involvement, including crowning emperors, was a real and significant feature of medieval Christendom."
+    },
+    {
+      "Id": "u1.11-q3",
+      "NodeId": "u1.11",
+      "Prompt": "Which comparison accurately describes how Christianity and Confucianism each functioned as an \u0027organizing structure\u0027 for governance, despite their very different origins?",
+      "Choices": [
+        "Both provided a moral and institutional framework that rulers used to justify authority and maintain social order\u2014Christianity through church doctrine and canon law, Confucianism through filial piety and hierarchical relationships upheld by a scholar-official class.",
+        "Neither system had any impact on law codes or administrative practice in the societies where they were dominant.",
+        "Christianity and Confucianism were identical in that both required a single infallible religious leader with absolute political power over all governments.",
+        "Confucianism spread primarily through military conquest, while Christianity spread only through hereditary succession of priests."
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "Both belief systems supplied ideological legitimacy and social order: Christianity via church institutions, canon law, and the doctrine of divinely sanctioned kingship, and Confucianism via hierarchical social roles (ruler-subject, father-son) enforced through an examination-based bureaucracy. The claim of a single infallible political leader in both is false\u2014Confucianism had no equivalent of a pope, and imperial authority was tied to the Mandate of Heaven, not religious infallibility."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s build a mental comparison table for how four belief systems organize governance. We\u0027ll add one system at a time and ask: who holds authority, and how is it justified?",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "title",
+            "Text": "Comparing Belief Systems as Governance Structures"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, Islam: in many Islamic states, religious and political authority were fused into one role, the caliph, who held both spiritual and temporal power.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "islam",
+            "Text": "Islam: Caliph = religious \u002B political authority combined"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "islam",
+            "Value": "Fused authority"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "Next, Christianity: in medieval Europe, the Church formed its own hierarchy\u2014popes and bishops\u2014that was separate from kings but powerful enough to crown or excommunicate them.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "christianity",
+            "Text": "Christianity: Church hierarchy legitimizes/crowns monarchs"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "christianity",
+            "Value": "Separate but intertwined authority"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Now Confucianism: it isn\u0027t a devotional religion with priests, but an ethical system that trained scholar-officials and justified the emperor\u0027s rule through moral order and the Mandate of Heaven.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "confucianism",
+            "Text": "Confucianism: Ethical code -\u003E merit-based bureaucracy"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "confucianism",
+            "Value": "Indirect legitimation via bureaucracy"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "Finally, Buddhism: it typically spread through decentralized monasteries and sanghas that relied on the patronage of local rulers, rather than forming one central ruling hierarchy.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "buddhism",
+            "Text": "Buddhism: Decentralized monasteries, ruler patronage"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "buddhism",
+            "Value": "Diffuse, patronage-based influence"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Comparing all four side by side: Islam fuses power in one leader, Christianity builds a parallel church hierarchy, Confucianism legitimizes a bureaucratic class, and Buddhism spreads through decentralized, ruler-dependent institutions.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "summary",
+            "Text": "Same goal (legitimize order), different structures"
+          },
+          {
+            "op": "boolGlow",
+            "ExprId": "summary",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:23:07.9777869+00:00",
+  "Model": "claude-sonnet-5"
+}

@@ -1,0 +1,269 @@
+{
+  "CourseId": "worldhistory",
+  "NodeId": "u1.4",
+  "ExampleId": "generated",
+  "WalkthroughText": "Both the Mexica and Inca built huge empires in the 1400s-1500s, but they organized control differently. The Mexica ran a tribute empire: conquered city-states kept local rulers and customs, but had to send goods, labor, and warriors to the capital, Tenochtitlan. The Inca ran a more centralized system: they built roads, storehouses, and used a rotational labor tax called the mit\u0027a to move people and resources directly for the state. Comparing these two systems shows two different answers to the same problem \u2014 how do you hold a huge, diverse population together without modern tools of government?",
+  "PracticeItems": [
+    {
+      "Id": "u1.4-q1",
+      "NodeId": "u1.4",
+      "Prompt": "Which statement best describes how the Mexica (Aztec) Empire administered its conquered territories, distinguishing it from the Inca approach?",
+      "Choices": [
+        "The Mexica ruled through a decentralized tribute system, allowing conquered city-states (altepetl) to retain local rulers and customs as long as they paid tribute and provided labor/military support",
+        "The Mexica dismantled all local governments and installed Mexica governors in every conquered city",
+        "The Mexica required all conquered peoples to abandon their native languages and religions immediately",
+        "The Mexica redistributed conquered land equally among all subject peoples regardless of status"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The Mexica Empire was fundamentally a tribute empire: conquered altepetl kept their own rulers and local governance structures but owed tribute (goods, labor, warriors) to Tenochtitlan. This is different from the Inca, who imposed more direct administrative control through the mit\u0027a labor system and state-built infrastructure. The other choices describe a level of direct control the Mexica did not actually exercise over most subject peoples."
+    },
+    {
+      "Id": "u1.4-q2",
+      "NodeId": "u1.4",
+      "Prompt": "The Inca mit\u0027a system is best described as which of the following?",
+      "Choices": [
+        "A rotational labor tax requiring communities to provide workers for state projects like roads, terraces, and storehouses in exchange for state protection and resources",
+        "A voluntary trade agreement between Inca merchants and neighboring empires",
+        "A hereditary slave system where captives worked permanently on royal estates",
+        "A religious pilgrimage required of all Inca citizens once per year"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The mit\u0027a was a labor-tax system: communities rotated workers to build/maintain roads, terraces, and storage facilities, and in turn received access to state resources like stored food during shortages. It was not slavery (it was rotational and reciprocal, not permanent bondage) and not a trade agreement or religious obligation, though it did have communal/religious dimensions\u2014the core function was labor extraction for state infrastructure."
+    },
+    {
+      "Id": "u1.4-q3",
+      "NodeId": "u1.4",
+      "Prompt": "Both the Mexica and Inca empires used record-keeping and administrative tools to manage their vast territories. Which pairing correctly matches empire to a key administrative tool?",
+      "Choices": [
+        "Inca used quipus (knotted cords) for record-keeping; Mexica used pictographic tribute lists and calendars",
+        "Mexica used quipus; Inca used an alphabetic writing system",
+        "Both empires relied solely on oral tradition with no administrative records",
+        "Inca used tribute lists written in Spanish; Mexica used quipus"
+      ],
+      "CorrectIndex": 0,
+      "Explanation": "The Inca, lacking a full writing system, used quipus\u2014knotted cords\u2014to record numerical and administrative data such as census figures and tribute obligations. The Mexica used pictographic/glyphic tribute lists and calendrical records to track tribute owed by subject city-states. Neither empire used alphabetic writing before European contact, and both had sophisticated non-oral record systems, ruling out the other choices."
+    }
+  ],
+  "WalkthroughSteps": [
+    {
+      "Index": 0,
+      "Caption": "Let\u0027s compare two American empires\u0027 strategies for controlling territory: the Mexica (Aztec) and the Inca. We\u0027ll build a simple side-by-side picture, since there\u0027s no code or math to trace here \u2014 just the structure of two empires.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "title",
+            "Text": "State-Building: Mexica vs. Inca"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 1,
+      "Caption": "First, the Mexica Empire, centered at Tenochtitlan. Picture it as a hub city collecting resources.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "mexica_core",
+            "Text": "Tenochtitlan (capital)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 2,
+      "Caption": "The Mexica didn\u0027t replace local governments. Conquered altepetl (city-states) kept their own rulers.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "altepetl",
+            "Text": "Conquered altepetl: keep local ruler"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "altepetl",
+            "Value": "local ruler retained"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 3,
+      "Caption": "Instead of direct rule, the Mexica demanded tribute: goods, labor, and soldiers flowing back to the capital.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "tribute",
+            "Text": "Tribute flow -\u003E Tenochtitlan"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "tribute",
+            "Value": "goods \u002B labor \u002B warriors"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 4,
+      "Caption": "So the Mexica system = decentralized, tribute-based control. Local identity stays intact, loyalty is bought through obligation, not direct governance.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "tribute",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 5,
+      "Caption": "Now let\u0027s look at the Inca Empire, centered at Cusco, which took a very different approach.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "inca_core",
+            "Text": "Cusco (capital)"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 6,
+      "Caption": "The Inca built an extensive road network connecting the empire directly to the capital, enabling faster control and communication.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "roads",
+            "Text": "Road network"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "roads",
+            "Value": "connects provinces to Cusco"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 7,
+      "Caption": "They imposed the mit\u0027a: a rotational labor tax. Communities sent workers to build roads, terraces, and storehouses for the state.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "mita",
+            "Text": "Mit\u0027a labor tax"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "mita",
+            "Value": "rotational labor for state projects"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 8,
+      "Caption": "In return, the state stored surplus food and goods, redistributing them during shortages \u2014 a reciprocal exchange, not just extraction.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "storehouses",
+            "Text": "State storehouses"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "storehouses",
+            "Value": "redistribute in famine/need"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 9,
+      "Caption": "So the Inca system = more centralized, direct administrative control, built on infrastructure and labor obligation rather than just tribute from existing rulers.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "storehouses",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 10,
+      "Caption": "Both empires also needed record-keeping to track all this. The Inca used quipus \u2014 knotted cords \u2014 to record numbers like census and labor data.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "quipu",
+            "Text": "Inca quipu (knotted cords)"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "quipu",
+            "Value": "records numeric data"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 11,
+      "Caption": "The Mexica used pictographic tribute lists and calendars to track what each altepetl owed.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "exprPush",
+            "ExprId": "tributelist",
+            "Text": "Mexica pictographic tribute list"
+          },
+          {
+            "op": "exprResolve",
+            "ExprId": "tributelist",
+            "Value": "records tribute owed"
+          }
+        ]
+      },
+      "SourceLine": null
+    },
+    {
+      "Index": 12,
+      "Caption": "Putting it together: both empires solved the same problem \u2014 governing huge, diverse populations \u2014 but the Mexica leaned on indirect tribute from existing rulers, while the Inca leaned on direct labor and infrastructure control.",
+      "Delta": {
+        "Ops": [
+          {
+            "op": "boolGlow",
+            "ExprId": "title",
+            "Value": true
+          }
+        ]
+      },
+      "SourceLine": null
+    }
+  ],
+  "Verified": true,
+  "GeneratedAt": "2026-08-03T18:20:02.5307038+00:00",
+  "Model": "claude-sonnet-5"
+}
