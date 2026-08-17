@@ -44,30 +44,38 @@ else
         <p>@Model.Pack.WalkthroughText</p>
 
         <h2>Practice questions</h2>
-        @foreach (var item in Model.Pack.PracticeItems)
-        {
-            <div class="card">
-                <p><strong>@item.Prompt</strong></p>
-                @for (var i = 0; i < item.Choices.Count; i++)
-                {
-                    <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
-                        @(i == item.CorrectIndex ? "✓" : "—") @item.Choices[i]
-                    </p>
-                }
-                <p class="notice">@item.Explanation</p>
-            </div>
-        }
+        <form method="post" asp-page-handler="Approve">
+            <input type="hidden" name="course" value="@Model.CourseId" />
+            <input type="hidden" name="node" value="@Model.NodeId" />
 
-        <div class="actions">
-            <form method="post" asp-page-handler="Approve">
-                <input type="hidden" name="course" value="@Model.CourseId" />
-                <input type="hidden" name="node" value="@Model.NodeId" />
+            @foreach (var item in Model.Pack.PracticeItems)
+            {
+                <div class="card">
+                    <p><strong>@item.Prompt</strong></p>
+                    @for (var i = 0; i < item.Choices.Count; i++)
+                    {
+                        <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
+                            @(i == item.CorrectIndex ? "✓" : "—") @item.Choices[i]
+                        </p>
+                    }
+                    <p class="notice">@item.Explanation</p>
+
+                    <label>
+                        <input type="checkbox" name="keep_@item.Id" value="true" checked />
+                        Keep this question
+                    </label>
+                    <label for="reason_@item.Id">If discarding, why? (required if unchecked)</label>
+                    <textarea id="reason_@item.Id" name="reason_@item.Id" rows="2"></textarea>
+                </div>
+            }
+
+            <div class="actions">
                 <button type="submit" class="btn-approve">Approve</button>
-            </form>
-        </div>
+            </div>
+        </form>
 
         <details style="margin-top: 16px;">
-            <summary>Reject this instead</summary>
+            <summary>Reject the whole topic instead</summary>
             <form method="post" asp-page-handler="Reject" style="margin-top: 10px;">
                 <input type="hidden" name="course" value="@Model.CourseId" />
                 <input type="hidden" name="node" value="@Model.NodeId" />

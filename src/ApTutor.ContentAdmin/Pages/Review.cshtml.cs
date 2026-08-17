@@ -1,5 +1,6 @@
 using ApTutor.Content;
 using ApTutor.ContentAdmin.Services;
+using ApTutor.Platform;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
@@ -79,13 +80,46 @@ public sealed class ReviewModel : PageModel
             return Page();
         }
 
-        ContentPackStore.Save(courseInfo.ContentDir, pack with { Verified = true });
+        // Per-item keep/discard: each question has a "keep_<itemId>" checkbox (checked by
+        // default) and a "reason_<itemId>" textarea. A discarded item requires a reason — same
+        // "no silent rejection" rule the whole-node Reject already enforces.
+        var kept = new List<PracticeItem>();
+        var discarded = new List<(string ItemId, string ItemPrompt, string Reason)>();
+        foreach (var item in pack.PracticeItems)
+        {
+            if (Request.Form.ContainsKey($"keep_{item.Id}"))
+            {
+                kept.Add(item);
+                continue;
+            }
+
+            var reason = Request.Form[$"reason_{item.Id}"].ToString().Trim();
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                Error = $"Please say why you're discarding \"{item.Prompt}\" before approving the rest.";
+                Pack = pack;
+                return Page();
+            }
+            discarded.Add((item.Id, item.Prompt, reason));
+        }
+
+        ContentPackStore.Save(courseInfo.ContentDir, pack with { PracticeItems = kept, Verified = true });
 
         var absolutePath = ContentPackStore.PathFor(courseInfo.ContentDir, node);
         var relativePath = Path.GetRelativePath(_git.CloneDir, absolutePath).Replace('\\', '/');
-        await _git.CommitAndPushAsync(new[] { relativePath }, $"content-admin: approve {course}/{node}");
+        var commitMessage = discarded.Count == 0
+            ? $"content-admin: approve {course}/{node}"
+            : $"content-admin: approve {course}/{node} ({discarded.Count} item(s) discarded)";
+        await _git.CommitAndPushAsync(new[] { relativePath }, commitMessage);
 
-        Notice = "Approved. This content is now live.";
+        if (discarded.Count > 0)
+            await _rejectionLog.RecordItemsAsync(courseInfo, node, discarded);
+
+        Notice = discarded.Count == 0
+            ? "Approved. This content is now live."
+            : kept.Count == 0
+                ? "Approved with no questions kept — the explanation is live, but you'll want to generate new questions for this topic."
+                : $"Approved with {kept.Count} question(s) live. {discarded.Count} discarded.";
         Pack = ContentPackStore.TryLoad(courseInfo.ContentDir, node);
         return Page();
     }
