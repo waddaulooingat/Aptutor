@@ -2,3 +2,8 @@ bin/
 obj/
 .vs/
 *.user
+
+# Local-only scratch folder for AWS credentials (access keys, etc.) — never meant to be committed.
+# Move this outside the repo entirely once things are formalized.
+/aws_stuff/
+/aws/
