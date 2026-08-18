@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>ApTutor.BackfillS3</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Reuses S3ContentStore.ApproveNodeAsync as-is — the exact same code path Content Admin's
+         own Approve button uses — rather than hand-reconstructing the node/manifest wire format. -->
+    <ProjectReference Include="..\..\src\ApTutor.ContentAdmin\ApTutor.ContentAdmin.csproj" />
+  </ItemGroup>
+
+</Project>
