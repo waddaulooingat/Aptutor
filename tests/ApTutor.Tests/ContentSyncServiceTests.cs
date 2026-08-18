@@ -44,7 +44,7 @@ public class ContentSyncServiceTests : IDisposable
         var result = await fake.RefreshAsync(course);
 
         Assert.True(result.Success);
-        Assert.Equal(1, result.UpdatedCount);
+        Assert.Equal(new[] { "u1.1" }, result.UpdatedNodeIds);
         var saved = ContentPackStore.TryLoad(_contentDir, "u1.1");
         Assert.NotNull(saved);
         Assert.Equal("hello", saved!.WalkthroughText);
@@ -61,7 +61,7 @@ public class ContentSyncServiceTests : IDisposable
         var result = await fake.RefreshAsync(course);
 
         Assert.True(result.Success);
-        Assert.Equal(0, result.UpdatedCount);
+        Assert.Empty(result.UpdatedNodeIds);
     }
 
     [Fact]
@@ -74,7 +74,7 @@ public class ContentSyncServiceTests : IDisposable
         var result = await fake.RefreshAsync(course);
 
         Assert.True(result.Success);
-        Assert.Equal(1, result.UpdatedCount);
+        Assert.Equal(new[] { "u1.1" }, result.UpdatedNodeIds);
         Assert.Equal("new text", ContentPackStore.TryLoad(_contentDir, "u1.1")!.WalkthroughText);
     }
 

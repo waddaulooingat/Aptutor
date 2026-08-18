@@ -7,7 +7,7 @@ using ApTutor.Platform;
 
 namespace ApTutor.Client.Services;
 
-public sealed record SyncResult(bool Success, int UpdatedCount, string? UserMessage);
+public sealed record SyncResult(bool Success, IReadOnlyList<string> UpdatedNodeIds, string? UserMessage);
 
 /// Minimal, temporary test bridge from S3 into the desktop Shell — NOT the shipping design. Pulls
 /// approved content straight from S3 with a read-only credential; no Licensing/entitlement service
@@ -37,14 +37,25 @@ public class ContentSyncService
                 manifest,
                 nodeId => ContentPackStore.TryLoad(course.ContentDir, nodeId) is { } cached ? ContentHash.Compute(cached) : null);
 
+            var actuallyUpdated = new List<string>();
             foreach (var nodeId in nodeIds)
             {
                 var pack = await GetNodeAsync(course.CourseId, nodeId, ct);
                 if (pack is not null)
+                {
                     ContentPackStore.Save(course.ContentDir, pack);
+                    actuallyUpdated.Add(nodeId);
+                }
             }
 
-            return new SyncResult(true, nodeIds.Count, null);
+            // Named explicitly, not just counted — so it's obvious during testing whether a given
+            // node actually came from S3 this run versus was already cached from before.
+            if (actuallyUpdated.Count > 0)
+                Console.WriteLine($"[ContentSyncService] Pulled from S3 for '{course.CourseId}': {string.Join(", ", actuallyUpdated)}");
+            else
+                Console.WriteLine($"[ContentSyncService] '{course.CourseId}' already up to date — nothing pulled from S3.");
+
+            return new SyncResult(true, actuallyUpdated, null);
         }
         catch (Exception ex)
         {
@@ -52,7 +63,7 @@ public class ContentSyncService
             // real cause) reach the UI as-is — the student sees one plain, non-technical message;
             // the real cause goes to the console so this is still debuggable during testing.
             Console.Error.WriteLine($"[ContentSyncService] Refresh failed for course '{course.CourseId}': {ex}");
-            return new SyncResult(false, 0, OfflineMessage);
+            return new SyncResult(false, Array.Empty<string>(), OfflineMessage);
         }
     }
 

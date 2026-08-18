@@ -299,7 +299,9 @@ public partial class MainWindow : Window
             {
                 RefreshAll();
                 ShowContentMessage(
-                    result.UpdatedCount == 0 ? "Already up to date." : $"Updated {result.UpdatedCount} topic(s).",
+                    result.UpdatedNodeIds.Count == 0
+                        ? "Already up to date — nothing new from S3."
+                        : $"Pulled from S3: {string.Join(", ", result.UpdatedNodeIds)}",
                     Brushes.DarkGreen);
             }
         }
