@@ -21,6 +21,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="12.1.0" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.102.1" />
   </ItemGroup>
 
   <ItemGroup>

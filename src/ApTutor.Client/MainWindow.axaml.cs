@@ -1,4 +1,7 @@
+using Amazon;
+using Amazon.S3;
 using ApTutor.Client.Courses;
+using ApTutor.Client.Services;
 using ApTutor.Content;
 using ApTutor.ContentFactory;
 using ApTutor.Curriculum;
@@ -20,6 +23,7 @@ public partial class MainWindow : Window
     private ICourseModule _course = null!;
     private MasteryTracker _mastery = null!;
     private DagNode? _selectedNode;
+    private bool _refreshingContent;
 
     public MainWindow()
     {
@@ -256,6 +260,61 @@ public partial class MainWindow : Window
         catch (Exception ex)
         {
             ShowContentMessage($"⚠ Refresh failed: {ex.Message}", Brushes.DarkRed);
+        }
+    }
+
+    /// Minimal, temporary test bridge (see ApTutor.Client.Services.ContentSyncService) — pulls
+    /// whatever's currently approved for the selected course straight from S3 with a read-only
+    /// credential. Not the shipping design: a Licensing/entitlement service issuing short-lived
+    /// signed URLs is meant to sit in front of this before any real customer's install talks to S3
+    /// directly. Refreshes only the currently-selected course.
+    private async void OnRefreshContentClick(object? sender, RoutedEventArgs e)
+    {
+        if (_refreshingContent) return;
+
+        var bucket = Environment.GetEnvironmentVariable("TUTORAI_CONTENT_BUCKET");
+        var region = Environment.GetEnvironmentVariable("TUTORAI_CONTENT_REGION");
+        if (string.IsNullOrWhiteSpace(bucket) || string.IsNullOrWhiteSpace(region))
+        {
+            ShowContentMessage("⚠ Set TUTORAI_CONTENT_BUCKET and TUTORAI_CONTENT_REGION to use Refresh content.", Brushes.DarkOrange);
+            return;
+        }
+
+        _refreshingContent = true;
+        RefreshContentButton.IsEnabled = false;
+        var course = _course; // capture: the course selector could change while this await is in flight
+        ShowContentMessage($"⏳ Refreshing {course.DisplayName} content...", Brushes.Gray);
+
+        try
+        {
+            using var s3 = new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) });
+            var sync = new ContentSyncService(s3, bucket);
+            var result = await sync.RefreshAsync(course);
+
+            if (!result.Success)
+            {
+                ShowContentMessage(result.UserMessage!, Brushes.DarkRed);
+            }
+            else if (course == _course) // still on the same course — safe to refresh the tree/detail
+            {
+                RefreshAll();
+                ShowContentMessage(
+                    result.UpdatedCount == 0 ? "Already up to date." : $"Updated {result.UpdatedCount} topic(s).",
+                    Brushes.DarkGreen);
+            }
+        }
+        catch (Exception ex)
+        {
+            // ContentSyncService.RefreshAsync already catches everything it can throw — this is a
+            // backstop for anything before/around it (e.g. constructing the S3 client itself), so a
+            // misconfiguration here can't crash an async void handler.
+            Console.Error.WriteLine($"[OnRefreshContentClick] {ex}");
+            ShowContentMessage("You are offline. This app needs an internet connection. Til then you can review the previously downloaded content.", Brushes.DarkRed);
+        }
+        finally
+        {
+            _refreshingContent = false;
+            RefreshContentButton.IsEnabled = true;
         }
     }
 

@@ -31,9 +31,11 @@ public class S3ContentStore
     private const int SchemaVersion = 1;
     private const int MaxManifestWriteAttempts = 5;
 
-    // Shared between the node-object write and the hash computation so a future change to JSON
-    // options can't silently change every hash without anyone noticing.
-    private static readonly JsonSerializerOptions CanonicalJsonOptions = new() { WriteIndented = false };
+    // ApTutor.Content.ContentHash.CanonicalOptions, not a locally-defined instance — this app's
+    // hash and ApTutor.Client's independently-recomputed hash of the same pack must be byte-for-byte
+    // identical, which is only guaranteed if both sides serialize through the one shared options
+    // instance rather than two separately-constructed (if similar-looking) ones.
+    private static readonly JsonSerializerOptions CanonicalJsonOptions = ContentHash.CanonicalOptions;
 
     private readonly IAmazonS3 _s3;
     private readonly string _bucket;
@@ -76,7 +78,7 @@ public class S3ContentStore
     public async Task ApproveNodeAsync(string courseId, string nodeId, NodeContentPack approvedPack, CancellationToken ct = default)
     {
         var body = JsonSerializer.Serialize(approvedPack, CanonicalJsonOptions);
-        var hash = ComputeHash(body);
+        var hash = ContentHash.Compute(approvedPack);
         var now = DateTimeOffset.UtcNow;
 
         await PutObjectAsync(NodeKey(courseId, nodeId), body, ifMatch: null, ifNoneMatch: null, ct);
@@ -165,6 +167,10 @@ public class S3ContentStore
     private static bool IsPreconditionFailed(AmazonS3Exception ex) =>
         ex.StatusCode == HttpStatusCode.PreconditionFailed || string.Equals(ex.ErrorCode, "PreconditionFailed", StringComparison.Ordinal);
 
+    // Only for hashing the course manifest itself (for the top-level index's CourseIndexEntry) —
+    // a different concern from ContentHash.Compute, which is specifically for NodeContentPack and
+    // shared with ApTutor.Client so both sides agree on a node's hash. Nothing outside this class
+    // needs to recompute a manifest's own hash, so no need to share this one.
     private static string ComputeHash(string content) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
 
