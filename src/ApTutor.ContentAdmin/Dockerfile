@@ -1,13 +1,18 @@
 # Tutor AI Content Admin — hosted SME review app.
 #
-# The eventual host is not chosen here (no cloud account access — see the plan's "Hosting target"
-# note); this just makes the app portable to whatever gets picked. Two things whoever deploys this
-# must provide: (1) a persistent volume mounted at /data (the git clone + ASP.NET Data Protection
-# key ring both need to survive restarts — otherwise a routine redeploy silently drops in-progress
-# reviews and force-logs-out every session), and (2) the environment variables this app reads at
-# runtime: ANTHROPIC_API_KEY, ANTHROPIC_MODEL, CONTENT_ADMIN_REPO_URL, CONTENT_ADMIN_REPO_PAT,
-# CONTENT_ADMIN_PASSWORD_HASH (see Services/PasswordHasher.cs to generate one), and optionally
-# CONTENT_ADMIN_COMMIT_NAME / CONTENT_ADMIN_COMMIT_EMAIL.
+# S3 is the source of truth for approved content now (git is application source code only), which
+# makes this app genuinely stateless — no persistent volume needed. Whoever deploys this must
+# provide: (1) an IAM role/credentials with the policy in the plan, scoped to read/write on the
+# content bucket, (2) the environment variables this app reads at runtime: ANTHROPIC_API_KEY,
+# ANTHROPIC_MODEL, CONTENT_ADMIN_PASSWORD_HASH (see Services/PasswordHasher.cs to generate one),
+# ContentAdmin__AdminUsername, ContentStore__Bucket, ContentStore__Region. AWS credentials
+# themselves come from the SDK's normal resolution chain (env vars locally, an attached instance
+# role on App Runner/Fargate/EC2) — nothing AWS-credential-specific needs to be passed explicitly.
+#
+# No persistent auth cookie key ring either — a redeploy logs out every SME session. Accepted
+# tradeoff for a low-traffic internal tool (see the plan); revisit if this ever needs to survive
+# redeploys without logging everyone out, or if it's ever run as more than one instance at a time
+# (both the auth cookie and the in-memory unapproved-draft tracking assume a single instance).
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
@@ -33,16 +38,9 @@ RUN dotnet publish src/ApTutor.ContentAdmin/ApTutor.ContentAdmin.csproj -c Relea
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
 WORKDIR /app
 
-# git is not present in the base aspnet image — GitRepoService shells out to the real `git` binary.
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends git ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
 COPY --from=build /app .
 
 ENV ASPNETCORE_URLS=http://+:8080
-ENV ContentAdmin__RepoCloneDir=/data/repo
-VOLUME ["/data"]
 EXPOSE 8080
 
 ENTRYPOINT ["dotnet", "ApTutor.ContentAdmin.dll"]

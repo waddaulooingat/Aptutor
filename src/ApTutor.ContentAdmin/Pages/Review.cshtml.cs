@@ -15,15 +15,18 @@ public sealed class ReviewModel : PageModel
 {
     private readonly CourseCatalog _catalog;
     private readonly ContentGenerationService _generation;
-    private readonly GitRepoService _git;
+    private readonly S3ContentStore _store;
     private readonly RejectionLog _rejectionLog;
+    private readonly ILogger<ReviewModel> _logger;
 
-    public ReviewModel(CourseCatalog catalog, ContentGenerationService generation, GitRepoService git, RejectionLog rejectionLog)
+    public ReviewModel(
+        CourseCatalog catalog, ContentGenerationService generation, S3ContentStore store, RejectionLog rejectionLog, ILogger<ReviewModel> logger)
     {
         _catalog = catalog;
         _generation = generation;
-        _git = git;
+        _store = store;
         _rejectionLog = rejectionLog;
+        _logger = logger;
     }
 
     public string CourseId { get; private set; } = "";
@@ -31,20 +34,42 @@ public sealed class ReviewModel : PageModel
     public string NodeTitle { get; private set; } = "";
     public string CourseDisplayName { get; private set; } = "";
     public NodeContentPack? Pack { get; private set; }
+    public bool PackIsPending { get; private set; }
     public string? Notice { get; private set; }
     public string? Error { get; private set; }
 
-    public IActionResult OnGet(string course, string node)
+    public async Task<IActionResult> OnGetAsync(string course, string node)
     {
         if (!TryLoadContext(course, node, out var courseInfo, out var actionResult))
             return actionResult!;
 
-        // A generation is already running for this node — don't show a stale/empty review view,
-        // send the SME to the page that's actually watching it.
-        if (_generation.GetJob(course, node) is { Status: GenerationStatus.Running })
-            return RedirectToPage("/Generating", new { course, node });
+        var job = _generation.GetJob(course, node);
+        switch (job?.Status)
+        {
+            case GenerationStatus.Running:
+                // Don't show a stale/empty review view — send the SME to the page that's actually
+                // watching this generation.
+                return RedirectToPage("/Generating", new { course, node });
 
-        Pack = ContentPackStore.TryLoad(courseInfo.ContentDir, node);
+            case GenerationStatus.Succeeded:
+                // An unapproved draft always wins over whatever's live — this is how "generate a
+                // new attempt" on an already-approved node lets the SME review the replacement.
+                Pack = job.Pack;
+                PackIsPending = true;
+                break;
+
+            case GenerationStatus.Failed:
+                Error = job.Error;
+                Pack = await _store.TryGetLiveNodeAsync(course, node);
+                PackIsPending = false;
+                break;
+
+            default:
+                Pack = await _store.TryGetLiveNodeAsync(course, node);
+                PackIsPending = false;
+                break;
+        }
+
         return Page();
     }
 
@@ -64,25 +89,22 @@ public sealed class ReviewModel : PageModel
         if (!TryLoadContext(course, node, out var courseInfo, out var actionResult))
             return actionResult!;
 
-        var pack = ContentPackStore.TryLoad(courseInfo.ContentDir, node);
-        if (pack is null)
+        var job = _generation.GetJob(course, node);
+        if (job is not { Status: GenerationStatus.Succeeded })
         {
-            Error = "There's nothing generated for this topic yet.";
+            // No draft to act on — either this was already approved (double-click/retry after
+            // success) or nothing was ever generated. Check the live store to tell which.
+            await ShowAlreadyHandledOrNothingToApproveAsync(course, node);
             return Page();
         }
 
-        if (pack.Verified)
-        {
-            // Idempotent: a double-click or retried request lands here again after the first one
-            // already succeeded — treat it as success rather than re-running the git pipeline.
-            Notice = "This topic is already approved.";
-            Pack = pack;
-            return Page();
-        }
+        var pack = job.Pack!;
 
         // Per-item keep/discard: each question has a "keep_<itemId>" checkbox (checked by
         // default) and a "reason_<itemId>" textarea. A discarded item requires a reason — same
-        // "no silent rejection" rule the whole-node Reject already enforces.
+        // "no silent rejection" rule the whole-node Reject already enforces. Validated BEFORE
+        // claiming the job below — a validation failure must leave the draft in place so the SME
+        // can fix the reason and resubmit, not lose it.
         var kept = new List<PracticeItem>();
         var discarded = new List<(string ItemId, string ItemPrompt, string Reason)>();
         foreach (var item in pack.PracticeItems)
@@ -98,29 +120,46 @@ public sealed class ReviewModel : PageModel
             {
                 Error = $"Please say why you're discarding \"{item.Prompt}\" before approving the rest.";
                 Pack = pack;
+                PackIsPending = true;
                 return Page();
             }
             discarded.Add((item.Id, item.Prompt, reason));
         }
 
-        ContentPackStore.Save(courseInfo.ContentDir, pack with { PracticeItems = kept, Verified = true });
+        // Claim the job atomically, only now that validation passed — a losing concurrent request
+        // (double-click, browser retry) falls into the "already handled" branch above instead of
+        // both writers racing to S3.
+        if (!_generation.ClearJob(course, node, GenerationStatus.Succeeded))
+        {
+            await ShowAlreadyHandledOrNothingToApproveAsync(course, node);
+            return Page();
+        }
 
-        var absolutePath = ContentPackStore.PathFor(courseInfo.ContentDir, node);
-        var relativePath = Path.GetRelativePath(_git.CloneDir, absolutePath).Replace('\\', '/');
-        var commitMessage = discarded.Count == 0
-            ? $"content-admin: approve {course}/{node}"
-            : $"content-admin: approve {course}/{node} ({discarded.Count} item(s) discarded)";
-        await _git.CommitAndPushAsync(new[] { relativePath }, commitMessage);
+        var approvedPack = pack with { PracticeItems = kept, Verified = true };
+        try
+        {
+            await _store.ApproveNodeAsync(course, node, approvedPack);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Approve failed for {Course}/{Node}; restoring draft so it can be retried", course, node);
+            _generation.RestoreJob(job);
+            Error = "Approving failed — please try again in a moment.";
+            Pack = pack;
+            PackIsPending = true;
+            return Page();
+        }
 
         if (discarded.Count > 0)
-            await _rejectionLog.RecordItemsAsync(courseInfo, node, discarded);
+            await _rejectionLog.RecordItemsAsync(course, node, discarded);
 
         Notice = discarded.Count == 0
             ? "Approved. This content is now live."
             : kept.Count == 0
                 ? "Approved with no questions kept — the explanation is live, but you'll want to generate new questions for this topic."
                 : $"Approved with {kept.Count} question(s) live. {discarded.Count} discarded.";
-        Pack = ContentPackStore.TryLoad(courseInfo.ContentDir, node);
+        Pack = approvedPack;
+        PackIsPending = false;
         return Page();
     }
 
@@ -132,29 +171,48 @@ public sealed class ReviewModel : PageModel
         if (string.IsNullOrWhiteSpace(reason))
         {
             Error = "Please say why you're rejecting this before it can be discarded.";
-            Pack = ContentPackStore.TryLoad(courseInfo.ContentDir, node);
+            if (_generation.GetJob(course, node) is { Status: GenerationStatus.Succeeded } pending)
+            {
+                Pack = pending.Pack;
+                PackIsPending = true;
+            }
             return Page();
         }
 
-        var pack = ContentPackStore.TryLoad(courseInfo.ContentDir, node);
-        if (pack is null)
+        if (!_generation.ClearJob(course, node, GenerationStatus.Succeeded))
         {
             Notice = "There was nothing pending to reject for this topic.";
             return Page();
         }
 
-        if (pack.Verified)
+        try
         {
-            Error = "This topic is already approved and live — it can't be rejected here.";
-            Pack = pack;
-            return Page();
+            await _rejectionLog.RecordAsync(course, node, reason.Trim());
         }
-
-        ContentPackStore.Delete(courseInfo.ContentDir, node);
-        await _rejectionLog.RecordAsync(courseInfo, node, reason.Trim());
+        catch (Exception ex)
+        {
+            // The draft is already discarded from the SME's point of view either way — a failure
+            // to durably log *why* doesn't need to become their problem, just ours to notice.
+            _logger.LogError(ex, "Failed to record rejection reason for {Course}/{Node} (draft was already discarded)", course, node);
+        }
 
         Notice = "Rejected. You can generate a new attempt for this topic any time.";
         return Page();
+    }
+
+    private async Task ShowAlreadyHandledOrNothingToApproveAsync(string course, string node)
+    {
+        var live = await _store.TryGetLiveNodeAsync(course, node);
+        if (live is not null)
+        {
+            Notice = "This topic is already approved.";
+            Pack = live;
+            PackIsPending = false;
+        }
+        else
+        {
+            Error = "There's nothing generated for this topic yet.";
+        }
     }
 
     private bool TryLoadContext(string course, string node, out CourseInfo courseInfo, out IActionResult? actionResult)

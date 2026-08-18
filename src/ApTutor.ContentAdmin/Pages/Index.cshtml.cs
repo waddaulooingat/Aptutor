@@ -1,4 +1,3 @@
-using ApTutor.Content;
 using ApTutor.ContentAdmin.Services;
 using ApTutor.Curriculum;
 using Microsoft.AspNetCore.Mvc.RazorPages;
@@ -14,20 +13,32 @@ public sealed record CourseSection(string CourseId, string DisplayName, IReadOnl
 public sealed class IndexModel : PageModel
 {
     private readonly CourseCatalog _catalog;
+    private readonly S3ContentStore _store;
+    private readonly ContentGenerationService _generation;
 
-    public IndexModel(CourseCatalog catalog) => _catalog = catalog;
+    public IndexModel(CourseCatalog catalog, S3ContentStore store, ContentGenerationService generation)
+    {
+        _catalog = catalog;
+        _store = store;
+        _generation = generation;
+    }
 
     public IReadOnlyList<CourseSection> Courses { get; private set; } = Array.Empty<CourseSection>();
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
-        Courses = _catalog.All
-            .OrderBy(c => c.DisplayName, StringComparer.Ordinal)
-            .Select(BuildSection)
-            .ToList();
+        var sections = new List<CourseSection>();
+        foreach (var course in _catalog.All.OrderBy(c => c.DisplayName, StringComparer.Ordinal))
+        {
+            // One manifest fetch covers every node in the course — checking S3 per node (69+ nodes
+            // for CS A alone) would be dozens of remote calls just to render this page.
+            var manifest = await _store.GetCourseManifestAsync(course.CourseId);
+            sections.Add(BuildSection(course, manifest));
+        }
+        Courses = sections;
     }
 
-    private static CourseSection BuildSection(CourseInfo course)
+    private CourseSection BuildSection(CourseInfo course, CourseManifest manifest)
     {
         var unitTitles = course.Graph.Dag.Units.ToDictionary(u => u.Unit, u => u.Title);
 
@@ -38,17 +49,20 @@ public sealed class IndexModel : PageModel
                 g.Key,
                 unitTitles.TryGetValue(g.Key, out var title) ? title : $"Unit {g.Key}",
                 g.OrderBy(n => n.Id, StringComparer.Ordinal)
-                    .Select(n => new NodeRow(n.Id, n.Title, StatusFor(course, n)))
+                    .Select(n => new NodeRow(n.Id, n.Title, StatusFor(course.CourseId, n, manifest)))
                     .ToList()))
             .ToList();
 
         return new CourseSection(course.CourseId, course.DisplayName, units);
     }
 
-    private static NodeReviewStatus StatusFor(CourseInfo course, DagNode node)
+    private NodeReviewStatus StatusFor(string courseId, DagNode node, CourseManifest manifest)
     {
-        var pack = ContentPackStore.TryLoad(course.ContentDir, node.Id);
-        if (pack is null) return NodeReviewStatus.NotStarted;
-        return pack.Verified ? NodeReviewStatus.Live : NodeReviewStatus.PendingReview;
+        if (manifest.Nodes.ContainsKey(node.Id)) return NodeReviewStatus.Live;
+
+        // Checked regardless of the manifest state — "generate a new attempt" on an already-live
+        // node should show as pending, not silently stay Live until the SME approves the redo.
+        var job = _generation.GetJob(courseId, node.Id);
+        return job?.Status == GenerationStatus.Succeeded ? NodeReviewStatus.PendingReview : NodeReviewStatus.NotStarted;
     }
 }

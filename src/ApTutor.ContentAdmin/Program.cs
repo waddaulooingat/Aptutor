@@ -1,12 +1,16 @@
 // Tutor AI Content Admin — hosted review app so a non-technical subject-matter expert can
-// generate and approve curriculum content without touching git, the CLI, or any dev tooling. See
-// the handoff/plan for the full design; this file is just DI + pipeline wiring.
+// generate and approve curriculum content without touching git, S3, or any dev tooling. S3 is the
+// source of truth for approved content; git remains for application source code only. See the
+// plan for the full design; this file is just DI + pipeline wiring.
 
+using Amazon;
+using Amazon.S3;
 using ApTutor.ContentAdmin.Services;
 using ApTutor.ContentFactory;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -65,10 +69,23 @@ builder.Services.AddSingleton(_ =>
 });
 builder.Services.AddSingleton<Generator>();
 
-builder.Services.AddSingleton<GitRepoService>();
-builder.Services.AddSingleton<CourseCatalog>();
-builder.Services.AddSingleton<ContentGenerationService>();
+builder.Services.Configure<S3ContentStoreOptions>(builder.Configuration.GetSection("ContentStore"));
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var options = sp.GetRequiredService<IOptions<S3ContentStoreOptions>>().Value;
+    if (string.IsNullOrWhiteSpace(options.Region))
+        throw new InvalidOperationException("ContentStore:Region is not configured.");
+
+    // Explicit region rather than a zero-arg AmazonS3Client() — avoids an implicit
+    // GetBucketLocation call (a permission this app's IAM policy doesn't grant) if the SDK can't
+    // otherwise resolve a region in whatever environment this ends up running in.
+    return new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(options.Region) });
+});
+// IAmazonS3/S3ContentStore explicitly singleton — same connection-pooling reasoning as ClaudeClient above.
+builder.Services.AddSingleton<S3ContentStore>();
 builder.Services.AddSingleton<RejectionLog>();
+builder.Services.AddSingleton<ContentGenerationService>();
+builder.Services.AddSingleton<CourseCatalog>();
 
 var app = builder.Build();
 
@@ -85,12 +102,14 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.MapRazorPages();
 
-// Clone/refresh the working copy and fail fast on a bad DAG/config at startup, rather than on
-// whatever request happens to be first through the door.
+// Fail fast at startup on a real S3 misconfiguration (wrong bucket, revoked credentials) rather
+// than surfacing as a confusing 403/404 on the first SME's first click — see
+// S3ContentStore.ValidateConnectivityAsync for why this matters specifically for S3's 403-vs-404
+// behavior on a missing key. CourseCatalog is also constructed eagerly here to fail fast on a bad
+// DAG file, same as before.
 using (var scope = app.Services.CreateScope())
 {
-    var git = scope.ServiceProvider.GetRequiredService<GitRepoService>();
-    await git.EnsureUpToDateAsync();
+    await scope.ServiceProvider.GetRequiredService<S3ContentStore>().ValidateConnectivityAsync();
     scope.ServiceProvider.GetRequiredService<CourseCatalog>();
 }
 

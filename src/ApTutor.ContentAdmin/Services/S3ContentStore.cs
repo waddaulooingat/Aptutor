@@ -1,0 +1,173 @@
+using System.Net;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Amazon.S3;
+using Amazon.S3.Model;
+using ApTutor.Content;
+using Microsoft.Extensions.Options;
+
+namespace ApTutor.ContentAdmin.Services;
+
+public sealed class S3ContentStoreOptions
+{
+    public string Bucket { get; set; } = "";
+    public string Region { get; set; } = "";
+}
+
+/// S3 is the source of truth for approved course content — git is source code only (see the plan).
+/// Layout:
+///   manifest.json                              — top-level index of courses
+///   courses/&lt;courseId&gt;/manifest.json            — per-course node hash/version index
+///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;.json       — one full NodeContentPack per approved node
+///   courses/&lt;courseId&gt;/rejections/&lt;nodeId&gt;-&lt;ticks&gt;.json — one object per rejection event
+///
+/// Unverified drafts never touch S3 at all (see ContentGenerationService) — only Approve writes
+/// here. The node object is a plain overwrite PUT (no merge semantics — full replace is correct).
+/// Both manifests use conditional writes (ETag IfMatch, bounded retry on 412; IfNoneMatch "*" for a
+/// course's first-ever write) since they're read-merge-write and more than one writer is possible.
+public class S3ContentStore
+{
+    private const int SchemaVersion = 1;
+    private const int MaxManifestWriteAttempts = 5;
+
+    // Shared between the node-object write and the hash computation so a future change to JSON
+    // options can't silently change every hash without anyone noticing.
+    private static readonly JsonSerializerOptions CanonicalJsonOptions = new() { WriteIndented = false };
+
+    private readonly IAmazonS3 _s3;
+    private readonly string _bucket;
+    private readonly ILogger<S3ContentStore> _logger;
+
+    public S3ContentStore(IAmazonS3 s3, IOptions<S3ContentStoreOptions> options, ILogger<S3ContentStore> logger)
+    {
+        _s3 = s3;
+        _bucket = string.IsNullOrWhiteSpace(options.Value.Bucket)
+            ? throw new InvalidOperationException("ContentStore:Bucket is not configured.")
+            : options.Value.Bucket;
+        _logger = logger;
+    }
+
+    /// Called once at startup. Without s3:ListBucket, S3 returns 403 (not 404) for a GetObject on a
+    /// missing key — indistinguishable from "credentials are broken" unless something disambiguates
+    /// it deliberately, once, loudly, at boot. A GET of the top-level manifest either succeeds,
+    /// 404s (bucket reachable, nothing approved anywhere yet — fine), or throws for any other reason
+    /// (not fine — surfaces here instead of on the first SME's first click).
+    public async Task ValidateConnectivityAsync(CancellationToken ct = default)
+    {
+        var (manifest, _) = await TryGetObjectAsync<TopLevelManifest>("manifest.json", ct);
+        _logger.LogInformation(
+            "S3 content store reachable (bucket '{Bucket}'). Top-level manifest {State}.",
+            _bucket, manifest is null ? "does not exist yet" : $"has {manifest.Courses.Count} course(s)");
+    }
+
+    public async Task<CourseManifest> GetCourseManifestAsync(string courseId, CancellationToken ct = default)
+    {
+        var (manifest, _) = await TryGetObjectAsync<CourseManifest>(CourseManifestKey(courseId), ct);
+        return manifest ?? CourseManifest.Empty(SchemaVersion);
+    }
+
+    public async Task<NodeContentPack?> TryGetLiveNodeAsync(string courseId, string nodeId, CancellationToken ct = default)
+    {
+        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId), ct);
+        return pack;
+    }
+
+    public async Task ApproveNodeAsync(string courseId, string nodeId, NodeContentPack approvedPack, CancellationToken ct = default)
+    {
+        var body = JsonSerializer.Serialize(approvedPack, CanonicalJsonOptions);
+        var hash = ComputeHash(body);
+        var now = DateTimeOffset.UtcNow;
+
+        await PutObjectAsync(NodeKey(courseId, nodeId), body, ifMatch: null, ifNoneMatch: null, ct);
+
+        var courseManifest = await UpdateWithRetryAsync<CourseManifest>(
+            CourseManifestKey(courseId),
+            current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, new NodeManifestEntry(hash, now)),
+            ct);
+        var courseManifestHash = ComputeHash(JsonSerializer.Serialize(courseManifest, CanonicalJsonOptions));
+
+        await UpdateWithRetryAsync<TopLevelManifest>(
+            "manifest.json",
+            current => ManifestMerge.UpsertCourse(current ?? TopLevelManifest.Empty(SchemaVersion), courseId, new CourseIndexEntry(courseManifestHash, now)),
+            ct);
+    }
+
+    private async Task<T> UpdateWithRetryAsync<T>(string key, Func<T?, T> merge, CancellationToken ct) where T : class
+    {
+        for (var attempt = 1; attempt <= MaxManifestWriteAttempts; attempt++)
+        {
+            var (current, etag) = await TryGetObjectAsync<T>(key, ct);
+            var updated = merge(current);
+            var body = JsonSerializer.Serialize(updated, CanonicalJsonOptions);
+
+            try
+            {
+                await PutObjectAsync(key, body, ifMatch: etag, ifNoneMatch: etag is null ? "*" : null, ct);
+                return updated;
+            }
+            catch (AmazonS3Exception ex) when (IsPreconditionFailed(ex))
+            {
+                // Deliberately catches on the LAST attempt too — falling through to the loop's
+                // natural exit (and the InvalidOperationException below) rather than letting the
+                // raw AmazonS3Exception escape here, which would leak an S3-specific exception type
+                // out of what's supposed to be this store's one, deliberate failure mode.
+                _logger.LogWarning(
+                    "Conditional write to '{Key}' lost a race (attempt {Attempt}/{Max}); re-reading and retrying.",
+                    key, attempt, MaxManifestWriteAttempts);
+            }
+        }
+
+        throw new InvalidOperationException($"Could not update '{key}' after {MaxManifestWriteAttempts} attempts — too much write contention.");
+    }
+
+    // These two are the only methods that actually touch IAmazonS3 — kept as a narrow protected
+    // seam (rather than hand-stubbing the entire IAmazonS3 interface, which has a huge surface) so
+    // tests can exercise the real conditional-write retry loop above (UpdateWithRetryAsync) end to
+    // end by overriding just these two leaf operations, without needing a full S3 double.
+    protected virtual async Task<(T? Value, string? ETag)> TryGetObjectAsync<T>(string key, CancellationToken ct) where T : class
+    {
+        try
+        {
+            using var response = await _s3.GetObjectAsync(new GetObjectRequest { BucketName = _bucket, Key = key }, ct);
+            using var reader = new StreamReader(response.ResponseStream);
+            var body = await reader.ReadToEndAsync(ct);
+            return (JsonSerializer.Deserialize<T>(body, CanonicalJsonOptions), response.ETag);
+        }
+        catch (AmazonS3Exception ex) when (IsNotFound(ex))
+        {
+            return (null, null);
+        }
+    }
+
+    protected virtual async Task PutObjectAsync(string key, string body, string? ifMatch, string? ifNoneMatch, CancellationToken ct)
+    {
+        var request = new PutObjectRequest
+        {
+            BucketName = _bucket,
+            Key = key,
+            ContentBody = body,
+            ContentType = "application/json",
+        };
+        if (ifMatch is not null) request.IfMatch = ifMatch;
+        if (ifNoneMatch is not null) request.IfNoneMatch = ifNoneMatch;
+
+        await _s3.PutObjectAsync(request, ct);
+    }
+
+    // A missing key surfaces as 404 (NoSuchKey/NotFound) when the caller has s3:ListBucket on the
+    // relevant prefix — which the IAM policy this app ships with grants specifically so this check
+    // is unambiguous. Without that permission S3 would return 403 for a missing key too, which is
+    // exactly the ambiguity ValidateConnectivityAsync exists to catch at startup instead of here.
+    private static bool IsNotFound(AmazonS3Exception ex) =>
+        ex.StatusCode == HttpStatusCode.NotFound || string.Equals(ex.ErrorCode, "NoSuchKey", StringComparison.Ordinal);
+
+    private static bool IsPreconditionFailed(AmazonS3Exception ex) =>
+        ex.StatusCode == HttpStatusCode.PreconditionFailed || string.Equals(ex.ErrorCode, "PreconditionFailed", StringComparison.Ordinal);
+
+    private static string ComputeHash(string content) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
+
+    private static string CourseManifestKey(string courseId) => $"courses/{courseId}/manifest.json";
+    private static string NodeKey(string courseId, string nodeId) => $"courses/{courseId}/nodes/{nodeId}.json";
+}

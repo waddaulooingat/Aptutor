@@ -42,6 +42,7 @@
          windowing/app startup needed to construct WorldHistoryCourseModule and read its
          properties), so referencing it to test the real class is safe and cheap. -->
     <ProjectReference Include="..\..\src\ApTutor.Client\ApTutor.Client.csproj" />
+    <ProjectReference Include="..\..\src\ApTutor.ContentAdmin\ApTutor.ContentAdmin.csproj" />
   </ItemGroup>
 
 </Project>

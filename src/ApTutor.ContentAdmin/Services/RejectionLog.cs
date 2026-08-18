@@ -1,56 +1,58 @@
 using System.Text.Json;
+using Amazon.S3;
+using Amazon.S3.Model;
+using Microsoft.Extensions.Options;
 
 namespace ApTutor.ContentAdmin.Services;
 
 /// ItemId/ItemPrompt are null for a whole-node rejection; set when a single practice item was
 /// discarded during an otherwise-successful Approve.
-public sealed record RejectionEntry(
-    string CourseId, string NodeId, string? ItemId, string? ItemPrompt, string Reason, DateTimeOffset RejectedAt);
+public sealed record RejectedItem(string? ItemId, string? ItemPrompt, string Reason);
+public sealed record RejectionEvent(string CourseId, string NodeId, IReadOnlyList<RejectedItem> Items, DateTimeOffset RejectedAt);
 
 /// Records that a rejection happened, durably — separately from the rejected content itself. The
-/// *generated draft* (whole-node reject) or the *discarded item* (per-item discard during Approve)
-/// is deleted and never enters git history (matches "no trace of a rejected attempt" — the SME's
-/// mental model has no git terms in it at all). But the *fact* that a rejection happened, and why,
-/// has to survive a redeploy so it can inform prompt improvements later, and local-disk-only
-/// doesn't guarantee that on most hosts — so this is committed and pushed separately, in its own
-/// small commit, via the same GitRepoService approvals use.
+/// generated draft never touches S3 at all (it only ever lived in ContentGenerationService's
+/// in-memory job dictionary — see that file), so there's nothing to delete here. But the *fact*
+/// that a rejection happened, and why, needs to survive a redeploy so it can inform prompt
+/// improvements later. One S3 object per rejection event (not an appended log) — avoids any
+/// read-modify-write race on a shared file, since each event gets its own uniquely-keyed PUT.
 public sealed class RejectionLog
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+    private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
 
-    private readonly GitRepoService _git;
+    private readonly IAmazonS3 _s3;
+    private readonly string _bucket;
 
-    public RejectionLog(GitRepoService git) => _git = git;
-
-    /// Whole-node rejection (Review's "Reject the whole topic" action): the entire generated draft
-    /// is discarded.
-    public Task RecordAsync(CourseInfo course, string nodeId, string reason, CancellationToken ct = default) =>
-        RecordManyAsync(course, new[] { new RejectionEntry(course.CourseId, nodeId, null, null, reason, DateTimeOffset.UtcNow) }, ct);
-
-    /// One or more individual practice items discarded during an otherwise-successful Approve.
-    /// Written and pushed together in one commit rather than one commit per item, so keeping 2
-    /// good questions and discarding 1 bad one doesn't produce 2 separate pushes.
-    public Task RecordItemsAsync(
-        CourseInfo course, string nodeId, IReadOnlyList<(string ItemId, string ItemPrompt, string Reason)> items, CancellationToken ct = default) =>
-        RecordManyAsync(
-            course,
-            items.Select(i => new RejectionEntry(course.CourseId, nodeId, i.ItemId, i.ItemPrompt, i.Reason, DateTimeOffset.UtcNow)).ToList(),
-            ct);
-
-    private async Task RecordManyAsync(CourseInfo course, IReadOnlyList<RejectionEntry> entries, CancellationToken ct)
+    public RejectionLog(IAmazonS3 s3, IOptions<S3ContentStoreOptions> options)
     {
-        if (entries.Count == 0) return;
+        _s3 = s3;
+        _bucket = options.Value.Bucket;
+    }
 
-        var absolutePath = Path.Combine(course.ContentDir, ".rejections.jsonl");
-        Directory.CreateDirectory(course.ContentDir);
-        var lines = entries.Select(e => JsonSerializer.Serialize(e, JsonOptions));
-        await File.AppendAllLinesAsync(absolutePath, lines, ct);
+    /// Whole-node rejection (Review's "Reject the whole topic" action).
+    public Task RecordAsync(string courseId, string nodeId, string reason, CancellationToken ct = default) =>
+        RecordEventAsync(courseId, nodeId, new[] { new RejectedItem(null, null, reason) }, ct);
 
-        var relativePath = Path.GetRelativePath(_git.CloneDir, absolutePath).Replace('\\', '/');
-        var nodeId = entries[0].NodeId;
-        var message = entries.Count == 1 && entries[0].ItemId is null
-            ? $"content-admin: log rejection of {course.CourseId}/{nodeId}"
-            : $"content-admin: log {entries.Count} discarded item(s) for {course.CourseId}/{nodeId}";
-        await _git.CommitAndPushAsync(new[] { relativePath }, message, ct);
+    /// One or more individual practice items discarded during an otherwise-successful Approve —
+    /// written as a single event/object, not one PUT per item.
+    public Task RecordItemsAsync(
+        string courseId, string nodeId, IReadOnlyList<(string ItemId, string ItemPrompt, string Reason)> discardedItems, CancellationToken ct = default) =>
+        RecordEventAsync(courseId, nodeId, discardedItems.Select(i => new RejectedItem(i.ItemId, i.ItemPrompt, i.Reason)).ToList(), ct);
+
+    private async Task RecordEventAsync(string courseId, string nodeId, IReadOnlyList<RejectedItem> items, CancellationToken ct)
+    {
+        if (items.Count == 0) return;
+
+        var rejectedAt = DateTimeOffset.UtcNow;
+        var evt = new RejectionEvent(courseId, nodeId, items, rejectedAt);
+        var key = $"courses/{courseId}/rejections/{nodeId}-{rejectedAt.UtcTicks}.json";
+
+        await _s3.PutObjectAsync(new PutObjectRequest
+        {
+            BucketName = _bucket,
+            Key = key,
+            ContentBody = JsonSerializer.Serialize(evt, JsonOptions),
+            ContentType = "application/json",
+        }, ct);
     }
 }

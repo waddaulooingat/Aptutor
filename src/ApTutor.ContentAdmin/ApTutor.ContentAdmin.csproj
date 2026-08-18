@@ -20,4 +20,8 @@
     <ProjectReference Include="..\ApTutor.ContentFactory\ApTutor.ContentFactory.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="4.0.102.1" />
+  </ItemGroup>
+
 </Project>

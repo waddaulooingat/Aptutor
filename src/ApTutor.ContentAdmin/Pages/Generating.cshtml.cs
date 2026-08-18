@@ -30,17 +30,21 @@ public sealed class GeneratingModel : PageModel
             return Page();
         }
 
-        // Terminal state: clear the tracking entry now that the SME is about to see the outcome,
-        // so the node is free to be regenerated. Succeeded goes straight to Review; Failed renders
-        // right here so the error message isn't lost in a redirect.
-        _generation.ClearJob(course, node);
-
-        if (job.Status == GenerationStatus.Failed)
+        if (job.Status == GenerationStatus.Succeeded)
         {
-            Error = job.Error;
-            return Page();
+            // Job stays in memory — Review reads it directly to show the draft for approval.
+            // Clearing here would throw the generated content away before anyone's seen it.
+            return RedirectToPage("/Review", new { course, node });
         }
 
-        return RedirectToPage("/Review", new { course, node });
+        // Failed: clear so the node is free to try again, then show the error right here (not lost
+        // in a redirect). If ClearJob loses the race (e.g. cleared elsewhere already), the state is
+        // already resolved one way or another — just send the SME back to Review to see it.
+        if (_generation.ClearJob(course, node, GenerationStatus.Failed))
+            Error = job.Error;
+        else
+            return RedirectToPage("/Review", new { course, node });
+
+        return Page();
     }
 }

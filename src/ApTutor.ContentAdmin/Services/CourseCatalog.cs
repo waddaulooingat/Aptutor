@@ -2,18 +2,18 @@ using ApTutor.Curriculum;
 
 namespace ApTutor.ContentAdmin.Services;
 
-public sealed record CourseInfo(string CourseId, string DisplayName, SkillGraph Graph, string ContentDir);
+public sealed record CourseInfo(string CourseId, string DisplayName, SkillGraph Graph);
 
-/// Loads each configured course's skill DAG once, resolved against GitRepoService's actual on-disk
-/// clone (ContentAdmin:RepoCloneDir + each course's DagPath/ContentDir from appsettings) — the same
-/// DAG the desktop app's course modules load, just pointed at whatever this process currently has
-/// checked out. Registered after Program.cs has already awaited GitRepoService.EnsureUpToDateAsync
-/// at startup, so the DAG/content files are guaranteed to exist by the time this constructs.
+/// Loads each configured course's skill DAG once, resolved against files already baked into this
+/// app's own container image (AppContext.BaseDirectory) — DAG structure is curriculum code, not
+/// generated content, and ships with the app the same way the desktop client already loads its own
+/// DAG files. ApTutor.Curriculum's own `<Content Include>` items copy transitively into any
+/// referencing project's build/publish output, so no extra wiring is needed here.
 public sealed class CourseCatalog
 {
     private readonly Dictionary<string, CourseInfo> _courses;
 
-    public CourseCatalog(IConfiguration config, GitRepoService git)
+    public CourseCatalog(IConfiguration config)
     {
         _courses = new Dictionary<string, CourseInfo>(StringComparer.Ordinal);
 
@@ -23,14 +23,11 @@ public sealed class CourseCatalog
             var displayName = courseSection["DisplayName"] ?? courseId;
             var dagRelativePath = courseSection["DagPath"]
                 ?? throw new InvalidOperationException($"Course '{courseId}' is missing DagPath in configuration.");
-            var contentRelativeDir = courseSection["ContentDir"]
-                ?? throw new InvalidOperationException($"Course '{courseId}' is missing ContentDir in configuration.");
 
-            var dagPath = Path.Combine(git.CloneDir, dagRelativePath);
-            var contentDir = Path.Combine(git.CloneDir, contentRelativeDir);
+            var dagPath = Path.Combine(AppContext.BaseDirectory, dagRelativePath);
             var graph = SkillDagLoader.Load(dagPath);
 
-            _courses[courseId] = new CourseInfo(courseId, displayName, graph, contentDir);
+            _courses[courseId] = new CourseInfo(courseId, displayName, graph);
         }
     }
 
