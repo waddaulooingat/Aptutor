@@ -79,6 +79,18 @@ public class ContentSyncServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task RefreshAsync_FetchesTheExactHashVersionedObjectTheManifestPointsAt()
+    {
+        var course = NewCourse();
+        var pack = SamplePack("u1.1", "hello");
+        var fake = new FakeContentSyncService(new Dictionary<string, NodeContentPack> { ["u1.1"] = pack });
+
+        await fake.RefreshAsync(course);
+
+        Assert.Equal(new[] { ("u1.1", ContentHash.Compute(pack)) }, fake.RequestedNodes);
+    }
+
+    [Fact]
     public async Task RefreshAsync_S3Failure_ReturnsTheExactOfflineMessage_AndTouchesNothingLocally()
     {
         var course = NewCourse();
@@ -97,6 +109,7 @@ public class ContentSyncServiceTests : IDisposable
     {
         private readonly Dictionary<string, NodeContentPack> _remoteNodes;
         public bool ThrowOnManifest { get; set; }
+        public List<(string NodeId, string Hash)> RequestedNodes { get; } = new();
 
         public FakeContentSyncService(Dictionary<string, NodeContentPack> remoteNodes) : base(null!, "test-bucket") =>
             _remoteNodes = remoteNodes;
@@ -109,7 +122,10 @@ public class ContentSyncServiceTests : IDisposable
             return Task.FromResult(new CourseManifestSnapshot(nodes));
         }
 
-        protected override Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, CancellationToken ct) =>
-            Task.FromResult(_remoteNodes.GetValueOrDefault(nodeId));
+        protected override Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, string hash, CancellationToken ct)
+        {
+            RequestedNodes.Add((nodeId, hash));
+            return Task.FromResult(_remoteNodes.GetValueOrDefault(nodeId));
+        }
     }
 }

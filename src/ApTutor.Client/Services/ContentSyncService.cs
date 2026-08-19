@@ -33,18 +33,20 @@ public class ContentSyncService
         try
         {
             var manifest = await GetManifestAsync(course.CourseId, ct);
-            var nodeIds = ContentSyncPlanner.ComputeNodesToDownload(
+            var toDownload = ContentSyncPlanner.ComputeNodesToDownload(
                 manifest,
                 nodeId => ContentPackStore.TryLoad(course.ContentDir, nodeId) is { } cached ? ContentHash.Compute(cached) : null);
 
             var actuallyUpdated = new List<string>();
-            foreach (var nodeId in nodeIds)
+            foreach (var node in toDownload)
             {
-                var pack = await GetNodeAsync(course.CourseId, nodeId, ct);
+                // Content-addressed: the hash from the manifest diff IS the object's key, not just
+                // a value to compare — see S3ContentStore's layout notes.
+                var pack = await GetNodeAsync(course.CourseId, node.NodeId, node.Hash, ct);
                 if (pack is not null)
                 {
                     ContentPackStore.Save(course.ContentDir, pack);
-                    actuallyUpdated.Add(nodeId);
+                    actuallyUpdated.Add(node.NodeId);
                 }
             }
 
@@ -91,12 +93,12 @@ public class ContentSyncService
         }
     }
 
-    protected virtual async Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, CancellationToken ct)
+    protected virtual async Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, string hash, CancellationToken ct)
     {
         try
         {
             using var response = await _s3.GetObjectAsync(
-                new GetObjectRequest { BucketName = _bucket, Key = $"courses/{courseId}/nodes/{nodeId}.json" }, ct);
+                new GetObjectRequest { BucketName = _bucket, Key = $"courses/{courseId}/nodes/{nodeId}/{hash}.json" }, ct);
             using var reader = new StreamReader(response.ResponseStream);
             var body = await reader.ReadToEndAsync(ct);
             return JsonSerializer.Deserialize<NodeContentPack>(body, ContentHash.CanonicalOptions);

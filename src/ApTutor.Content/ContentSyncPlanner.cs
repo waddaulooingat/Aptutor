@@ -9,10 +9,12 @@ public sealed record CourseManifestSnapshot(IReadOnlyList<CourseManifestNode> No
 /// is a pull of what's approved, not a mirror that prunes local state).
 public static class ContentSyncPlanner
 {
-    /// localHash returns null if the node isn't cached locally at all.
-    public static IReadOnlyList<string> ComputeNodesToDownload(CourseManifestSnapshot manifest, Func<string, string?> localHash) =>
+    /// Returns the full node+hash pairs that need downloading (not just node ids) — content is
+    /// content-addressed by hash now, so the caller needs the hash to know which versioned object
+    /// to fetch, not just which node changed. localHash returns null if the node isn't cached
+    /// locally at all.
+    public static IReadOnlyList<CourseManifestNode> ComputeNodesToDownload(CourseManifestSnapshot manifest, Func<string, string?> localHash) =>
         manifest.Nodes
             .Where(n => localHash(n.NodeId) != n.Hash)
-            .Select(n => n.NodeId)
             .ToList();
 }

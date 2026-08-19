@@ -81,6 +81,53 @@ public class S3ContentStoreTests
     }
 
     [Fact]
+    public async Task ApproveNodeAsync_ChangedContent_WritesANewObject_LeavesThePreviousVersionInPlace()
+    {
+        var store = new FakeS3ContentStore();
+        var v1 = SamplePack("u1.1", "version one");
+
+        await store.ApproveNodeAsync("csa", "u1.1", v1);
+        var objectCountAfterFirst = store.ObjectCount;
+
+        var v2 = v1 with { WalkthroughText = "version two" };
+        await store.ApproveNodeAsync("csa", "u1.1", v2);
+
+        // A genuinely new key was written (content-addressed by hash) rather than the first
+        // version's object being overwritten — the object count for this node's key prefix grows.
+        Assert.True(store.ObjectCount > objectCountAfterFirst);
+
+        // The manifest — and therefore what the Shell/TryGetLiveNodeAsync would resolve to — points
+        // at the latest version only.
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1");
+        Assert.Equal("version two", live!.WalkthroughText);
+    }
+
+    [Fact]
+    public async Task ApproveNodeAsync_ReapprovingUnchangedContent_IsAHarmlessNoOp_SameKeySameBytes()
+    {
+        var store = new FakeS3ContentStore();
+        var pack = SamplePack("u1.1", "unchanged");
+
+        await store.ApproveNodeAsync("csa", "u1.1", pack);
+        var objectCountAfterFirst = store.ObjectCount;
+
+        await store.ApproveNodeAsync("csa", "u1.1", pack); // exact same content again
+
+        // Same hash => same key => the node object write is idempotent (no new object created).
+        // (The manifest still gets re-written, which is fine — it's the node object count that
+        // proves content-addressing is doing its job here.)
+        Assert.Equal(objectCountAfterFirst, store.ObjectCount);
+    }
+
+    [Fact]
+    public async Task TryGetLiveNodeAsync_NoManifestEntry_ReturnsNull()
+    {
+        var store = new FakeS3ContentStore();
+
+        Assert.Null(await store.TryGetLiveNodeAsync("csa", "never-approved"));
+    }
+
+    [Fact]
     public async Task ApproveNodeAsync_LosesAConcurrentWriteRaceOnce_RetriesAndStillSucceeds()
     {
         var store = new FakeS3ContentStore { ConflictsToSimulateOnCourseManifest = 1 };
@@ -114,6 +161,7 @@ public class S3ContentStoreTests
 
         public int ConflictsToSimulateOnCourseManifest { get; set; }
         public int PutAttemptsOnCourseManifest { get; private set; }
+        public int ObjectCount => _objects.Count;
 
         public FakeS3ContentStore()
             : base(null!, Options.Create(new S3ContentStoreOptions { Bucket = "test-bucket", Region = "us-east-1" }), NullLogger<S3ContentStore>.Instance)

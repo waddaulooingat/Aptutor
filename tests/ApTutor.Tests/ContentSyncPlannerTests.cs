@@ -14,7 +14,7 @@ public class ContentSyncPlannerTests
 
         var toDownload = ContentSyncPlanner.ComputeNodesToDownload(manifest, _ => null);
 
-        Assert.Equal(new[] { "u1.1" }, toDownload);
+        Assert.Equal(new[] { "u1.1" }, toDownload.Select(n => n.NodeId));
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class ContentSyncPlannerTests
 
         var toDownload = ContentSyncPlanner.ComputeNodesToDownload(manifest, _ => "hash-old");
 
-        Assert.Equal(new[] { "u1.1" }, toDownload);
+        Assert.Equal(new[] { "u1.1" }, toDownload.Select(n => n.NodeId));
     }
 
     [Fact]
@@ -54,7 +54,7 @@ public class ContentSyncPlannerTests
 
         var toDownload = ContentSyncPlanner.ComputeNodesToDownload(manifest, id => local.GetValueOrDefault(id));
 
-        Assert.Equal(new[] { "u1.2", "u1.3" }, toDownload);
+        Assert.Equal(new[] { "u1.2", "u1.3" }, toDownload.Select(n => n.NodeId));
     }
 
     [Fact]

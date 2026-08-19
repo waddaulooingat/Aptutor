@@ -17,15 +17,23 @@ public sealed class S3ContentStoreOptions
 
 /// S3 is the source of truth for approved course content — git is source code only (see the plan).
 /// Layout:
-///   manifest.json                              — top-level index of courses
-///   courses/&lt;courseId&gt;/manifest.json            — per-course node hash/version index
-///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;.json       — one full NodeContentPack per approved node
+///   manifest.json                                    — top-level index of courses
+///   courses/&lt;courseId&gt;/manifest.json                  — per-course node hash/version index
+///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;/&lt;hash&gt;.json      — one IMMUTABLE object per approved version
 ///   courses/&lt;courseId&gt;/rejections/&lt;nodeId&gt;-&lt;ticks&gt;.json — one object per rejection event
 ///
+/// Content-addressed by design: a node's key is derived from its own content hash, so re-approving
+/// unchanged content writes the same key with the same bytes (a harmless idempotent no-op) and
+/// approving changed content always lands on a brand-new key, leaving the previous version's object
+/// untouched rather than overwriting it. This is what makes the Shell's Refresh a correct, cheap
+/// diff — it downloads exactly the versions whose hash changed, nothing more. (An earlier version of
+/// this store wrote to a fixed, overwritten-in-place path; that path is no longer written to for new
+/// approvals — see the plan's Part A for the migration.)
+///
 /// Unverified drafts never touch S3 at all (see ContentGenerationService) — only Approve writes
-/// here. The node object is a plain overwrite PUT (no merge semantics — full replace is correct).
-/// Both manifests use conditional writes (ETag IfMatch, bounded retry on 412; IfNoneMatch "*" for a
-/// course's first-ever write) since they're read-merge-write and more than one writer is possible.
+/// here. Both manifests use conditional writes (ETag IfMatch, bounded retry on 412; IfNoneMatch "*"
+/// for a course's first-ever write) since they're read-merge-write and more than one writer is
+/// possible.
 public class S3ContentStore
 {
     private const int SchemaVersion = 1;
@@ -69,9 +77,15 @@ public class S3ContentStore
         return manifest ?? CourseManifest.Empty(SchemaVersion);
     }
 
+    /// Resolves the currently-live hash from the course manifest first, then fetches that exact
+    /// versioned object — there's no fixed "latest" key any more (see class remarks), the manifest
+    /// entry IS the pointer to which version is live.
     public async Task<NodeContentPack?> TryGetLiveNodeAsync(string courseId, string nodeId, CancellationToken ct = default)
     {
-        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId), ct);
+        var manifest = await GetCourseManifestAsync(courseId, ct);
+        if (!manifest.Nodes.TryGetValue(nodeId, out var entry)) return null;
+
+        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId, entry.Hash), ct);
         return pack;
     }
 
@@ -81,7 +95,10 @@ public class S3ContentStore
         var hash = ContentHash.Compute(approvedPack);
         var now = DateTimeOffset.UtcNow;
 
-        await PutObjectAsync(NodeKey(courseId, nodeId), body, ifMatch: null, ifNoneMatch: null, ct);
+        // Content-addressed key: writing the same hash's content to the same key twice is an
+        // idempotent no-op (identical bytes); a changed pack always lands on a new key, so this
+        // never needs a conditional write the way the manifest updates below do.
+        await PutObjectAsync(NodeKey(courseId, nodeId, hash), body, ifMatch: null, ifNoneMatch: null, ct);
 
         var courseManifest = await UpdateWithRetryAsync<CourseManifest>(
             CourseManifestKey(courseId),
@@ -175,5 +192,5 @@ public class S3ContentStore
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
 
     private static string CourseManifestKey(string courseId) => $"courses/{courseId}/manifest.json";
-    private static string NodeKey(string courseId, string nodeId) => $"courses/{courseId}/nodes/{nodeId}.json";
+    private static string NodeKey(string courseId, string nodeId, string hash) => $"courses/{courseId}/nodes/{nodeId}/{hash}.json";
 }
