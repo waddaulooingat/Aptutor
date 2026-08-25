@@ -34,6 +34,14 @@ else if (!Model.PackIsPending)
         <p><span class="badge badge-live">Live</span> This topic's content has been approved and is already in the app.</p>
         <h2>Explanation</h2>
         <p>@Model.Pack.WalkthroughText</p>
+
+        <div class="actions" style="margin-top: 16px;">
+            <form method="post" asp-page-handler="Generate">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <button type="submit">Generate another set</button>
+            </form>
+        </div>
     </div>
 }
 else
