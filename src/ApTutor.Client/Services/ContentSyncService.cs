@@ -35,29 +35,37 @@ public class ContentSyncService
             var manifest = await GetManifestAsync(course.CourseId, ct);
             var toDownload = ContentSyncPlanner.ComputeNodesToDownload(
                 manifest,
-                nodeId => ContentPackStore.TryLoad(course.ContentDir, nodeId) is { } cached ? ContentHash.Compute(cached) : null);
+                (nodeId, hash) => ContentPackStore.VersionExists(course.ContentDir, nodeId, hash));
 
             var actuallyUpdated = new List<string>();
             foreach (var node in toDownload)
             {
                 // Content-addressed: the hash from the manifest diff IS the object's key, not just
-                // a value to compare — see S3ContentStore's layout notes.
+                // a value to compare — see S3ContentStore's layout notes. A node can have several
+                // approved versions now (see the multi-set library plan); every version listed in
+                // the manifest gets its own file, never overwriting a sibling version, so the Shell
+                // ends up with the node's whole approved library to pick from at serving time.
                 var pack = await GetNodeAsync(course.CourseId, node.NodeId, node.Hash, ct);
                 if (pack is not null)
                 {
-                    ContentPackStore.Save(course.ContentDir, pack);
+                    ContentPackStore.SaveVersion(course.ContentDir, node.Hash, pack);
                     actuallyUpdated.Add(node.NodeId);
                 }
             }
 
+            // Distinct node ids for reporting — a node with several new versions in one refresh
+            // contributes one entry per version to actuallyUpdated above (each is a separate file),
+            // but should only be named once here.
+            var updatedNodeIds = actuallyUpdated.Distinct().ToList();
+
             // Named explicitly, not just counted — so it's obvious during testing whether a given
             // node actually came from S3 this run versus was already cached from before.
-            if (actuallyUpdated.Count > 0)
-                Console.WriteLine($"[ContentSyncService] Pulled from S3 for '{course.CourseId}': {string.Join(", ", actuallyUpdated)}");
+            if (updatedNodeIds.Count > 0)
+                Console.WriteLine($"[ContentSyncService] Pulled from S3 for '{course.CourseId}': {string.Join(", ", updatedNodeIds)}");
             else
                 Console.WriteLine($"[ContentSyncService] '{course.CourseId}' already up to date — nothing pulled from S3.");
 
-            return new SyncResult(true, actuallyUpdated, null);
+            return new SyncResult(true, updatedNodeIds, null);
         }
         catch (Exception ex)
         {
@@ -82,14 +90,11 @@ public class ContentSyncService
             var body = await reader.ReadToEndAsync(ct);
 
             var manifest = JsonSerializer.Deserialize<S3CourseManifest>(body, ContentHash.CanonicalOptions);
-            var nodes = (manifest?.Nodes ?? new Dictionary<string, S3NodeManifestEntry>())
-                .Select(kv => new CourseManifestNode(kv.Key, kv.Value.Hash))
-                .ToList();
-            return new CourseManifestSnapshot(nodes);
+            return new CourseManifestSnapshot(manifest?.Nodes ?? new Dictionary<string, NodeManifestEntry>());
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            return new CourseManifestSnapshot(Array.Empty<CourseManifestNode>());
+            return new CourseManifestSnapshot(new Dictionary<string, NodeManifestEntry>());
         }
     }
 
@@ -109,9 +114,10 @@ public class ContentSyncService
         }
     }
 
-    // Local mirror of the wire shape ApTutor.ContentAdmin's S3ContentStore writes for a course
-    // manifest — deliberately not a shared type/project reference (see the plan): the Shell only
-    // needs nodeId+hash out of it, not ContentAdmin's whole manifest-merge machinery.
-    private sealed record S3CourseManifest(int SchemaVersion, Dictionary<string, S3NodeManifestEntry> Nodes);
-    private sealed record S3NodeManifestEntry(string Hash, DateTimeOffset UpdatedAt);
+    // Local mirror of the top-level wire shape ApTutor.ContentAdmin's S3ContentStore writes for a
+    // course manifest — deliberately not a shared type/project reference to ContentAdmin's whole
+    // manifest-merge machinery (see the plan). The per-node entry shape (NodeManifestEntry) IS
+    // shared, from ApTutor.Content, since its backward-compatibility parsing needs to behave
+    // identically on both sides — see ContentManifestWire.cs.
+    private sealed record S3CourseManifest(int SchemaVersion, Dictionary<string, NodeManifestEntry> Nodes);
 }

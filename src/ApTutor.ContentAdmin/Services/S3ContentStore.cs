@@ -36,7 +36,10 @@ public sealed class S3ContentStoreOptions
 /// possible.
 public class S3ContentStore
 {
-    private const int SchemaVersion = 1;
+    // Bumped from 1 -> 2 when NodeManifestEntry moved from a single hash to a list of versions —
+    // informational only (nothing branches on this value), the actual backward-compat handling for
+    // manifests still on the old shape lives in NodeManifestEntryConverter.
+    private const int SchemaVersion = 2;
     private const int MaxManifestWriteAttempts = 5;
 
     // ApTutor.Content.ContentHash.CanonicalOptions, not a locally-defined instance — this app's
@@ -77,15 +80,17 @@ public class S3ContentStore
         return manifest ?? CourseManifest.Empty(SchemaVersion);
     }
 
-    /// Resolves the currently-live hash from the course manifest first, then fetches that exact
-    /// versioned object — there's no fixed "latest" key any more (see class remarks), the manifest
-    /// entry IS the pointer to which version is live.
+    /// Resolves the most recently-approved version from the course manifest and fetches that exact
+    /// versioned object — a node can have several independently-approved versions now (see the
+    /// multi-set library plan), this always returns the newest one, e.g. for Content Admin's Review
+    /// page to show as context. The Shell doesn't use this — it downloads and rotates among every
+    /// version itself (see ApTutor.Client.Services.ContentSyncService).
     public async Task<NodeContentPack?> TryGetLiveNodeAsync(string courseId, string nodeId, CancellationToken ct = default)
     {
         var manifest = await GetCourseManifestAsync(courseId, ct);
         if (!manifest.Nodes.TryGetValue(nodeId, out var entry)) return null;
 
-        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId, entry.Hash), ct);
+        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId, entry.Latest.Hash), ct);
         return pack;
     }
 
@@ -102,7 +107,7 @@ public class S3ContentStore
 
         var courseManifest = await UpdateWithRetryAsync<CourseManifest>(
             CourseManifestKey(courseId),
-            current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, new NodeManifestEntry(hash, now)),
+            current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, hash, now),
             ct);
         var courseManifestHash = ComputeHash(JsonSerializer.Serialize(courseManifest, CanonicalJsonOptions));
 

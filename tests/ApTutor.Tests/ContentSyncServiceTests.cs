@@ -39,15 +39,15 @@ public class ContentSyncServiceTests : IDisposable
     {
         var course = NewCourse();
         var pack = SamplePack("u1.1", "hello");
-        var fake = new FakeContentSyncService(new Dictionary<string, NodeContentPack> { ["u1.1"] = pack });
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>> { ["u1.1"] = new() { pack } });
 
         var result = await fake.RefreshAsync(course);
 
         Assert.True(result.Success);
         Assert.Equal(new[] { "u1.1" }, result.UpdatedNodeIds);
-        var saved = ContentPackStore.TryLoad(_contentDir, "u1.1");
-        Assert.NotNull(saved);
-        Assert.Equal("hello", saved!.WalkthroughText);
+        var saved = ContentPackStore.LoadVersions(_contentDir, "u1.1");
+        Assert.Single(saved);
+        Assert.Equal("hello", saved[0].WalkthroughText);
     }
 
     [Fact]
@@ -55,9 +55,9 @@ public class ContentSyncServiceTests : IDisposable
     {
         var course = NewCourse();
         var pack = SamplePack("u1.1", "hello");
-        ContentPackStore.Save(_contentDir, pack); // pre-seed the exact same content locally
+        ContentPackStore.SaveVersion(_contentDir, ContentHash.Compute(pack), pack); // pre-seed the exact same version locally
 
-        var fake = new FakeContentSyncService(new Dictionary<string, NodeContentPack> { ["u1.1"] = pack });
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>> { ["u1.1"] = new() { pack } });
         var result = await fake.RefreshAsync(course);
 
         Assert.True(result.Success);
@@ -65,17 +65,24 @@ public class ContentSyncServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task RefreshAsync_ChangedContent_DownloadsAndOverwritesTheLocalCopy()
+    public async Task RefreshAsync_NewVersionAlongsideAnExistingOne_DownloadsOnlyTheNewOne_KeepsBoth()
     {
+        // A node can accumulate several approved sets (see the multi-set library plan) — an earlier
+        // version already cached locally must survive a refresh that brings down a newer one.
         var course = NewCourse();
-        ContentPackStore.Save(_contentDir, SamplePack("u1.1", "old text"));
+        var oldPack = SamplePack("u1.1", "old set");
+        ContentPackStore.SaveVersion(_contentDir, ContentHash.Compute(oldPack), oldPack);
 
-        var fake = new FakeContentSyncService(new Dictionary<string, NodeContentPack> { ["u1.1"] = SamplePack("u1.1", "new text") });
+        var newPack = SamplePack("u1.1", "new set");
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>> { ["u1.1"] = new() { oldPack, newPack } });
         var result = await fake.RefreshAsync(course);
 
         Assert.True(result.Success);
         Assert.Equal(new[] { "u1.1" }, result.UpdatedNodeIds);
-        Assert.Equal("new text", ContentPackStore.TryLoad(_contentDir, "u1.1")!.WalkthroughText);
+        var versions = ContentPackStore.LoadVersions(_contentDir, "u1.1");
+        Assert.Equal(2, versions.Count);
+        Assert.Contains(versions, p => p.WalkthroughText == "old set");
+        Assert.Contains(versions, p => p.WalkthroughText == "new set");
     }
 
     [Fact]
@@ -83,7 +90,7 @@ public class ContentSyncServiceTests : IDisposable
     {
         var course = NewCourse();
         var pack = SamplePack("u1.1", "hello");
-        var fake = new FakeContentSyncService(new Dictionary<string, NodeContentPack> { ["u1.1"] = pack });
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>> { ["u1.1"] = new() { pack } });
 
         await fake.RefreshAsync(course);
 
@@ -94,7 +101,7 @@ public class ContentSyncServiceTests : IDisposable
     public async Task RefreshAsync_S3Failure_ReturnsTheExactOfflineMessage_AndTouchesNothingLocally()
     {
         var course = NewCourse();
-        var fake = new FakeContentSyncService(new Dictionary<string, NodeContentPack>()) { ThrowOnManifest = true };
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>>()) { ThrowOnManifest = true };
 
         var result = await fake.RefreshAsync(course);
 
@@ -102,30 +109,34 @@ public class ContentSyncServiceTests : IDisposable
         Assert.Equal(
             "You are offline. This app needs an internet connection. Til then you can review the previously downloaded content.",
             result.UserMessage);
-        Assert.Null(ContentPackStore.TryLoad(_contentDir, "u1.1"));
+        Assert.Empty(ContentPackStore.LoadVersions(_contentDir, "u1.1"));
     }
 
     private sealed class FakeContentSyncService : ContentSyncService
     {
-        private readonly Dictionary<string, NodeContentPack> _remoteNodes;
+        private readonly Dictionary<string, List<NodeContentPack>> _remoteNodes;
         public bool ThrowOnManifest { get; set; }
         public List<(string NodeId, string Hash)> RequestedNodes { get; } = new();
 
-        public FakeContentSyncService(Dictionary<string, NodeContentPack> remoteNodes) : base(null!, "test-bucket") =>
+        public FakeContentSyncService(Dictionary<string, List<NodeContentPack>> remoteNodes) : base(null!, "test-bucket") =>
             _remoteNodes = remoteNodes;
 
         protected override Task<CourseManifestSnapshot> GetManifestAsync(string courseId, CancellationToken ct)
         {
             if (ThrowOnManifest) throw new InvalidOperationException("simulated network failure");
 
-            var nodes = _remoteNodes.Select(kv => new CourseManifestNode(kv.Key, ContentHash.Compute(kv.Value))).ToList();
+            var nodes = _remoteNodes.ToDictionary(
+                kv => kv.Key,
+                kv => new NodeManifestEntry(kv.Value.Select(p => new NodeVersionEntry(ContentHash.Compute(p), p.GeneratedAt)).ToList()),
+                StringComparer.Ordinal);
             return Task.FromResult(new CourseManifestSnapshot(nodes));
         }
 
         protected override Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, string hash, CancellationToken ct)
         {
             RequestedNodes.Add((nodeId, hash));
-            return Task.FromResult(_remoteNodes.GetValueOrDefault(nodeId));
+            var pack = _remoteNodes.GetValueOrDefault(nodeId)?.FirstOrDefault(p => ContentHash.Compute(p) == hash);
+            return Task.FromResult(pack);
         }
     }
 }

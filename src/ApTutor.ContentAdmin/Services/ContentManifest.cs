@@ -1,6 +1,6 @@
-namespace ApTutor.ContentAdmin.Services;
+using ApTutor.Content;
 
-public sealed record NodeManifestEntry(string Hash, DateTimeOffset UpdatedAt);
+namespace ApTutor.ContentAdmin.Services;
 
 public sealed record CourseManifest(int SchemaVersion, IReadOnlyDictionary<string, NodeManifestEntry> Nodes)
 {
@@ -21,11 +21,23 @@ public sealed record TopLevelManifest(int SchemaVersion, IReadOnlyDictionary<str
 /// around these functions.
 public static class ManifestMerge
 {
-    public static CourseManifest UpsertNode(CourseManifest current, string nodeId, NodeManifestEntry entry)
+    /// Appends a newly-approved version rather than replacing what's there — a node accumulates a
+    /// growing library of independently-approved sets over time (see the multi-set library plan),
+    /// not a single "latest" pointer. Idempotent: re-approving a pack whose hash is already present
+    /// (a harmless no-op re-approval, not a genuinely new set) doesn't add a duplicate entry.
+    public static CourseManifest UpsertNode(CourseManifest current, string nodeId, string hash, DateTimeOffset updatedAt)
     {
+        var existingVersions = current.Nodes.TryGetValue(nodeId, out var existing)
+            ? existing.Versions
+            : Array.Empty<NodeVersionEntry>();
+
+        if (existingVersions.Any(v => v.Hash == hash))
+            return current;
+
+        var updatedVersions = existingVersions.Append(new NodeVersionEntry(hash, updatedAt)).ToList();
         var nodes = new Dictionary<string, NodeManifestEntry>(current.Nodes, StringComparer.Ordinal)
         {
-            [nodeId] = entry,
+            [nodeId] = new NodeManifestEntry(updatedVersions),
         };
         return current with { Nodes = nodes };
     }

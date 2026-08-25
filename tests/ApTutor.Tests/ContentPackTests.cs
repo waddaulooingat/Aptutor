@@ -122,4 +122,112 @@ public class ContentPackTests : IDisposable
         Assert.Single(steps);
         Assert.Equal("first step", steps[0].Caption);
     }
+
+    // ---- Version-aware storage (see the multi-set library plan) ----
+
+    [Fact]
+    public void SaveVersion_ThenLoadVersions_RoundTrips()
+    {
+        var pack = SamplePack("u1.1", verified: true);
+
+        ContentPackStore.SaveVersion(_dir, "hash-a", pack);
+        var versions = ContentPackStore.LoadVersions(_dir, "u1.1");
+
+        Assert.Single(versions);
+        Assert.Equal(pack.WalkthroughText, versions[0].WalkthroughText);
+    }
+
+    [Fact]
+    public void SaveVersion_DoesNotCollideWithTheSingleFileLayoutForTheSameNode()
+    {
+        // "<nodeId>.json" (flat file) and "<nodeId>/" (versions subfolder) can coexist for the same
+        // node without clobbering each other — this matters during the transition, where a node
+        // might have both bundled dev content and synced multi-set content.
+        var flatPack = SamplePack("u1.1", verified: true) with { WalkthroughText = "flat" };
+        var versionedPack = SamplePack("u1.1", verified: true) with { WalkthroughText = "versioned" };
+
+        ContentPackStore.Save(_dir, flatPack);
+        ContentPackStore.SaveVersion(_dir, "hash-a", versionedPack);
+
+        Assert.Equal("flat", ContentPackStore.TryLoad(_dir, "u1.1")!.WalkthroughText);
+        Assert.Equal("versioned", ContentPackStore.LoadVersions(_dir, "u1.1").Single().WalkthroughText);
+    }
+
+    [Fact]
+    public void VersionExists_ReflectsWhatsBeenSaved()
+    {
+        Assert.False(ContentPackStore.VersionExists(_dir, "u1.1", "hash-a"));
+
+        ContentPackStore.SaveVersion(_dir, "hash-a", SamplePack("u1.1", verified: true));
+
+        Assert.True(ContentPackStore.VersionExists(_dir, "u1.1", "hash-a"));
+        Assert.False(ContentPackStore.VersionExists(_dir, "u1.1", "hash-b"));
+    }
+
+    [Fact]
+    public void LoadVersions_NoVersionsSavedYet_ReturnsEmpty() =>
+        Assert.Empty(ContentPackStore.LoadVersions(_dir, "never-synced"));
+
+    [Fact]
+    public void FileContentSource_MultipleVerifiedVersions_PracticeItemsComeFromExactlyOneOfThem()
+    {
+        var setA = SamplePack("u1.1", verified: true) with
+        {
+            PracticeItems = new[] { new PracticeItem("a-q1", "u1.1", "prompt A", new[] { "x", "y" }, 0, "because") },
+        };
+        var setB = SamplePack("u1.1", verified: true) with
+        {
+            PracticeItems = new[] { new PracticeItem("b-q1", "u1.1", "prompt B", new[] { "x", "y" }, 0, "because") },
+        };
+        ContentPackStore.SaveVersion(_dir, "hash-a", setA);
+        ContentPackStore.SaveVersion(_dir, "hash-b", setB);
+        var source = new FileContentSource(_dir);
+
+        var items = source.GetPracticeItems("u1.1");
+
+        Assert.Single(items); // one whole set's items, not both pooled together
+        Assert.True(items[0].Id is "a-q1" or "b-q1");
+    }
+
+    [Fact]
+    public void FileContentSource_UnverifiedVersionsOnly_FallsBackAsIfNoneExisted()
+    {
+        ContentPackStore.SaveVersion(_dir, "hash-a", SamplePack("u1.1", verified: false));
+        var source = new FileContentSource(_dir);
+
+        Assert.Empty(source.GetPracticeItems("u1.1"));
+    }
+
+    [Fact]
+    public void FileContentSource_NoVersionsSynced_FallsBackToTheSingleFileLayout()
+    {
+        // Bundled/dev-generated content that predates or never goes through Content Admin's S3 sync
+        // path must keep working unchanged.
+        ContentPackStore.Save(_dir, SamplePack("u1.1", verified: true));
+        var source = new FileContentSource(_dir);
+
+        Assert.Single(source.GetPracticeItems("u1.1"));
+        Assert.Equal("A short explanation.", source.GetWalkthroughText("u1.1", "generated"));
+    }
+
+    [Fact]
+    public void FileContentSource_MultipleVersions_WalkthroughTextComesFromTheMostRecentlyGeneratedOne()
+    {
+        var older = SamplePack("u1.1", verified: true) with
+        {
+            WalkthroughText = "older explanation", GeneratedAt = DateTimeOffset.UtcNow.AddDays(-1),
+        };
+        var newer = SamplePack("u1.1", verified: true) with
+        {
+            WalkthroughText = "newer explanation", GeneratedAt = DateTimeOffset.UtcNow,
+        };
+        ContentPackStore.SaveVersion(_dir, "hash-old", older);
+        ContentPackStore.SaveVersion(_dir, "hash-new", newer);
+        var source = new FileContentSource(_dir);
+
+        // Deterministic, unlike practice items — a topic's explanation switching at random between
+        // visits would read as a bug, not variety.
+        Assert.Equal("newer explanation", source.GetWalkthroughText("u1.1", "generated"));
+        Assert.Equal("newer explanation", source.GetWalkthroughText("u1.1", "generated"));
+    }
 }

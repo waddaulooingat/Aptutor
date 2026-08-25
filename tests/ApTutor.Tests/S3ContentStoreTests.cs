@@ -68,15 +68,15 @@ public class S3ContentStoreTests
         var samePack = SamplePack("u1.1", "same text");
 
         await store.ApproveNodeAsync("csa", "u1.1", samePack);
-        var hashAfterFirst = (await store.GetCourseManifestAsync("csa")).Nodes["u1.1"].Hash;
+        var hashAfterFirst = (await store.GetCourseManifestAsync("csa")).Nodes["u1.1"].Latest.Hash;
 
         await store.ApproveNodeAsync("csa", "u1.1", samePack);
-        var hashAfterRepeat = (await store.GetCourseManifestAsync("csa")).Nodes["u1.1"].Hash;
+        var hashAfterRepeat = (await store.GetCourseManifestAsync("csa")).Nodes["u1.1"].Latest.Hash;
         Assert.Equal(hashAfterFirst, hashAfterRepeat);
 
         var changedPack = samePack with { WalkthroughText = "different text now" };
         await store.ApproveNodeAsync("csa", "u1.1", changedPack);
-        var hashAfterChange = (await store.GetCourseManifestAsync("csa")).Nodes["u1.1"].Hash;
+        var hashAfterChange = (await store.GetCourseManifestAsync("csa")).Nodes["u1.1"].Latest.Hash;
         Assert.NotEqual(hashAfterFirst, hashAfterChange);
     }
 
@@ -96,10 +96,14 @@ public class S3ContentStoreTests
         // version's object being overwritten — the object count for this node's key prefix grows.
         Assert.True(store.ObjectCount > objectCountAfterFirst);
 
-        // The manifest — and therefore what the Shell/TryGetLiveNodeAsync would resolve to — points
-        // at the latest version only.
+        // TryGetLiveNodeAsync resolves to the newest version...
         var live = await store.TryGetLiveNodeAsync("csa", "u1.1");
         Assert.Equal("version two", live!.WalkthroughText);
+
+        // ...but the manifest keeps BOTH versions, not just the latest — a node accumulates a
+        // library of approved sets rather than replacing what's there (see the multi-set plan).
+        var manifest = await store.GetCourseManifestAsync("csa");
+        Assert.Equal(2, manifest.Nodes["u1.1"].Versions.Count);
     }
 
     [Fact]
@@ -125,6 +129,38 @@ public class S3ContentStoreTests
         var store = new FakeS3ContentStore();
 
         Assert.Null(await store.TryGetLiveNodeAsync("csa", "never-approved"));
+    }
+
+    [Fact]
+    public async Task GetCourseManifestAsync_ReadsAManifestStillOnTheOldSingleHashShape()
+    {
+        // Real manifests approved before multi-set support existed were written as a single
+        // {Hash, UpdatedAt} pair per node, not a Versions array — there's no one-time migration step,
+        // so this shape must still parse correctly (see NodeManifestEntryConverter).
+        var store = new FakeS3ContentStore();
+        store.SeedRawObject(
+            "courses/csa/manifest.json",
+            """{"SchemaVersion":1,"Nodes":{"u7.1":{"Hash":"old-hash","UpdatedAt":"2026-08-19T14:23:34.5308124+00:00"}}}""");
+
+        var manifest = await store.GetCourseManifestAsync("csa");
+
+        Assert.Single(manifest.Nodes["u7.1"].Versions);
+        Assert.Equal("old-hash", manifest.Nodes["u7.1"].Latest.Hash);
+    }
+
+    [Fact]
+    public async Task ApproveNodeAsync_OnANodeStillOnTheOldManifestShape_AppendsRatherThanLosingTheOldVersion()
+    {
+        var store = new FakeS3ContentStore();
+        store.SeedRawObject(
+            "courses/csa/manifest.json",
+            """{"SchemaVersion":1,"Nodes":{"u1.1":{"Hash":"old-hash","UpdatedAt":"2026-08-19T14:23:34.5308124+00:00"}}}""");
+
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", "brand new set"));
+
+        var manifest = await store.GetCourseManifestAsync("csa");
+        Assert.Equal(2, manifest.Nodes["u1.1"].Versions.Count);
+        Assert.Contains(manifest.Nodes["u1.1"].Versions, v => v.Hash == "old-hash");
     }
 
     [Fact]
@@ -167,6 +203,12 @@ public class S3ContentStoreTests
             : base(null!, Options.Create(new S3ContentStoreOptions { Bucket = "test-bucket", Region = "us-east-1" }), NullLogger<S3ContentStore>.Instance)
         {
         }
+
+        /// Seeds an object with raw, hand-written JSON bytes — used to simulate real data still on
+        /// an old wire shape (e.g. a manifest node written before multi-set support existed), which
+        /// ApproveNodeAsync's own serialization can never produce since it always writes the current
+        /// shape.
+        public void SeedRawObject(string key, string body) => _objects[key] = (body, NextETag());
 
         protected override Task<(T? Value, string? ETag)> TryGetObjectAsync<T>(string key, CancellationToken ct) where T : class
         {
