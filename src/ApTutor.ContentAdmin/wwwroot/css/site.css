@@ -58,6 +58,11 @@ h2 { font-size: 1.1rem; margin-top: 1.5rem; }
 
 .unit-heading { margin-top: 1.5rem; color: var(--muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; }
 
+.unit-header { display: flex; justify-content: space-between; align-items: baseline; }
+.unit-header .unit-heading { margin-top: 1.5rem; }
+.generate-unit-form { margin: 0; }
+.generate-unit-form .link-button { font-size: 0.85rem; }
+
 .node-list { list-style: none; margin: 8px 0; padding: 0; }
 .node-row {
     display: flex;

@@ -18,7 +18,16 @@
         <h2>@course.DisplayName</h2>
         @foreach (var unit in course.Units)
         {
-            <p class="unit-heading">Unit @unit.Unit — @unit.Title</p>
+            var notStartedCount = unit.Nodes.Count(n => n.Status == ApTutor.ContentAdmin.Pages.NodeReviewStatus.NotStarted);
+            <div class="unit-header">
+                <p class="unit-heading">Unit @unit.Unit — @unit.Title</p>
+                @if (notStartedCount > 0)
+                {
+                    <form method="post" asp-page-handler="GenerateUnit" asp-route-course="@course.CourseId" asp-route-unit="@unit.Unit" class="generate-unit-form">
+                        <button type="submit" class="link-button">Generate remaining (@notStartedCount)</button>
+                    </form>
+                }
+            </div>
             <ul class="node-list">
                 @foreach (var node in unit.Nodes)
                 {
@@ -26,6 +35,9 @@
                         <a href="/Review?course=@course.CourseId&node=@node.NodeId">@node.Title</a>
                         @switch (node.Status)
                         {
+                            case ApTutor.ContentAdmin.Pages.NodeReviewStatus.Generating:
+                                <span class="badge badge-pending">Generating…</span>
+                                break;
                             case ApTutor.ContentAdmin.Pages.NodeReviewStatus.PendingReview:
                                 <span class="badge badge-pending">Pending review</span>
                                 break;
