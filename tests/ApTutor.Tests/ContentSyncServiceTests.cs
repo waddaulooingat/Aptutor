@@ -1,6 +1,7 @@
 using ApTutor.Client.Courses;
 using ApTutor.Client.Services;
 using ApTutor.Content;
+using ApTutor.Curriculum;
 using ApTutor.Platform;
 using ApTutor.Scene;
 using Xunit;
@@ -21,7 +22,7 @@ public class ContentSyncServiceTests : IDisposable
         if (Directory.Exists(_contentDir)) Directory.Delete(_contentDir, recursive: true);
     }
 
-    private CsaCourseModule NewCourse() => new(DagPath, _contentDir);
+    private CsaCourseModule NewCourse() => new(SkillDagLoader.Load(DagPath), _contentDir);
 
     private static NodeContentPack SamplePack(string nodeId, string text) => new(
         CourseId: "csa",

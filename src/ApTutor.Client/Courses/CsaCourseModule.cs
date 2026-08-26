@@ -24,12 +24,15 @@ public sealed class CsaCourseModule : ICourseModule
     public IAttemptGrader? Grader => null;
     public string ContentDir { get; }
 
-    /// contentDir defaults to "<app dir>/content/csa" — where a human running
-    /// `ApTutor.ContentFactory generate --course csa ...` then `review` would produce verified
-    /// "<nodeId>.json" packs. Overridable so tests can point at an isolated fixture directory.
-    public CsaCourseModule(string dagJsonPath, string? contentDir = null)
+    /// Takes an already-loaded SkillGraph rather than a file path — CS A's structure is discovered
+    /// from S3 now, like any other course (see CourseDiscoveryService and the Shell-display-only/
+    /// course-authoring plan), not read from a file baked into the build. contentDir defaults to
+    /// "<app dir>/content/csa" — where a human running `ApTutor.ContentFactory generate --course
+    /// csa ...` then `review` would produce verified "<nodeId>.json" packs. Overridable so tests can
+    /// point at an isolated fixture directory.
+    public CsaCourseModule(SkillGraph dag, string? contentDir = null)
     {
-        Dag = SkillDagLoader.Load(dagJsonPath);
+        Dag = dag;
         ContentDir = contentDir ?? Path.Combine(AppContext.BaseDirectory, "content", "csa");
         StepProvider = new TracerStepProvider(ContentDir);
         Content = new CompositeContentSource(new FixtureContentSource(), new FileContentSource(ContentDir));

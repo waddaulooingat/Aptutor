@@ -30,7 +30,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        LoadCourses();
+        _ = LoadCoursesAsync();
     }
 
     /// Reloads settings after the dialog closes — Save or Cancel both just close the window, so
@@ -42,19 +42,108 @@ public partial class MainWindow : Window
         _settings = AppSettingsStore.Load(AppSettingsStore.DefaultDir);
     }
 
-    /// Registers every course the shell knows about and wires the dropdown to switch between
-    /// them. Defaults to CS A on launch — not persisted across runs (a "remember last course"
-    /// feature is a reasonable follow-up, not required yet).
-    private void LoadCourses()
+    /// Discovers every course from S3 (see CourseDiscoveryService) and registers an ICourseModule
+    /// per one — no hardcoded course list, no baked-in DAG file. CS A is the one deliberate
+    /// exception: it keeps its own bespoke wiring (the live Java tracer, the fixture item bank via
+    /// CsaCourseModule) since that's real interactive engineering no generator can produce (see the
+    /// Shell-display-only/course-authoring plan); every other course gets the generic,
+    /// course-agnostic wiring (GenericCourseModule). Defaults to CS A on launch when present, else
+    /// whatever course sorts first — not persisted across runs.
+    ///
+    /// This is genuinely async now (course structure lives in S3, not next to the exe), which is a
+    /// real behavior change from before: the window is briefly non-interactive on first load, and
+    /// the mastery/practice UI has nothing to show at all if this machine has never reached S3
+    /// before. Course-picking controls are explicitly disabled for that window so nothing can run
+    /// against a not-yet-set _course.
+    private async Task LoadCoursesAsync()
     {
-        var dagDir = AppContext.BaseDirectory;
-        var csa = new CsaCourseModule(Path.Combine(dagDir, "apcsa-skill-dag.json"));
-        var worldHistory = new WorldHistoryCourseModule(Path.Combine(dagDir, "apwh-skill-dag.json"));
-        _registry.Register(csa);
-        _registry.Register(worldHistory);
+        CourseSelector.IsEnabled = false;
+        MockExamButton.IsEnabled = false;
+        RefreshContentButton.IsEnabled = false;
+        DetailTitle.Text = "Loading courses…";
 
-        CourseSelector.ItemsSource = _registry.All;
-        CourseSelector.SelectedItem = csa; // triggers OnCourseSelectionChanged -> SwitchCourse
+        if (!TryResolveS3Config(out var bucket, out var region, out var configError))
+        {
+            DetailTitle.Text = "Could not load courses.";
+            ShowContentMessage($"{configError} Then restart the app.", Brushes.DarkOrange);
+            return;
+        }
+
+        try
+        {
+            using var s3 = BuildS3Client(region);
+            var discovered = await new CourseDiscoveryService(s3, bucket).DiscoverCoursesAsync();
+
+            if (discovered.Count == 0)
+            {
+                DetailTitle.Text = "No courses are available yet.";
+                ShowContentMessage("Check back soon.", Brushes.Gray);
+                return;
+            }
+
+            foreach (var course in discovered)
+            {
+                var contentDir = Path.Combine(AppContext.BaseDirectory, "content", course.CourseId);
+                ICourseModule module = course.CourseId == "csa"
+                    ? new CsaCourseModule(course.Graph, contentDir)
+                    : new GenericCourseModule(
+                        course.CourseId,
+                        course.Graph.Dag.Meta.DisplayName ?? course.Graph.Dag.Meta.Course,
+                        course.Graph,
+                        contentDir);
+                _registry.Register(module);
+            }
+
+            CourseSelector.ItemsSource = _registry.All;
+            CourseSelector.IsEnabled = true;
+            RefreshContentButton.IsEnabled = true;
+
+            var defaultCourse = _registry.All.FirstOrDefault(c => c.CourseId == "csa") ?? _registry.All.First();
+            CourseSelector.SelectedItem = defaultCourse; // triggers OnCourseSelectionChanged -> SwitchCourse
+        }
+        catch (Exception ex)
+        {
+            // Same posture as ContentSyncService/OnRefreshContentClick: never show a raw exception
+            // to a student, log it for anyone actually debugging this.
+            Console.Error.WriteLine($"[LoadCoursesAsync] {ex}");
+            DetailTitle.Text = "You are offline.";
+            ShowContentMessage("This app needs an internet connection to load courses for the first time. Try again once you're back online.", Brushes.DarkRed);
+        }
+    }
+
+    /// Resolves bucket/region the same way for both course discovery and content refresh — false
+    /// with a user-facing message if either isn't configured at all (nothing sensible to try
+    /// without them).
+    private bool TryResolveS3Config(out string bucket, out string region, out string error)
+    {
+        var resolvedBucket = ConfigResolver.Resolve("TUTORAI_CONTENT_BUCKET", _settings.ContentBucket);
+        var resolvedRegion = ConfigResolver.Resolve("TUTORAI_CONTENT_REGION", _settings.ContentRegion);
+        if (string.IsNullOrWhiteSpace(resolvedBucket) || string.IsNullOrWhiteSpace(resolvedRegion))
+        {
+            bucket = "";
+            region = "";
+            error = "⚠ Set the content bucket + region in Settings first.";
+            return false;
+        }
+
+        bucket = resolvedBucket;
+        region = resolvedRegion;
+        error = "";
+        return true;
+    }
+
+    /// A Settings-saved credential isn't something the SDK's own resolution chain (env vars, shared
+    /// config file, instance role, ...) would ever find on its own, so it's passed explicitly when
+    /// present; otherwise falls through to that chain unchanged — e.g. an AWS_* env var, or an
+    /// EC2/App Runner instance role.
+    private AmazonS3Client BuildS3Client(string region)
+    {
+        var accessKeyId = ConfigResolver.Resolve("AWS_ACCESS_KEY_ID", _settings.AwsAccessKeyId);
+        var secretAccessKey = ConfigResolver.Resolve("AWS_SECRET_ACCESS_KEY", _settings.AwsSecretAccessKey);
+        var s3Config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) };
+        return !string.IsNullOrWhiteSpace(accessKeyId) && !string.IsNullOrWhiteSpace(secretAccessKey)
+            ? new AmazonS3Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), s3Config)
+            : new AmazonS3Client(s3Config);
     }
 
     private void OnCourseSelectionChanged(object? sender, SelectionChangedEventArgs e)
@@ -283,11 +372,9 @@ public partial class MainWindow : Window
     {
         if (_refreshingContent) return;
 
-        var bucket = ConfigResolver.Resolve("TUTORAI_CONTENT_BUCKET", _settings.ContentBucket);
-        var region = ConfigResolver.Resolve("TUTORAI_CONTENT_REGION", _settings.ContentRegion);
-        if (string.IsNullOrWhiteSpace(bucket) || string.IsNullOrWhiteSpace(region))
+        if (!TryResolveS3Config(out var bucket, out var region, out var configError))
         {
-            ShowContentMessage("⚠ Set the content bucket + region in Settings to use Refresh content.", Brushes.DarkOrange);
+            ShowContentMessage($"{configError} (needed for Refresh content).", Brushes.DarkOrange);
             return;
         }
 
@@ -298,16 +385,7 @@ public partial class MainWindow : Window
 
         try
         {
-            // A Settings-saved credential isn't something the SDK's own resolution chain (env vars,
-            // shared config file, instance role, ...) would ever find on its own, so it's passed
-            // explicitly when present; otherwise fall through to that chain unchanged, same as
-            // before Settings existed — e.g. an AWS_* env var, or an EC2/App Runner instance role.
-            var accessKeyId = ConfigResolver.Resolve("AWS_ACCESS_KEY_ID", _settings.AwsAccessKeyId);
-            var secretAccessKey = ConfigResolver.Resolve("AWS_SECRET_ACCESS_KEY", _settings.AwsSecretAccessKey);
-            var s3Config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) };
-            using var s3 = !string.IsNullOrWhiteSpace(accessKeyId) && !string.IsNullOrWhiteSpace(secretAccessKey)
-                ? new AmazonS3Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), s3Config)
-                : new AmazonS3Client(s3Config);
+            using var s3 = BuildS3Client(region);
             var sync = new ContentSyncService(s3, bucket);
             var result = await sync.RefreshAsync(course);
 
