@@ -300,7 +300,7 @@ public partial class MainWindow : Window
                 RefreshAll();
                 ShowContentMessage(
                     result.UpdatedNodeIds.Count == 0
-                        ? "Already up to date — nothing new from S3."
+                        ? "No new units available. Check back soon."
                         : $"Pulled from S3: {string.Join(", ", result.UpdatedNodeIds)}",
                     Brushes.DarkGreen);
             }
