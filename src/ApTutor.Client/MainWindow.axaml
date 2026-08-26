@@ -20,6 +20,7 @@
       <TextBlock Name="ProgressLabel" VerticalAlignment="Center" />
       <Button Name="MockExamButton" Content="Mock Exam" Click="OnMockExamClick" Margin="24,0,0,0" />
       <Button Name="RefreshContentButton" Content="Refresh content" Click="OnRefreshContentClick" />
+      <Button Name="SettingsButton" Content="Settings" Click="OnSettingsClick" />
     </StackPanel>
 
     <Grid Grid.Row="1" ColumnDefinitions="320,8,*">

@@ -1,4 +1,5 @@
 using Amazon;
+using Amazon.Runtime;
 using Amazon.S3;
 using ApTutor.Client.Courses;
 using ApTutor.Client.Services;
@@ -24,11 +25,21 @@ public partial class MainWindow : Window
     private MasteryTracker _mastery = null!;
     private DagNode? _selectedNode;
     private bool _refreshingContent;
+    private AppSettings _settings = AppSettingsStore.Load(AppSettingsStore.DefaultDir);
 
     public MainWindow()
     {
         InitializeComponent();
         LoadCourses();
+    }
+
+    /// Reloads settings after the dialog closes — Save or Cancel both just close the window, so
+    /// re-reading from disk (a no-op on Cancel, since nothing was written) is simpler than plumbing
+    /// a result back out of it.
+    private async void OnSettingsClick(object? sender, RoutedEventArgs e)
+    {
+        await new SettingsWindow().ShowDialog(this);
+        _settings = AppSettingsStore.Load(AppSettingsStore.DefaultDir);
     }
 
     /// Registers every course the shell knows about and wires the dropdown to switch between
@@ -233,11 +244,11 @@ public partial class MainWindow : Window
         _selectedNode = node;
         RefreshDetail();
 
-        var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
-        var model = Environment.GetEnvironmentVariable("ANTHROPIC_MODEL");
+        var apiKey = ConfigResolver.Resolve("ANTHROPIC_API_KEY", _settings.AnthropicApiKey);
+        var model = ConfigResolver.Resolve("ANTHROPIC_MODEL", _settings.AnthropicModel);
         if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
         {
-            ShowContentMessage("⚠ Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL to use Refresh questions (dev-only).", Brushes.DarkOrange);
+            ShowContentMessage("⚠ Set the Anthropic API key + model in Settings to use Refresh questions (dev-only).", Brushes.DarkOrange);
             return;
         }
 
@@ -272,11 +283,11 @@ public partial class MainWindow : Window
     {
         if (_refreshingContent) return;
 
-        var bucket = Environment.GetEnvironmentVariable("TUTORAI_CONTENT_BUCKET");
-        var region = Environment.GetEnvironmentVariable("TUTORAI_CONTENT_REGION");
+        var bucket = ConfigResolver.Resolve("TUTORAI_CONTENT_BUCKET", _settings.ContentBucket);
+        var region = ConfigResolver.Resolve("TUTORAI_CONTENT_REGION", _settings.ContentRegion);
         if (string.IsNullOrWhiteSpace(bucket) || string.IsNullOrWhiteSpace(region))
         {
-            ShowContentMessage("⚠ Set TUTORAI_CONTENT_BUCKET and TUTORAI_CONTENT_REGION to use Refresh content.", Brushes.DarkOrange);
+            ShowContentMessage("⚠ Set the content bucket + region in Settings to use Refresh content.", Brushes.DarkOrange);
             return;
         }
 
@@ -287,7 +298,16 @@ public partial class MainWindow : Window
 
         try
         {
-            using var s3 = new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) });
+            // A Settings-saved credential isn't something the SDK's own resolution chain (env vars,
+            // shared config file, instance role, ...) would ever find on its own, so it's passed
+            // explicitly when present; otherwise fall through to that chain unchanged, same as
+            // before Settings existed — e.g. an AWS_* env var, or an EC2/App Runner instance role.
+            var accessKeyId = ConfigResolver.Resolve("AWS_ACCESS_KEY_ID", _settings.AwsAccessKeyId);
+            var secretAccessKey = ConfigResolver.Resolve("AWS_SECRET_ACCESS_KEY", _settings.AwsSecretAccessKey);
+            var s3Config = new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) };
+            using var s3 = !string.IsNullOrWhiteSpace(accessKeyId) && !string.IsNullOrWhiteSpace(secretAccessKey)
+                ? new AmazonS3Client(new BasicAWSCredentials(accessKeyId, secretAccessKey), s3Config)
+                : new AmazonS3Client(s3Config);
             var sync = new ContentSyncService(s3, bucket);
             var result = await sync.RefreshAsync(course);
 
