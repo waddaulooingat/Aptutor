@@ -10,9 +10,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Reuses S3ContentStore.ApproveNodeAsync as-is — the exact same code path Content Admin's
-         own Approve button uses — rather than hand-reconstructing the node/manifest wire format. -->
+    <!-- Reuses S3ContentStore.ApproveNodeAsync/ApproveStructureAsync as-is — the exact same code
+         paths Content Admin's own UI uses — rather than hand-reconstructing the wire format. -->
     <ProjectReference Include="..\..\src\ApTutor.ContentAdmin\ApTutor.ContentAdmin.csproj" />
+    <!-- Explicit, not just relying on the transitive reference through ApTutor.ContentAdmin — this
+         is what actually copies apcsa-skill-dag.json/apwh-skill-dag.json into this tool's own build
+         output, which SkillDagLoader.Load then reads via AppContext.BaseDirectory. -->
+    <ProjectReference Include="..\..\src\ApTutor.Curriculum\ApTutor.Curriculum.csproj" />
   </ItemGroup>
 
 </Project>
