@@ -3,8 +3,6 @@ using System.Text.Json;
 namespace ApTutor.Client.Services;
 
 public sealed record AppSettings(
-    string? AnthropicApiKey = null,
-    string? AnthropicModel = null,
     string? ContentBucket = null,
     string? ContentRegion = null,
     string? AwsAccessKeyId = null,
@@ -13,11 +11,14 @@ public sealed record AppSettings(
     public static readonly AppSettings Empty = new();
 }
 
-/// Local, per-machine settings for values this dev/SME-facing shell currently only reads from
-/// plain environment variables (ANTHROPIC_API_KEY/MODEL for the dev-only "Refresh questions"
-/// action, TUTORAI_CONTENT_BUCKET/REGION plus AWS credentials for the S3 content-sync test bridge)
-/// — having to re-set those in every fresh terminal window was real day-to-day friction. Stored as
-/// local, unencrypted JSON under the current user's profile: no worse than the plaintext
+/// Local, per-machine settings for the S3 content-sync test bridge — TUTORAI_CONTENT_BUCKET/REGION
+/// plus a read-only AWS credential, all otherwise only readable from plain environment variables.
+/// Having to re-set those in every fresh terminal window was real day-to-day friction. Deliberately
+/// doesn't cover ANTHROPIC_API_KEY/MODEL — those belong to the separate, dev-only "Refresh
+/// questions" debug tool (a live Claude call for one node), not to what this app's Shell actually
+/// does day to day (pull already-approved content from S3); keeping this Settings surface scoped to
+/// that real behavior rather than every environment variable this codebase happens to read. Stored
+/// as local, unencrypted JSON under the current user's profile: no worse than the plaintext
 /// environment variables this already accepted (see the plan's dev-convenience-vs-customer-facing
 /// note), and not something this app hands to a real paying customer as-is — revisit if/when this
 /// ships beyond internal SME use.

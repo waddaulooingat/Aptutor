@@ -20,8 +20,6 @@ public class AppSettingsStoreTests : IDisposable
     public void Save_ThenLoad_RoundTripsExactly()
     {
         var settings = new AppSettings(
-            AnthropicApiKey: "sk-ant-test",
-            AnthropicModel: "claude-test",
             ContentBucket: "tutor-ai-content",
             ContentRegion: "us-east-1",
             AwsAccessKeyId: "AKIATEST",
@@ -41,7 +39,7 @@ public class AppSettingsStoreTests : IDisposable
         AppSettingsStore.Save(_dir, settings);
         var loaded = AppSettingsStore.Load(_dir);
 
-        Assert.Null(loaded.AnthropicApiKey);
+        Assert.Null(loaded.AwsAccessKeyId);
         Assert.Equal("tutor-ai-content", loaded.ContentBucket);
     }
 

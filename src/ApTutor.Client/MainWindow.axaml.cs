@@ -244,11 +244,11 @@ public partial class MainWindow : Window
         _selectedNode = node;
         RefreshDetail();
 
-        var apiKey = ConfigResolver.Resolve("ANTHROPIC_API_KEY", _settings.AnthropicApiKey);
-        var model = ConfigResolver.Resolve("ANTHROPIC_MODEL", _settings.AnthropicModel);
+        var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
+        var model = Environment.GetEnvironmentVariable("ANTHROPIC_MODEL");
         if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
         {
-            ShowContentMessage("⚠ Set the Anthropic API key + model in Settings to use Refresh questions (dev-only).", Brushes.DarkOrange);
+            ShowContentMessage("⚠ Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL to use Refresh questions (dev-only).", Brushes.DarkOrange);
             return;
         }
 

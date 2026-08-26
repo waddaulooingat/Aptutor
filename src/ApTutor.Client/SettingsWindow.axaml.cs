@@ -13,8 +13,6 @@ public partial class SettingsWindow : Window
         InitializeComponent();
 
         var settings = AppSettingsStore.Load(AppSettingsStore.DefaultDir);
-        AnthropicApiKeyBox.Text = settings.AnthropicApiKey;
-        AnthropicModelBox.Text = settings.AnthropicModel;
         ContentBucketBox.Text = settings.ContentBucket;
         ContentRegionBox.Text = settings.ContentRegion;
         AwsAccessKeyIdBox.Text = settings.AwsAccessKeyId;
@@ -24,8 +22,6 @@ public partial class SettingsWindow : Window
     private void OnSaveClick(object? sender, RoutedEventArgs e)
     {
         var settings = new AppSettings(
-            AnthropicApiKey: NullIfBlank(AnthropicApiKeyBox.Text),
-            AnthropicModel: NullIfBlank(AnthropicModelBox.Text),
             ContentBucket: NullIfBlank(ContentBucketBox.Text),
             ContentRegion: NullIfBlank(ContentRegionBox.Text),
             AwsAccessKeyId: NullIfBlank(AwsAccessKeyIdBox.Text),
