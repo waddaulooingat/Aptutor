@@ -9,10 +9,15 @@ namespace ApTutor.Content;
 /// diff only works if both sides serialize with byte-identical options, so this is the one place
 /// that's allowed to define them. Not exposing the options for arbitrary reuse elsewhere; Compute
 /// is the only thing callers should need.
+///
+/// Generic rather than NodeContentPack-specific so the same content-addressing scheme covers course
+/// structure (ApTutor.Curriculum.SkillDag) too — see the Shell-display-only/course-authoring plan.
+/// This project deliberately has no reference to ApTutor.Curriculum; a generic method needs no such
+/// reference to hash a SkillDag, whereas a SkillDag-specific overload would.
 public static class ContentHash
 {
     public static readonly JsonSerializerOptions CanonicalOptions = new() { WriteIndented = false };
 
-    public static string Compute(NodeContentPack pack) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(pack, CanonicalOptions)))).ToLowerInvariant();
+    public static string Compute<T>(T value) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(value, CanonicalOptions)))).ToLowerInvariant();
 }

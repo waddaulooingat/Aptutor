@@ -4,6 +4,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using ApTutor.Content;
 using ApTutor.ContentAdmin.Services;
+using ApTutor.Curriculum;
 using ApTutor.Platform;
 using ApTutor.Scene;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -129,6 +130,75 @@ public class S3ContentStoreTests
         var store = new FakeS3ContentStore();
 
         Assert.Null(await store.TryGetLiveNodeAsync("csa", "never-approved"));
+    }
+
+    private static SkillDag SampleStructure(string courseTitle, int nodeCount = 1) => new(
+        Meta: new DagMeta(courseTitle, nodeCount),
+        ScenePrimitives: new Dictionary<string, string>(),
+        Units: new[] { new UnitInfo(1, "Unit 1") },
+        Nodes: new[] { new DagNode("u1.1", 1, NodeType.Concept, "Intro", Array.Empty<string>(), "") });
+
+    [Fact]
+    public async Task TryGetLiveStructureAsync_NoStructureApprovedYet_ReturnsNull()
+    {
+        var store = new FakeS3ContentStore();
+
+        Assert.Null(await store.TryGetLiveStructureAsync("csa"));
+    }
+
+    [Fact]
+    public async Task ApproveStructureAsync_ThenTryGetLiveStructureAsync_RoundTrips()
+    {
+        var store = new FakeS3ContentStore();
+        var structure = SampleStructure("Computer Science A");
+
+        await store.ApproveStructureAsync("csa", structure);
+
+        var live = await store.TryGetLiveStructureAsync("csa");
+        Assert.NotNull(live);
+        Assert.Equal("Computer Science A", live!.Meta.Course);
+    }
+
+    [Fact]
+    public async Task ApproveStructureAsync_ChangedStructure_ReplacesThePointer_DoesNotAccumulateVersions()
+    {
+        var store = new FakeS3ContentStore();
+        await store.ApproveStructureAsync("csa", SampleStructure("v1"));
+        var objectCountAfterFirst = store.ObjectCount;
+
+        await store.ApproveStructureAsync("csa", SampleStructure("v2"));
+
+        // A genuinely new, content-addressed object was written for v2 (the old one is left in
+        // place, immutable) — but unlike node content, the manifest's pointer only ever names one.
+        Assert.True(store.ObjectCount > objectCountAfterFirst);
+        var live = await store.TryGetLiveStructureAsync("csa");
+        Assert.Equal("v2", live!.Meta.Course);
+    }
+
+    [Fact]
+    public async Task ApproveStructureAsync_ReapprovingUnchangedStructure_IsAHarmlessNoOp_SameKeySameBytes()
+    {
+        var store = new FakeS3ContentStore();
+        var structure = SampleStructure("Computer Science A");
+
+        await store.ApproveStructureAsync("csa", structure);
+        var objectCountAfterFirst = store.ObjectCount;
+
+        await store.ApproveStructureAsync("csa", structure);
+
+        Assert.Equal(objectCountAfterFirst, store.ObjectCount);
+    }
+
+    [Fact]
+    public async Task ApproveStructureAsync_LeavesNodeContentAlone()
+    {
+        var store = new FakeS3ContentStore();
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", "explanation"));
+
+        await store.ApproveStructureAsync("csa", SampleStructure("Computer Science A"));
+
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1");
+        Assert.Equal("explanation", live!.WalkthroughText);
     }
 
     [Fact]

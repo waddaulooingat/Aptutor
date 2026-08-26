@@ -70,6 +70,36 @@ public class ManifestMergeTests
     }
 
     [Fact]
+    public void SetStructure_OnACourseWithNoStructureYet_SetsThePointer()
+    {
+        var when = DateTimeOffset.UtcNow;
+        var manifest = ManifestMerge.SetStructure(CourseManifest.Empty(1), "structure-hash-1", when);
+
+        Assert.Equal("structure-hash-1", manifest.StructureHash);
+        Assert.Equal(when, manifest.StructureUpdatedAt);
+    }
+
+    [Fact]
+    public void SetStructure_ReplacesThePreviousPointer_UnlikeUpsertNodeItDoesNotAccumulate()
+    {
+        var manifest = ManifestMerge.SetStructure(CourseManifest.Empty(1), "hash-v1", DateTimeOffset.UtcNow.AddMinutes(-5));
+
+        var updated = ManifestMerge.SetStructure(manifest, "hash-v2", DateTimeOffset.UtcNow);
+
+        Assert.Equal("hash-v2", updated.StructureHash);
+    }
+
+    [Fact]
+    public void SetStructure_LeavesNodesAlone()
+    {
+        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "node-hash", DateTimeOffset.UtcNow);
+
+        var updated = ManifestMerge.SetStructure(manifest, "structure-hash", DateTimeOffset.UtcNow);
+
+        Assert.True(updated.Nodes.ContainsKey("u1.1"));
+    }
+
+    [Fact]
     public void UpsertCourse_OnEmptyTopLevelManifest_AddsTheCourse()
     {
         var empty = TopLevelManifest.Empty(1);

@@ -2,7 +2,18 @@ using ApTutor.Content;
 
 namespace ApTutor.ContentAdmin.Services;
 
-public sealed record CourseManifest(int SchemaVersion, IReadOnlyDictionary<string, NodeManifestEntry> Nodes)
+/// StructureHash/StructureUpdatedAt point at the course's current curriculum structure (see
+/// ApTutor.Curriculum.SkillDag and S3ContentStore.ApproveStructureAsync) — deliberately a single
+/// pointer, not a growing list like NodeManifestEntry.Versions: a course has exactly one live DAG at
+/// a time, there's no "rotate between several curricula" concept the way there is for practice-item
+/// sets. Both nullable and additive to the existing shape, so manifests written before course
+/// structure moved into S3 (every node manifest so far) still deserialize correctly with no
+/// backward-compatibility shim needed — a missing JSON property just defaults to null.
+public sealed record CourseManifest(
+    int SchemaVersion,
+    IReadOnlyDictionary<string, NodeManifestEntry> Nodes,
+    string? StructureHash = null,
+    DateTimeOffset? StructureUpdatedAt = null)
 {
     public static CourseManifest Empty(int schemaVersion) =>
         new(schemaVersion, new Dictionary<string, NodeManifestEntry>(StringComparer.Ordinal));
@@ -41,6 +52,13 @@ public static class ManifestMerge
         };
         return current with { Nodes = nodes };
     }
+
+    /// Overwrites the current structure pointer outright — unlike UpsertNode, there's no "keep the
+    /// old one too" concept for course structure (see CourseManifest's remarks). Not idempotent on
+    /// an unchanged hash the way UpsertNode is, since overwriting with the same value is already a
+    /// no-op in effect.
+    public static CourseManifest SetStructure(CourseManifest current, string hash, DateTimeOffset updatedAt) =>
+        current with { StructureHash = hash, StructureUpdatedAt = updatedAt };
 
     public static TopLevelManifest UpsertCourse(TopLevelManifest current, string courseId, CourseIndexEntry entry)
     {

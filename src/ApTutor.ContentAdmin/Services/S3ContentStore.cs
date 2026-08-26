@@ -5,6 +5,7 @@ using System.Text.Json;
 using Amazon.S3;
 using Amazon.S3.Model;
 using ApTutor.Content;
+using ApTutor.Curriculum;
 using Microsoft.Extensions.Options;
 
 namespace ApTutor.ContentAdmin.Services;
@@ -18,8 +19,12 @@ public sealed class S3ContentStoreOptions
 /// S3 is the source of truth for approved course content — git is source code only (see the plan).
 /// Layout:
 ///   manifest.json                                    — top-level index of courses
-///   courses/&lt;courseId&gt;/manifest.json                  — per-course node hash/version index
+///   courses/&lt;courseId&gt;/manifest.json                  — per-course node hash/version index, plus
+///                                                        the course's current structure pointer
 ///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;/&lt;hash&gt;.json      — one IMMUTABLE object per approved version
+///   courses/&lt;courseId&gt;/structure/&lt;hash&gt;.json           — one IMMUTABLE object per approved DAG
+///                                                        revision (units/nodes/prereqs — see
+///                                                        ApTutor.Curriculum.SkillDag)
 ///   courses/&lt;courseId&gt;/rejections/&lt;nodeId&gt;-&lt;ticks&gt;.json — one object per rejection event
 ///
 /// Content-addressed by design: a node's key is derived from its own content hash, so re-approving
@@ -94,6 +99,38 @@ public class S3ContentStore
         return pack;
     }
 
+    /// Fetches the course's current curriculum structure (units/nodes/prereqs) — see the
+    /// Shell-display-only/course-authoring plan. Null if no structure has ever been approved for
+    /// this course yet (a brand-new course with a unit list but no DAG filled in, or a course
+    /// nobody has migrated onto S3-delivered structure at all).
+    public async Task<SkillDag?> TryGetLiveStructureAsync(string courseId, CancellationToken ct = default)
+    {
+        var manifest = await GetCourseManifestAsync(courseId, ct);
+        if (manifest.StructureHash is not { } hash) return null;
+
+        var (dag, _) = await TryGetObjectAsync<SkillDag>(StructureKey(courseId, hash), ct);
+        return dag;
+    }
+
+    /// Same content-addressing shape as ApproveNodeAsync: the structure object itself is immutable
+    /// and never overwritten (a changed DAG always lands on a new hash-named key), but unlike node
+    /// content, the manifest's structure pointer is REPLACED, not appended to — see
+    /// ManifestMerge.SetStructure's remarks for why a course only ever has one live curriculum.
+    public async Task ApproveStructureAsync(string courseId, SkillDag structure, CancellationToken ct = default)
+    {
+        var body = JsonSerializer.Serialize(structure, CanonicalJsonOptions);
+        var hash = ContentHash.Compute(structure);
+        var now = DateTimeOffset.UtcNow;
+
+        await PutObjectAsync(StructureKey(courseId, hash), body, ifMatch: null, ifNoneMatch: null, ct);
+
+        var courseManifest = await UpdateWithRetryAsync<CourseManifest>(
+            CourseManifestKey(courseId),
+            current => ManifestMerge.SetStructure(current ?? CourseManifest.Empty(SchemaVersion), hash, now),
+            ct);
+        await ReindexCourseInTopLevelManifestAsync(courseId, courseManifest, now, ct);
+    }
+
     public async Task ApproveNodeAsync(string courseId, string nodeId, NodeContentPack approvedPack, CancellationToken ct = default)
     {
         var body = JsonSerializer.Serialize(approvedPack, CanonicalJsonOptions);
@@ -109,8 +146,16 @@ public class S3ContentStore
             CourseManifestKey(courseId),
             current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, hash, now),
             ct);
-        var courseManifestHash = ComputeHash(JsonSerializer.Serialize(courseManifest, CanonicalJsonOptions));
+        await ReindexCourseInTopLevelManifestAsync(courseId, courseManifest, now, ct);
+    }
 
+    /// Shared tail of ApproveNodeAsync/ApproveStructureAsync — both end by pointing the top-level
+    /// course index at this course's just-updated manifest hash, so the Shell/Content Admin can
+    /// discover which courses exist (and whether any of their manifests changed) from one object
+    /// without listing every course's manifest individually.
+    private async Task ReindexCourseInTopLevelManifestAsync(string courseId, CourseManifest courseManifest, DateTimeOffset now, CancellationToken ct)
+    {
+        var courseManifestHash = ComputeHash(JsonSerializer.Serialize(courseManifest, CanonicalJsonOptions));
         await UpdateWithRetryAsync<TopLevelManifest>(
             "manifest.json",
             current => ManifestMerge.UpsertCourse(current ?? TopLevelManifest.Empty(SchemaVersion), courseId, new CourseIndexEntry(courseManifestHash, now)),
@@ -198,4 +243,5 @@ public class S3ContentStore
 
     private static string CourseManifestKey(string courseId) => $"courses/{courseId}/manifest.json";
     private static string NodeKey(string courseId, string nodeId, string hash) => $"courses/{courseId}/nodes/{nodeId}/{hash}.json";
+    private static string StructureKey(string courseId, string hash) => $"courses/{courseId}/structure/{hash}.json";
 }

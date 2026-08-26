@@ -44,9 +44,13 @@ public static class SkillDagLoader
         Converters = { new JsonStringEnumConverter(JsonNamingPolicy.CamelCase) }
     };
 
-    public static SkillGraph Load(string path)
+    public static SkillGraph Load(string path) => LoadFromJson(File.ReadAllText(path));
+
+    /// Split out of Load so a DAG downloaded from S3 (see the Shell-display-only/course-authoring
+    /// plan) can be validated the exact same way as one read from a local file, without needing to
+    /// stage the bytes to disk first just to satisfy a file-path-only API.
+    public static SkillGraph LoadFromJson(string json)
     {
-        var json = File.ReadAllText(path);
         var dag = JsonSerializer.Deserialize<SkillDag>(json, Options)
                   ?? throw new InvalidDataException("Skill DAG deserialized to null.");
         return new SkillGraph(dag); // ctor validates
