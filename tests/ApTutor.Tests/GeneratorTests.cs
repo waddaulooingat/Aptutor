@@ -99,18 +99,18 @@ public class GeneratorTests
         await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode));
     }
 
-    // Dev-only "Refresh questions" (MainWindow's right-click): a smaller, faster call that only
-    // regenerates practice items, no walkthrough — same parsing discipline as the full generator.
-    private const string PracticeItemsOnlyResponse = """
+    // GenerateUnitStructureAsync (see the Shell-display-only/course-authoring plan's Part B) —
+    // drafts a unit's node list rather than any one node's content.
+    private const string UnitStructureResponse = """
         {
             "content": [
                 {
                     "type": "tool_use",
-                    "name": "emit_practice_items",
+                    "name": "emit_unit_structure",
                     "input": {
-                        "practiceItems": [
-                            { "prompt": "Refreshed Q1?", "choices": ["a", "b", "c", "d"], "correctIndex": 0, "explanation": "e1" },
-                            { "prompt": "Refreshed Q2?", "choices": ["a", "b", "c", "d"], "correctIndex": 3, "explanation": "e2" }
+                        "nodes": [
+                            { "id": "u2.1", "title": "Trans-Saharan trade routes", "type": "concept", "prereqs": [], "viz": "" },
+                            { "id": "u2.2", "title": "Indian Ocean trade network", "type": "concept", "prereqs": ["u2.1"], "viz": "" }
                         ]
                     }
                 }
@@ -119,30 +119,77 @@ public class GeneratorTests
         """;
 
     [Fact]
-    public async Task RegeneratePracticeItemsAsync_ParsesCannedResponseIntoPracticeItems()
+    public async Task GenerateUnitStructureAsync_ParsesCannedResponseIntoDagNodes()
     {
-        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(PracticeItemsOnlyResponse));
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(UnitStructureResponse));
         var generator = new Generator(client);
 
-        var items = await generator.RegeneratePracticeItemsAsync("csa", SampleNode);
+        var nodes = await generator.GenerateUnitStructureAsync("worldhistory", 2, "Networks of Exchange", Array.Empty<DagNode>(), guidance: null);
 
-        Assert.Equal(2, items.Count);
-        Assert.Equal("u1.2-q1", items[0].Id); // assigned by us, not the model
-        Assert.Equal("u1.2", items[0].NodeId);
-        Assert.Equal("Refreshed Q1?", items[0].Prompt);
-        Assert.Equal("u1.2-q2", items[1].Id);
-        Assert.Equal(3, items[1].CorrectIndex);
+        Assert.Equal(2, nodes.Count);
+        Assert.Equal("u2.1", nodes[0].Id);
+        Assert.Equal(2, nodes[0].Unit); // assigned by us from unitNumber, not parsed from the model
+        Assert.Equal(NodeType.Concept, nodes[0].Type);
+        Assert.Empty(nodes[0].Prereqs);
+        Assert.Equal("u2.2", nodes[1].Id);
+        Assert.Equal(new[] { "u2.1" }, nodes[1].Prereqs);
     }
 
     [Fact]
-    public async Task RegeneratePracticeItemsAsync_MalformedToolInput_Throws()
+    public async Task GenerateUnitStructureAsync_NodeIdMissingUnitPrefix_Throws()
     {
         const string badResponse = """
-            { "content": [ { "type": "tool_use", "name": "emit_practice_items", "input": { "somethingElse": true } } ] }
+            { "content": [ { "type": "tool_use", "name": "emit_unit_structure", "input": {
+                "nodes": [ { "id": "u3.1", "title": "Wrong unit", "type": "concept", "prereqs": [], "viz": "" } ] } } ] }
             """;
         var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
         var generator = new Generator(client);
 
-        await Assert.ThrowsAnyAsync<Exception>(() => generator.RegeneratePracticeItemsAsync("csa", SampleNode));
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateUnitStructureAsync("worldhistory", 2, "Networks of Exchange", Array.Empty<DagNode>(), guidance: null));
+    }
+
+    [Fact]
+    public async Task GenerateUnitStructureAsync_DuplicateNodeId_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_unit_structure", "input": {
+                "nodes": [
+                    { "id": "u2.1", "title": "First", "type": "concept", "prereqs": [], "viz": "" },
+                    { "id": "u2.1", "title": "Duplicate", "type": "concept", "prereqs": [], "viz": "" }
+                ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateUnitStructureAsync("worldhistory", 2, "Networks of Exchange", Array.Empty<DagNode>(), guidance: null));
+    }
+
+    [Fact]
+    public async Task GenerateUnitStructureAsync_UnrecognizedNodeType_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_unit_structure", "input": {
+                "nodes": [ { "id": "u2.1", "title": "Bad type", "type": "not-a-real-type", "prereqs": [], "viz": "" } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateUnitStructureAsync("worldhistory", 2, "Networks of Exchange", Array.Empty<DagNode>(), guidance: null));
+    }
+
+    [Fact]
+    public async Task GenerateUnitStructureAsync_ZeroNodes_Throws()
+    {
+        const string emptyResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_unit_structure", "input": { "nodes": [] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(emptyResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateUnitStructureAsync("worldhistory", 2, "Networks of Exchange", Array.Empty<DagNode>(), guidance: null));
     }
 }

@@ -47,14 +47,52 @@ public static class GenerationSchema
         },
     };
 
-    /// Dev-only "refresh questions" (see Generator.RegeneratePracticeItemsAsync): just the
-    /// practiceItems shape, no walkthrough — a single node's questions regenerate in one small,
-    /// cheap call instead of the full node content pack.
-    public static JsonNode PracticeItemsOnlySchema() => new JsonObject
+    /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring
+    /// plan's Part B). Like NodeContentSchema, this is a guide — real enforcement (id prefix,
+    /// duplicate ids, valid NodeType, and full prereq/cycle validation across the whole merged
+    /// course) happens in Generator.cs and StructureMerge, not here.
+    public static JsonNode UnitStructureSchema() => new JsonObject
     {
         ["type"] = "object",
-        ["required"] = new JsonArray { "practiceItems" },
-        ["properties"] = new JsonObject { ["practiceItems"] = PracticeItemsArraySchema() },
+        ["required"] = new JsonArray { "nodes" },
+        ["properties"] = new JsonObject
+        {
+            ["nodes"] = new JsonObject
+            {
+                ["type"] = "array",
+                ["minItems"] = 1,
+                ["items"] = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["required"] = new JsonArray { "id", "title", "type", "prereqs", "viz" },
+                    ["properties"] = new JsonObject
+                    {
+                        ["id"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "e.g. \"u2.1\" — must start with \"u<unit>.\" for the unit number given in the prompt.",
+                        },
+                        ["title"] = new JsonObject { ["type"] = "string" },
+                        ["type"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["enum"] = new JsonArray { "concept", "skill", "synthesis", "frq" },
+                        },
+                        ["prereqs"] = new JsonObject
+                        {
+                            ["type"] = "array",
+                            ["items"] = new JsonObject { ["type"] = "string" },
+                            ["description"] = "Ids of nodes the student must already know — existing nodes from the prompt, or earlier ids you generated in this same unit.",
+                        },
+                        ["viz"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "A short visualization/primitive hint (e.g. \"timeline\"), or \"\" if none applies.",
+                        },
+                    },
+                },
+            },
+        },
     };
 
     private static JsonNode PracticeItemsArraySchema() => new JsonObject

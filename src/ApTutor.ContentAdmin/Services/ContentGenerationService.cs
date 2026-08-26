@@ -89,7 +89,10 @@ public sealed class ContentGenerationService
         try
         {
             var course = _catalog.Get(courseId);
-            var node = course.Graph.Node(nodeId);
+            // Null-forgiving: reachable only via TryStartGeneration, which Review.cshtml.cs only
+            // calls after TryLoadContext has already confirmed this exact course/node has a
+            // non-null Graph — see its own null check.
+            var node = course.Graph!.Node(nodeId);
             var pack = await _generator.GenerateAsync(courseId, node, ct);
             TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Pack = pack });
         }

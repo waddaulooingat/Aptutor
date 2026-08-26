@@ -1,0 +1,66 @@
+@page
+@using ApTutor.Curriculum
+@model ApTutor.ContentAdmin.Pages.ReviewUnitModel
+@{
+    ViewData["Title"] = "Review unit structure";
+}
+
+<p><a href="/">&larr; Back to topics</a></p>
+<h1>Review unit structure</h1>
+<p class="notice">@Model.CourseDisplayName &mdash; Unit @Model.Unit</p>
+
+@if (Model.Error is not null)
+{
+    <p class="error">@Model.Error</p>
+}
+@if (Model.Notice is not null)
+{
+    <p class="notice">@Model.Notice</p>
+}
+
+<div class="card">
+    <p class="notice">
+        Review every proposed topic below. Uncheck "Keep" to drop a topic entirely, or edit its
+        title/prereqs/type directly. Prereqs are a comma-separated list of topic ids (existing ids
+        from this course, or another topic id from this same batch).
+    </p>
+
+    <form method="post" asp-page-handler="Approve">
+        <input type="hidden" name="course" value="@Model.CourseId" />
+        <input type="hidden" name="unit" value="@Model.Unit" />
+
+        <label for="unitTitle">Unit title</label>
+        <input type="text" id="unitTitle" name="unitTitle" value="@Model.UnitTitle" required />
+
+        @foreach (var node in Model.ProposedNodes)
+        {
+            <div class="card">
+                <label>
+                    <input type="checkbox" name="keep_@node.Id" value="true" checked />
+                    Keep <strong>@node.Id</strong>
+                </label>
+
+                <label for="title_@node.Id">Title</label>
+                <input type="text" id="title_@node.Id" name="title_@node.Id" value="@node.Title" />
+
+                <label for="type_@node.Id">Type</label>
+                <select id="type_@node.Id" name="type_@node.Id">
+                    @foreach (var type in Enum.GetValues<NodeType>())
+                    {
+                        <option value="@type" selected="@(type == node.Type)">@type</option>
+                    }
+                </select>
+
+                <label for="prereqs_@node.Id">Prereqs (comma-separated topic ids)</label>
+                <input type="text" id="prereqs_@node.Id" name="prereqs_@node.Id" value="@string.Join(", ", node.Prereqs)" />
+
+                <label for="viz_@node.Id">Visualization hint (optional)</label>
+                <input type="text" id="viz_@node.Id" name="viz_@node.Id" value="@node.Viz" />
+            </div>
+        }
+
+        <div class="actions">
+            <button type="submit" class="btn-approve">Approve unit</button>
+        </div>
+    </form>
+</div>

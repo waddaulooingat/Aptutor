@@ -85,6 +85,7 @@ builder.Services.AddSingleton<IAmazonS3>(sp =>
 builder.Services.AddSingleton<S3ContentStore>();
 builder.Services.AddSingleton<RejectionLog>();
 builder.Services.AddSingleton<ContentGenerationService>();
+builder.Services.AddSingleton<UnitStructureGenerationService>();
 builder.Services.AddSingleton<CourseCatalog>();
 
 var app = builder.Build();

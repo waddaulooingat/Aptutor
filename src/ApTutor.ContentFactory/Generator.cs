@@ -12,7 +12,8 @@ public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<string> 
 public sealed record GeneratedStep(string Caption, int? SourceLine, IReadOnlyList<SceneOp> Ops);
 public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
-public sealed record GeneratedPracticeItemsOnly(IReadOnlyList<GeneratedPracticeItem> PracticeItems);
+public sealed record GeneratedUnitNode(string Id, string Title, string Type, IReadOnlyList<string> Prereqs, string Viz);
+public sealed record GeneratedUnitStructure(IReadOnlyList<GeneratedUnitNode> Nodes);
 
 public sealed class Generator
 {
@@ -55,23 +56,44 @@ public sealed class Generator
             Model: _client.Model);
     }
 
-    /// Dev-only "refresh questions" (right-click a node in the shell): regenerates JUST that node's
-    /// practice items — cheaper and faster than a full GenerateAsync when all you want is a fresh
-    /// question bank, and it deliberately doesn't touch any existing walkthrough text/steps. Always
-    /// unverified — the caller (MainWindow) saves it with Verified: false and a clear warning; this
-    /// never writes into the same trusted path `review` approves without a human looking at it.
-    public async Task<IReadOnlyList<PracticeItem>> RegeneratePracticeItemsAsync(string courseId, DagNode node, CancellationToken ct = default)
+    /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring
+    /// plan's Part B) — one level above per-node content generation: drafts the node list
+    /// (ids/titles/types/prereqs) for a unit, not any node's actual explanation/practice items.
+    /// existingNodes gives the model real node ids it can reference in prereqs. The model is never
+    /// trusted with the Unit field itself (assigned here from the caller's unitNumber, not parsed
+    /// from its output); id-prefix and duplicate-id checks happen here, but full prereq/cycle
+    /// validation across the whole merged course happens later, in StructureMerge + the SkillGraph
+    /// constructor it feeds — this method alone can't know about nodes outside this one unit.
+    public async Task<IReadOnlyList<DagNode>> GenerateUnitStructureAsync(
+        string courseId, int unit, string unitTitle, IReadOnlyList<DagNode> existingNodes, string? guidance, CancellationToken ct = default)
     {
-        var schema = GenerationSchema.PracticeItemsOnlySchema();
+        var schema = GenerationSchema.UnitStructureSchema();
         var system = PromptTemplates.System(courseId);
-        var user = PromptTemplates.PracticeItemsOnlyForNode(node);
+        var user = PromptTemplates.ForUnit(unit, unitTitle, existingNodes, guidance);
 
-        var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_practice_items", ct);
-        var generated = JsonSerializer.Deserialize<GeneratedPracticeItemsOnly>(inputJson.GetRawText(), ParseOptions)
-            ?? throw new InvalidOperationException($"Claude returned an empty/unparsable practice-items block for node '{node.Id}'.");
+        var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_unit_structure", ct);
+        var generated = JsonSerializer.Deserialize<GeneratedUnitStructure>(inputJson.GetRawText(), ParseOptions)
+            ?? throw new InvalidOperationException($"Claude returned an empty/unparsable structure block for unit {unit}.");
 
-        return generated.PracticeItems
-            .Select((item, i) => new PracticeItem($"{node.Id}-q{i + 1}", node.Id, item.Prompt, item.Choices, item.CorrectIndex, item.Explanation))
-            .ToList();
+        if (generated.Nodes.Count == 0)
+            throw new InvalidOperationException($"Claude returned zero nodes for unit {unit}.");
+
+        var idPrefix = $"u{unit}.";
+        var seenIds = new HashSet<string>(StringComparer.Ordinal);
+        var result = new List<DagNode>(generated.Nodes.Count);
+
+        foreach (var raw in generated.Nodes)
+        {
+            if (!raw.Id.StartsWith(idPrefix, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Generated node id '{raw.Id}' doesn't start with the required '{idPrefix}' prefix for unit {unit}.");
+            if (!seenIds.Add(raw.Id))
+                throw new InvalidOperationException($"Claude generated a duplicate node id '{raw.Id}' within the same unit.");
+            if (!Enum.TryParse<NodeType>(raw.Type, ignoreCase: true, out var type))
+                throw new InvalidOperationException($"Generated node '{raw.Id}' has an unrecognized type '{raw.Type}'.");
+
+            result.Add(new DagNode(raw.Id, unit, type, raw.Title, raw.Prereqs, raw.Viz));
+        }
+
+        return result;
     }
 }

@@ -15,10 +15,13 @@
 @foreach (var course in Model.Courses)
 {
     <section class="card">
-        <h2>@course.DisplayName</h2>
+        <div class="unit-header">
+            <h2>@course.DisplayName</h2>
+            <a href="/GenerateUnit?course=@course.CourseId" class="link-button">Generate new unit</a>
+        </div>
         @if (!course.HasStructure)
         {
-            <p class="notice">This course has no unit structure yet — use "Generate unit structure" to add units before generating content.</p>
+            <p class="notice">This course has no unit structure yet — use "Generate new unit" above to add one before generating content.</p>
         }
         @foreach (var unit in course.Units)
         {

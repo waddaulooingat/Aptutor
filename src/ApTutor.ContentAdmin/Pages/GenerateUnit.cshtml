@@ -1,0 +1,38 @@
+@page
+@model ApTutor.ContentAdmin.Pages.GenerateUnitModel
+@{
+    ViewData["Title"] = "Generate unit structure";
+}
+
+<p><a href="/">&larr; Back to topics</a></p>
+<h1>Generate unit structure</h1>
+<p class="notice">@Model.CourseDisplayName</p>
+
+@if (Model.Error is not null)
+{
+    <p class="error">@Model.Error</p>
+}
+
+<div class="card">
+    <p class="notice">
+        Drafts a node list (topics, types, prereqs) for one unit — not any topic's actual
+        explanation or practice questions. You'll review and can edit every node before it's added
+        to the course.
+    </p>
+    <form method="post">
+        <input type="hidden" name="course" value="@Model.CourseId" />
+
+        <label for="unit">Unit number</label>
+        <input type="number" id="unit" name="unit" min="1" required />
+
+        <label for="unitTitle">Unit title</label>
+        <input type="text" id="unitTitle" name="unitTitle" placeholder="e.g. Networks of Exchange" required />
+
+        <label for="guidance">Additional guidance (optional)</label>
+        <textarea id="guidance" name="guidance" rows="3" placeholder="Any scope notes, e.g. time period or emphasis"></textarea>
+
+        <div class="actions">
+            <button type="submit" class="btn-primary">Generate</button>
+        </div>
+    </form>
+</div>

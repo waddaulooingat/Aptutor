@@ -1,0 +1,25 @@
+@page
+@model ApTutor.ContentAdmin.Pages.GeneratingUnitModel
+@{
+    ViewData["Title"] = "Generating unit structure";
+    if (Model.IsRunning)
+    {
+        <meta http-equiv="refresh" content="2" />
+    }
+}
+
+<p><a href="/">&larr; Back to topics</a></p>
+
+@if (Model.IsRunning)
+{
+    <div class="card">
+        <p class="spinner-text">Generating unit structure&hellip; this page will refresh on its own.</p>
+    </div>
+}
+else
+{
+    <div class="card">
+        <p class="error">Generation failed: @Model.Error</p>
+        <p><a href="/GenerateUnit?course=@Model.CourseId">Go back and try again</a></p>
+    </div>
+}

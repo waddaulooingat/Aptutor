@@ -28,15 +28,29 @@ public static class PromptTemplates
         this node's title.
         """;
 
-    /// Dev-only "refresh questions" (see Generator.RegeneratePracticeItemsAsync): practice items
-    /// only, no walkthrough — a fast, cheap single-node regeneration, not the full content pack.
-    public static string PracticeItemsOnlyForNode(DagNode node) => $"""
-        Generate ONLY practice items (no walkthrough, no explanation text) for this curriculum node:
+    /// Content Admin's "Generate unit structure" (one level above per-node content generation —
+    /// see the Shell-display-only/course-authoring plan's Part B). existingNodes gives the model
+    /// real node ids it can reference in prereqs; it's never trusted to invent cross-unit prereqs
+    /// out of nothing.
+    public static string ForUnit(int unit, string unitTitle, IReadOnlyList<DagNode> existingNodes, string? guidance) => $"""
+        Draft the node list for a new curriculum unit within this course:
 
-        {NodeSummary(node)}
+        unit number: {unit}
+        unit title: {unitTitle}
+        {(string.IsNullOrWhiteSpace(guidance) ? "" : $"additional guidance from the reviewer: {guidance}\n")}
+        Existing nodes already in this course, for prereq reference only — do not repeat or modify
+        any of these; only generate NEW nodes for the unit above:
+        {ExistingNodesSummary(existingNodes)}
 
-        Assume the student has already mastered every listed prereq, but nothing beyond that.
+        Each new node's id must start with "u{unit}." followed by a number (e.g. "u{unit}.1",
+        "u{unit}.2", ...), in the order a student should learn them. A node's prereqs may reference
+        any of the existing node ids listed above, or any earlier node id you generate in this same
+        unit — never a node id that doesn't exist and never itself. Order your nodes so every prereq
+        you reference already appears either in the existing list above or earlier in your own output.
         """;
+
+    private static string ExistingNodesSummary(IReadOnlyList<DagNode> nodes) =>
+        nodes.Count == 0 ? "(none yet)" : string.Join("\n", nodes.Select(n => $"{n.Id}: {n.Title}"));
 
     private static string NodeSummary(DagNode node) => $"""
         id: {node.Id}
