@@ -113,6 +113,41 @@ public class ContentSyncServiceTests : IDisposable
         Assert.Empty(ContentPackStore.LoadVersions(_contentDir, "u1.1"));
     }
 
+    // RefreshNodeAsync backs the Shell's per-node right-click "Get new set" — same diff-and-download
+    // logic as RefreshAsync, just filtered to one node (see the Shell-display-only/course-authoring
+    // plan's Part E).
+    [Fact]
+    public async Task RefreshNodeAsync_OnlyDownloadsTheRequestedNode_IgnoresOtherNewNodes()
+    {
+        var course = NewCourse();
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>>
+        {
+            ["u1.1"] = new() { SamplePack("u1.1", "hello") },
+            ["u1.2"] = new() { SamplePack("u1.2", "other node") },
+        });
+
+        var result = await fake.RefreshNodeAsync(course, "u1.1");
+
+        Assert.True(result.Success);
+        Assert.Equal(new[] { "u1.1" }, result.UpdatedNodeIds);
+        Assert.Single(ContentPackStore.LoadVersions(_contentDir, "u1.1"));
+        Assert.Empty(ContentPackStore.LoadVersions(_contentDir, "u1.2"));
+    }
+
+    [Fact]
+    public async Task RefreshNodeAsync_NodeAlreadyUpToDate_DownloadsNothing()
+    {
+        var course = NewCourse();
+        var pack = SamplePack("u1.1", "hello");
+        ContentPackStore.SaveVersion(_contentDir, ContentHash.Compute(pack), pack);
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>> { ["u1.1"] = new() { pack } });
+
+        var result = await fake.RefreshNodeAsync(course, "u1.1");
+
+        Assert.True(result.Success);
+        Assert.Empty(result.UpdatedNodeIds);
+    }
+
     private sealed class FakeContentSyncService : ContentSyncService
     {
         private readonly Dictionary<string, List<NodeContentPack>> _remoteNodes;

@@ -4,7 +4,6 @@ using Amazon.S3;
 using ApTutor.Client.Courses;
 using ApTutor.Client.Services;
 using ApTutor.Content;
-using ApTutor.ContentFactory;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
 using ApTutor.Scene;
@@ -321,11 +320,13 @@ public partial class MainWindow : Window
             ContentPanel.Children.Add(BuildPracticeItemBlock(item));
     }
 
-    /// Dev-only: right-click a node -> regenerate JUST its practice items live via Claude, saved as
-    /// an unverified pack (see RefreshContent's warning banner). Never touches Mock Exam's
-    /// verified-only serving path — a refreshed-but-unreviewed item is only ever visible here in
-    /// the detail pane, clearly labeled, until a human runs `review` and approves it.
-    private async void OnRefreshQuestionsClick(object? sender, RoutedEventArgs e)
+    /// Right-click a node -> pulls that node's latest approved set from S3, if there's anything new
+    /// — always S3, never Claude (see the Shell-display-only/course-authoring plan's Part E, which
+    /// retired the old live-Claude-backed dev tool this used to be: all content generation happens
+    /// exclusively in Content Admin now, with SME review, and the Shell only ever displays what was
+    /// approved there). Same underlying mechanism as the course-level "Refresh content" button
+    /// (ContentSyncService.RefreshNodeAsync), just scoped to one node.
+    private async void OnGetNewSetClick(object? sender, RoutedEventArgs e)
     {
         if (sender is not MenuItem { Tag: NodeItemVm vm }) return;
         var node = vm.Node;
@@ -333,33 +334,40 @@ public partial class MainWindow : Window
         _selectedNode = node;
         RefreshDetail();
 
-        var apiKey = Environment.GetEnvironmentVariable("ANTHROPIC_API_KEY");
-        var model = Environment.GetEnvironmentVariable("ANTHROPIC_MODEL");
-        if (string.IsNullOrWhiteSpace(apiKey) || string.IsNullOrWhiteSpace(model))
+        if (!TryResolveS3Config(out var bucket, out var region, out var configError))
         {
-            ShowContentMessage("⚠ Set ANTHROPIC_API_KEY and ANTHROPIC_MODEL to use Refresh questions (dev-only).", Brushes.DarkOrange);
+            ShowContentMessage(configError, Brushes.DarkOrange);
             return;
         }
 
-        ShowContentMessage($"⏳ Refreshing questions for {node.Id} via Claude ({model})...", Brushes.Gray);
+        ShowContentMessage($"⏳ Checking for new content for {node.Id}...", Brushes.Gray);
 
         try
         {
-            var generator = new Generator(new ClaudeClient(apiKey, model));
-            var newItems = await generator.RegeneratePracticeItemsAsync(_course.CourseId, node);
+            using var s3 = BuildS3Client(region);
+            var sync = new ContentSyncService(s3, bucket);
+            var result = await sync.RefreshNodeAsync(_course, node.Id);
 
-            var existing = ContentPackStore.TryLoad(_course.ContentDir, node.Id);
-            var pack = existing is { } e2
-                ? e2 with { PracticeItems = newItems, Verified = false, GeneratedAt = DateTimeOffset.UtcNow, Model = model }
-                : new NodeContentPack(_course.CourseId, node.Id, "generated", "", newItems, Array.Empty<VisualStep>(), false, DateTimeOffset.UtcNow, model);
-
-            ContentPackStore.Save(_course.ContentDir, pack);
-
-            if (_selectedNode?.Id == node.Id) RefreshDetail();
+            if (!result.Success)
+            {
+                ShowContentMessage(result.UserMessage!, Brushes.DarkRed);
+            }
+            else if (result.UpdatedNodeIds.Count == 0)
+            {
+                ShowContentMessage("More content coming.", Brushes.Gray);
+            }
+            else
+            {
+                if (_selectedNode?.Id == node.Id) RefreshDetail();
+                ShowContentMessage($"Pulled new content for {node.Id}.", Brushes.DarkGreen);
+            }
         }
         catch (Exception ex)
         {
-            ShowContentMessage($"⚠ Refresh failed: {ex.Message}", Brushes.DarkRed);
+            // ContentSyncService.RefreshNodeAsync already catches everything it can throw — this is
+            // a backstop for anything before/around it, same posture as OnRefreshContentClick.
+            Console.Error.WriteLine($"[OnGetNewSetClick] {ex}");
+            ShowContentMessage("You are offline. This app needs an internet connection. Til then you can review the previously downloaded content.", Brushes.DarkRed);
         }
     }
 

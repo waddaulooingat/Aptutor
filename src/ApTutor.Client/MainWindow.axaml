@@ -33,7 +33,7 @@
                 <ContextMenu>
                   <!-- Tag binds explicitly to the row's data item (UnitGroupVm or NodeItemVm) —
                        the handler no-ops for anything that isn't a NodeItemVm, e.g. a unit header. -->
-                  <MenuItem Header="Refresh questions (dev)" Click="OnRefreshQuestionsClick" Tag="{Binding}" />
+                  <MenuItem Header="Get new set" Click="OnGetNewSetClick" Tag="{Binding}" />
                 </ContextMenu>
               </TextBlock.ContextMenu>
             </TextBlock>

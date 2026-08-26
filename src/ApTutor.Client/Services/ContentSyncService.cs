@@ -28,7 +28,17 @@ public class ContentSyncService
         _bucket = bucket;
     }
 
-    public async Task<SyncResult> RefreshAsync(ICourseModule course, CancellationToken ct = default)
+    public Task<SyncResult> RefreshAsync(ICourseModule course, CancellationToken ct = default) =>
+        RefreshCoreAsync(course, nodeIdFilter: null, ct);
+
+    /// Node-scoped counterpart to RefreshAsync — pulls only what's missing for one node instead of
+    /// diffing the whole course. Backs the Shell's per-node right-click refresh, which always goes
+    /// through S3 now rather than a live Claude call (see the Shell-display-only/course-authoring
+    /// plan's Part E).
+    public Task<SyncResult> RefreshNodeAsync(ICourseModule course, string nodeId, CancellationToken ct = default) =>
+        RefreshCoreAsync(course, nodeId, ct);
+
+    private async Task<SyncResult> RefreshCoreAsync(ICourseModule course, string? nodeIdFilter, CancellationToken ct)
     {
         try
         {
@@ -36,6 +46,8 @@ public class ContentSyncService
             var toDownload = ContentSyncPlanner.ComputeNodesToDownload(
                 manifest,
                 (nodeId, hash) => ContentPackStore.VersionExists(course.ContentDir, nodeId, hash));
+            if (nodeIdFilter is not null)
+                toDownload = toDownload.Where(n => n.NodeId == nodeIdFilter).ToList();
 
             var actuallyUpdated = new List<string>();
             foreach (var node in toDownload)
