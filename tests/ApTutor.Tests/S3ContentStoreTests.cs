@@ -260,7 +260,11 @@ public class S3ContentStoreTests
     /// passing null! for it is safe because nothing here calls the base implementations.
     private sealed class FakeS3ContentStore : S3ContentStore
     {
-        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
+        // Must match ContentHash.CanonicalOptions exactly (not a separately-constructed lookalike)
+        // — production S3ContentStore serializes/deserializes through that shared instance
+        // specifically so the enum converter it carries (needed for SkillDag's NodeType) is applied
+        // consistently; a fake with its own slightly different options would round-trip incorrectly.
+        private static readonly JsonSerializerOptions JsonOptions = ContentHash.CanonicalOptions;
         private readonly Dictionary<string, (string Body, string ETag)> _objects = new(StringComparer.Ordinal);
         private int _etagCounter;
         private int _courseManifestConflictsSoFar;

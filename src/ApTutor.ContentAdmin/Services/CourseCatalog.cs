@@ -46,7 +46,9 @@ public sealed class CourseCatalog
         {
             var structure = await _store.TryGetLiveStructureAsync(courseId, ct);
             var graph = structure is not null ? new SkillGraph(structure) : null;
-            var displayName = structure?.Meta.Course ?? courseId;
+            // DisplayName, never Course — Course can be a non-compliant descriptive string (e.g.
+            // "AP World History: Modern"); see DagMeta's remarks.
+            var displayName = structure?.Meta.DisplayName ?? structure?.Meta.Course ?? courseId;
             courses[courseId] = new CourseInfo(courseId, displayName, graph);
         }
 

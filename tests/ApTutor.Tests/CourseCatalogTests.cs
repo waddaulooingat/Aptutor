@@ -97,7 +97,8 @@ public class CourseCatalogTests
     /// that actually touch IAmazonS3.
     private sealed class FakeS3ContentStore : S3ContentStore
     {
-        private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = false };
+        // Same options as production (see S3ContentStoreTests' identical fake for why).
+        private static readonly JsonSerializerOptions JsonOptions = ContentHash.CanonicalOptions;
         private readonly Dictionary<string, (string Body, string ETag)> _objects = new(StringComparer.Ordinal);
         private int _etagCounter;
 

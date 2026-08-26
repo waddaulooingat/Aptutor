@@ -16,9 +16,18 @@ public sealed record SkillDag(
     [property: JsonPropertyName("units")] IReadOnlyList<UnitInfo> Units,
     [property: JsonPropertyName("nodes")] IReadOnlyList<DagNode> Nodes);
 
+/// DisplayName is separate from Course deliberately — Course is free-form/descriptive (e.g. "AP
+/// World History: Modern", matching whatever the source standard actually calls itself) while
+/// DisplayName is what the Shell shows a student, which must never contain "AP"/"Advanced
+/// Placement" (trademark guardrail — see CsaCourseModule/WorldHistoryCourseModule's own remarks on
+/// this). Nullable/optional so DAG files written before this field existed still deserialize;
+/// callers fall back to Course when it's absent, which is only correct for courses whose Course
+/// value already happens to be compliant — a real course-authoring flow should always set this
+/// explicitly rather than relying on that fallback.
 public sealed record DagMeta(
     [property: JsonPropertyName("course")] string Course,
-    [property: JsonPropertyName("nodeCount")] int NodeCount);
+    [property: JsonPropertyName("nodeCount")] int NodeCount,
+    [property: JsonPropertyName("displayName")] string? DisplayName = null);
 
 public sealed record UnitInfo(
     [property: JsonPropertyName("unit")] int Unit,

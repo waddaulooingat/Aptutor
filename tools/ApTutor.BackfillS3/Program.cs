@@ -37,13 +37,17 @@ if (string.IsNullOrWhiteSpace(bucket) || string.IsNullOrWhiteSpace(region))
     return 1;
 }
 
-// courseId -> (local content directory, local DAG file name). Content dir matches
-// CsaCourseModule/WorldHistoryCourseModule's own defaults; DAG file name matches what
-// ApTutor.Curriculum ships — run this from the repo root.
-var courses = new Dictionary<string, (string ContentDir, string DagFileName)>
+// courseId -> (local content directory, local DAG file name, trademark-compliant display name).
+// Content dir matches CsaCourseModule/WorldHistoryCourseModule's own defaults; DAG file name
+// matches what ApTutor.Curriculum ships — run this from the repo root. Neither local DAG file has
+// meta.displayName set (it's a new field — see DagMeta's remarks), and meta.course for World
+// History is literally "AP World History: Modern", which must never be shown to a student directly
+// — so DisplayName is set explicitly here, matching what CsaCourseModule/WorldHistoryCourseModule
+// already hardcoded before this backfill existed.
+var courses = new Dictionary<string, (string ContentDir, string DagFileName, string DisplayName)>
 {
-    ["csa"] = (Path.Combine("src", "ApTutor.Client", "content", "csa"), "apcsa-skill-dag.json"),
-    ["worldhistory"] = (Path.Combine("src", "ApTutor.Client", "content", "worldhistory"), "apwh-skill-dag.json"),
+    ["csa"] = (Path.Combine("src", "ApTutor.Client", "content", "csa"), "apcsa-skill-dag.json", "Computer Science A"),
+    ["worldhistory"] = (Path.Combine("src", "ApTutor.Client", "content", "worldhistory"), "apwh-skill-dag.json", "World History"),
 };
 
 using var s3 = new AmazonS3Client(new AmazonS3Config { RegionEndpoint = RegionEndpoint.GetBySystemName(region) });
@@ -52,14 +56,15 @@ var store = new S3ContentStore(
 
 var uploaded = 0;
 var skipped = 0;
-foreach (var (courseId, (dir, dagFileName)) in courses)
+foreach (var (courseId, (dir, dagFileName, displayName)) in courses)
 {
     var dagPath = Path.Combine(AppContext.BaseDirectory, dagFileName);
     if (File.Exists(dagPath))
     {
         var graph = SkillDagLoader.Load(dagPath); // validates the DAG the same way Content Admin/the Shell would
-        await store.ApproveStructureAsync(courseId, graph.Dag);
-        Console.WriteLine($"[{courseId}] uploaded structure ({graph.Dag.Nodes.Count} nodes, {graph.Dag.Units.Count} units).");
+        var structure = graph.Dag with { Meta = graph.Dag.Meta with { DisplayName = displayName } };
+        await store.ApproveStructureAsync(courseId, structure);
+        Console.WriteLine($"[{courseId}] uploaded structure ({structure.Nodes.Count} nodes, {structure.Units.Count} units, display name '{displayName}').");
     }
     else
     {
