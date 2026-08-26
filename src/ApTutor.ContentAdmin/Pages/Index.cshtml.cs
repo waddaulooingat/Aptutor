@@ -10,7 +10,12 @@ public enum NodeReviewStatus { NotStarted, Generating, PendingReview, Live }
 
 public sealed record NodeRow(string NodeId, string Title, NodeReviewStatus Status);
 public sealed record UnitGroup(int Unit, string Title, IReadOnlyList<NodeRow> Nodes);
-public sealed record CourseSection(string CourseId, string DisplayName, IReadOnlyList<UnitGroup> Units);
+
+/// HasStructure is false for a course that exists (it's in the S3 course index) but has no approved
+/// DAG yet — e.g. one just created via "Create new course" (unit list approved, no nodes filled in
+/// per unit yet). Units is empty in that case; the view shows a distinct message rather than an
+/// unexplained blank section.
+public sealed record CourseSection(string CourseId, string DisplayName, bool HasStructure, IReadOnlyList<UnitGroup> Units);
 
 // Only OnPostGenerateUnitAsync spends real, billed API money — see Program.cs for why this
 // attribute (which applies to every handler on this page, not just that one) is the right
@@ -52,11 +57,11 @@ public sealed class IndexModel : PageModel
     /// afterward — this only bulks the "kick off generation" step, nothing downstream of it.
     public async Task<IActionResult> OnPostGenerateUnitAsync(string course, int unit)
     {
-        if (!_catalog.TryGet(course, out var courseInfo))
+        if (!_catalog.TryGet(course, out var courseInfo) || courseInfo.Graph is not { } graph)
             return NotFound();
 
         var manifest = await _store.GetCourseManifestAsync(course);
-        foreach (var node in courseInfo.Graph.Dag.Nodes.Where(n => n.Unit == unit))
+        foreach (var node in graph.Dag.Nodes.Where(n => n.Unit == unit))
         {
             if (StatusFor(course, node, manifest) == NodeReviewStatus.NotStarted)
                 _generation.TryStartGeneration(course, node.Id);
@@ -67,9 +72,12 @@ public sealed class IndexModel : PageModel
 
     private CourseSection BuildSection(CourseInfo course, CourseManifest manifest)
     {
-        var unitTitles = course.Graph.Dag.Units.ToDictionary(u => u.Unit, u => u.Title);
+        if (course.Graph is not { } graph)
+            return new CourseSection(course.CourseId, course.DisplayName, HasStructure: false, Array.Empty<UnitGroup>());
 
-        var units = course.Graph.Dag.Nodes
+        var unitTitles = graph.Dag.Units.ToDictionary(u => u.Unit, u => u.Title);
+
+        var units = graph.Dag.Nodes
             .GroupBy(n => n.Unit)
             .OrderBy(g => g.Key)
             .Select(g => new UnitGroup(
@@ -80,7 +88,7 @@ public sealed class IndexModel : PageModel
                     .ToList()))
             .ToList();
 
-        return new CourseSection(course.CourseId, course.DisplayName, units);
+        return new CourseSection(course.CourseId, course.DisplayName, HasStructure: true, units);
     }
 
     private NodeReviewStatus StatusFor(string courseId, DagNode node, CourseManifest manifest)

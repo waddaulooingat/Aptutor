@@ -85,6 +85,14 @@ public class S3ContentStore
         return manifest ?? CourseManifest.Empty(SchemaVersion);
     }
 
+    /// The bucket-wide index of every course that's ever had anything approved — see CourseCatalog,
+    /// which uses this to discover the course list from S3 instead of a static appsettings.json map.
+    public async Task<TopLevelManifest> GetTopLevelManifestAsync(CancellationToken ct = default)
+    {
+        var (manifest, _) = await TryGetObjectAsync<TopLevelManifest>("manifest.json", ct);
+        return manifest ?? TopLevelManifest.Empty(SchemaVersion);
+    }
+
     /// Resolves the most recently-approved version from the course manifest and fetches that exact
     /// versioned object — a node can have several independently-approved versions now (see the
     /// multi-set library plan), this always returns the newest one, e.g. for Content Admin's Review

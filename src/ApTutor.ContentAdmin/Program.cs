@@ -105,12 +105,12 @@ app.MapRazorPages();
 // Fail fast at startup on a real S3 misconfiguration (wrong bucket, revoked credentials) rather
 // than surfacing as a confusing 403/404 on the first SME's first click — see
 // S3ContentStore.ValidateConnectivityAsync for why this matters specifically for S3's 403-vs-404
-// behavior on a missing key. CourseCatalog is also constructed eagerly here to fail fast on a bad
-// DAG file, same as before.
+// behavior on a missing key. CourseCatalog's first RefreshAsync also happens here, eagerly, so a
+// broken course discovery fails loud at boot rather than surfacing as an empty course list.
 using (var scope = app.Services.CreateScope())
 {
     await scope.ServiceProvider.GetRequiredService<S3ContentStore>().ValidateConnectivityAsync();
-    scope.ServiceProvider.GetRequiredService<CourseCatalog>();
+    await scope.ServiceProvider.GetRequiredService<CourseCatalog>().RefreshAsync();
 }
 
 app.Run();

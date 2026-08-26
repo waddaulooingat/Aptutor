@@ -3,8 +3,8 @@ using ApTutor.ContentAdmin.Services;
 using ApTutor.ContentFactory;
 using ApTutor.Platform;
 using ApTutor.Scene;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace ApTutor.Tests;
@@ -19,14 +19,11 @@ public class ContentGenerationServiceTests
     {
         var client = new ClaudeClient("unused-test-key", "unused-test-model");
         var generator = new Generator(client);
-        var config = new ConfigurationBuilder()
-            .AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["ContentAdmin:Courses:csa:DisplayName"] = "Computer Science A",
-                ["ContentAdmin:Courses:csa:DagPath"] = "apcsa-skill-dag.json",
-            })
-            .Build();
-        var catalog = new CourseCatalog(config);
+        // CourseCatalog isn't actually exercised by these tests (ClearJob doesn't touch it) — just
+        // needs to exist to satisfy ContentGenerationService's constructor. IAmazonS3 is never
+        // called since nothing here invokes CourseCatalog.RefreshAsync.
+        var store = new S3ContentStore(null!, Options.Create(new S3ContentStoreOptions { Bucket = "test-bucket", Region = "us-east-1" }), NullLogger<S3ContentStore>.Instance);
+        var catalog = new CourseCatalog(store, NullLogger<CourseCatalog>.Instance);
         return new ContentGenerationService(generator, catalog, NullLogger<ContentGenerationService>.Instance);
     }
 

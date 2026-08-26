@@ -222,14 +222,14 @@ public sealed class ReviewModel : PageModel
         actionResult = null;
         courseInfo = null!;
 
-        if (!_catalog.TryGet(course, out courseInfo) || !courseInfo.Graph.Exists(node))
+        if (!_catalog.TryGet(course, out courseInfo) || courseInfo.Graph is not { } graph || !graph.Exists(node))
         {
             actionResult = NotFound();
             return false;
         }
 
         CourseDisplayName = courseInfo.DisplayName;
-        NodeTitle = courseInfo.Graph.Node(node).Title;
+        NodeTitle = graph.Node(node).Title;
         return true;
     }
 }

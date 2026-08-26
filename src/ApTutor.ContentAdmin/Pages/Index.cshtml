@@ -9,13 +9,17 @@
 
 @if (Model.Courses.Count == 0)
 {
-    <p class="notice">No courses are configured yet.</p>
+    <p class="notice">No courses exist yet.</p>
 }
 
 @foreach (var course in Model.Courses)
 {
     <section class="card">
         <h2>@course.DisplayName</h2>
+        @if (!course.HasStructure)
+        {
+            <p class="notice">This course has no unit structure yet — use "Generate unit structure" to add units before generating content.</p>
+        }
         @foreach (var unit in course.Units)
         {
             var notStartedCount = unit.Nodes.Count(n => n.Status == ApTutor.ContentAdmin.Pages.NodeReviewStatus.NotStarted);
