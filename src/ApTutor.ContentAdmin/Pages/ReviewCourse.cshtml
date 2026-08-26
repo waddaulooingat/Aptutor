@@ -1,0 +1,48 @@
+@page
+@model ApTutor.ContentAdmin.Pages.ReviewCourseModel
+@{
+    ViewData["Title"] = "Review new course";
+}
+
+<p><a href="/">&larr; Back to topics</a></p>
+<h1>Review new course</h1>
+<p class="notice">@Model.DisplayName (@Model.CourseName) &mdash; id: @Model.CourseId</p>
+
+@if (Model.Error is not null)
+{
+    <p class="error">@Model.Error</p>
+}
+@if (Model.Notice is not null)
+{
+    <p class="notice">@Model.Notice</p>
+}
+
+<div class="card">
+    <p class="notice">
+        This creates curriculum only — units and their titles, no topics or content yet. Uncheck
+        "Keep" to drop a unit, or edit its title directly. Once approved, use "Generate new unit"
+        per unit to fill each one in. If this course needs bespoke interactive engineering (like CS
+        A's live code tracer), that's a separate, hand-built effort this tool can't produce.
+    </p>
+
+    <form method="post" asp-page-handler="Approve">
+        <input type="hidden" name="course" value="@Model.CourseId" />
+
+        @foreach (var unit in Model.ProposedUnits)
+        {
+            <div class="card">
+                <label>
+                    <input type="checkbox" name="keep_@unit.Unit" value="true" checked />
+                    Keep Unit @unit.Unit
+                </label>
+
+                <label for="title_@unit.Unit">Title</label>
+                <input type="text" id="title_@unit.Unit" name="title_@unit.Unit" value="@unit.Title" />
+            </div>
+        }
+
+        <div class="actions">
+            <button type="submit" class="btn-approve">Create course</button>
+        </div>
+    </form>
+</div>

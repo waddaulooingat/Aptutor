@@ -14,6 +14,8 @@ public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
 public sealed record GeneratedUnitNode(string Id, string Title, string Type, IReadOnlyList<string> Prereqs, string Viz);
 public sealed record GeneratedUnitStructure(IReadOnlyList<GeneratedUnitNode> Nodes);
+public sealed record GeneratedCourseUnit(int Unit, string Title);
+public sealed record GeneratedCourseUnitList(IReadOnlyList<GeneratedCourseUnit> Units);
 
 public sealed class Generator
 {
@@ -95,5 +97,34 @@ public sealed class Generator
         }
 
         return result;
+    }
+
+    /// Content Admin's "Create new course" (see the Shell-display-only/course-authoring plan's
+    /// Part C) — the top-level entry point, one level above GenerateUnitStructureAsync: drafts only
+    /// the unit list (a course's table of contents), never any unit's node structure.
+    public async Task<IReadOnlyList<UnitInfo>> GenerateCourseUnitListAsync(string courseId, string courseName, string? guidance, CancellationToken ct = default)
+    {
+        var schema = GenerationSchema.CourseUnitListSchema();
+        var system = PromptTemplates.System(courseId);
+        var user = PromptTemplates.ForCourse(courseName, guidance);
+
+        var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_course_units", ct);
+        var generated = JsonSerializer.Deserialize<GeneratedCourseUnitList>(inputJson.GetRawText(), ParseOptions)
+            ?? throw new InvalidOperationException("Claude returned an empty/unparsable unit-list block.");
+
+        if (generated.Units.Count == 0)
+            throw new InvalidOperationException("Claude returned zero units for the new course.");
+
+        var seenUnitNumbers = new HashSet<int>();
+        var result = new List<UnitInfo>(generated.Units.Count);
+        foreach (var raw in generated.Units)
+        {
+            if (!seenUnitNumbers.Add(raw.Unit))
+                throw new InvalidOperationException($"Claude generated a duplicate unit number {raw.Unit}.");
+
+            result.Add(new UnitInfo(raw.Unit, raw.Title));
+        }
+
+        return result.OrderBy(u => u.Unit).ToList();
     }
 }

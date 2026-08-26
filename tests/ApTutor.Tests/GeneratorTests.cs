@@ -192,4 +192,80 @@ public class GeneratorTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => generator.GenerateUnitStructureAsync("worldhistory", 2, "Networks of Exchange", Array.Empty<DagNode>(), guidance: null));
     }
+
+    // GenerateCourseUnitListAsync (see the Shell-display-only/course-authoring plan's Part C) —
+    // drafts only a course's unit list (table of contents), never any node structure.
+    private const string CourseUnitListResponse = """
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "emit_course_units",
+                    "input": {
+                        "units": [
+                            { "unit": 1, "title": "Kinematics" },
+                            { "unit": 2, "title": "Dynamics" }
+                        ]
+                    }
+                }
+            ]
+        }
+        """;
+
+    [Fact]
+    public async Task GenerateCourseUnitListAsync_ParsesCannedResponseIntoUnitInfos()
+    {
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(CourseUnitListResponse));
+        var generator = new Generator(client);
+
+        var units = await generator.GenerateCourseUnitListAsync("physics1", "AP Physics 1", guidance: null);
+
+        Assert.Equal(2, units.Count);
+        Assert.Equal(1, units[0].Unit);
+        Assert.Equal("Kinematics", units[0].Title);
+        Assert.Equal(2, units[1].Unit);
+        Assert.Equal("Dynamics", units[1].Title);
+    }
+
+    [Fact]
+    public async Task GenerateCourseUnitListAsync_OutOfOrderResponse_IsSortedByUnitNumber()
+    {
+        const string outOfOrderResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_course_units", "input": {
+                "units": [ { "unit": 2, "title": "Second" }, { "unit": 1, "title": "First" } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(outOfOrderResponse));
+        var generator = new Generator(client);
+
+        var units = await generator.GenerateCourseUnitListAsync("physics1", "AP Physics 1", guidance: null);
+
+        Assert.Equal(new[] { 1, 2 }, units.Select(u => u.Unit));
+    }
+
+    [Fact]
+    public async Task GenerateCourseUnitListAsync_DuplicateUnitNumber_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_course_units", "input": {
+                "units": [ { "unit": 1, "title": "First" }, { "unit": 1, "title": "Duplicate" } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateCourseUnitListAsync("physics1", "AP Physics 1", guidance: null));
+    }
+
+    [Fact]
+    public async Task GenerateCourseUnitListAsync_ZeroUnits_Throws()
+    {
+        const string emptyResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_course_units", "input": { "units": [] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(emptyResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateCourseUnitListAsync("physics1", "AP Physics 1", guidance: null));
+    }
 }

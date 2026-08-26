@@ -47,6 +47,32 @@ public static class GenerationSchema
         },
     };
 
+    /// Content Admin's "Create new course" (see the Shell-display-only/course-authoring plan's
+    /// Part C) — just a unit list (number + title), no node structure.
+    public static JsonNode CourseUnitListSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["required"] = new JsonArray { "units" },
+        ["properties"] = new JsonObject
+        {
+            ["units"] = new JsonObject
+            {
+                ["type"] = "array",
+                ["minItems"] = 1,
+                ["items"] = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["required"] = new JsonArray { "unit", "title" },
+                    ["properties"] = new JsonObject
+                    {
+                        ["unit"] = new JsonObject { ["type"] = "integer", ["minimum"] = 1 },
+                        ["title"] = new JsonObject { ["type"] = "string" },
+                    },
+                },
+            },
+        },
+    };
+
     /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring
     /// plan's Part B). Like NodeContentSchema, this is a guide — real enforcement (id prefix,
     /// duplicate ids, valid NodeType, and full prereq/cycle validation across the whole merged

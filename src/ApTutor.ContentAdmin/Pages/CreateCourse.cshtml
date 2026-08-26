@@ -1,0 +1,39 @@
+@page
+@model ApTutor.ContentAdmin.Pages.CreateCourseModel
+@{
+    ViewData["Title"] = "Create new course";
+}
+
+<p><a href="/">&larr; Back to topics</a></p>
+<h1>Create new course</h1>
+
+@if (Model.Error is not null)
+{
+    <p class="error">@Model.Error</p>
+}
+
+<div class="card">
+    <p class="notice">
+        Drafts a unit list (table of contents) for a brand-new course — no topics or content yet.
+        Once created, use "Generate new unit" per unit to fill it in, same as any existing course.
+        This creates curriculum only: if the course needs bespoke interactive engineering (like CS
+        A's live code tracer), that's a separate, hand-built effort this tool can't produce.
+    </p>
+    <form method="post">
+        <label for="courseId">Course id (lowercase, no spaces)</label>
+        <input type="text" id="courseId" name="courseId" placeholder="e.g. physics1" required />
+
+        <label for="courseName">Course name</label>
+        <input type="text" id="courseName" name="courseName" placeholder="e.g. AP Physics 1" required />
+
+        <label for="displayName">Display name (shown to students &mdash; no &quot;AP&quot;/&quot;Advanced Placement&quot;)</label>
+        <input type="text" id="displayName" name="displayName" placeholder="e.g. Physics 1" required />
+
+        <label for="guidance">Additional guidance (optional)</label>
+        <textarea id="guidance" name="guidance" rows="3"></textarea>
+
+        <div class="actions">
+            <button type="submit" class="btn-primary">Generate unit list</button>
+        </div>
+    </form>
+</div>

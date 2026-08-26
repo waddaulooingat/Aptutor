@@ -28,6 +28,19 @@ public static class PromptTemplates
         this node's title.
         """;
 
+    /// Content Admin's "Create new course" (see the Shell-display-only/course-authoring plan's
+    /// Part C) — the top-level entry point, one level above "Generate unit structure": drafts only
+    /// a course's unit list (its table of contents), not any unit's node structure.
+    public static string ForCourse(string courseName, string? guidance) => $"""
+        Draft the unit list (table of contents) for a new course:
+
+        course: {courseName}
+        {(string.IsNullOrWhiteSpace(guidance) ? "" : $"additional guidance from the reviewer: {guidance}\n")}
+        List the units in the order a student should take them, numbered starting at 1. Give each a
+        short, clear title describing its scope. Do not generate any topics/nodes within a unit —
+        only the unit list itself, nothing more.
+        """;
+
     /// Content Admin's "Generate unit structure" (one level above per-node content generation —
     /// see the Shell-display-only/course-authoring plan's Part B). existingNodes gives the model
     /// real node ids it can reference in prereqs; it's never trusted to invent cross-unit prereqs
