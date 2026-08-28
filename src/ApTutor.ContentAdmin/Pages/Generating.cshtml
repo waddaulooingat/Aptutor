@@ -8,18 +8,18 @@
     }
 }
 
-<p><a href="/Review?course=@Model.CourseId&node=@Model.NodeId">&larr; Back to topic</a></p>
+<p><a href="/Review?course=@Model.CourseId&node=@Model.NodeId&difficulty=@Model.Difficulty">&larr; Back to topic</a></p>
 
 @if (Model.IsRunning)
 {
     <div class="card">
-        <p class="spinner-text">Generating content for this topic&hellip; this page will refresh on its own.</p>
+        <p class="spinner-text">Generating @Model.Difficulty content for this topic&hellip; this page will refresh on its own.</p>
     </div>
 }
 else
 {
     <div class="card">
         <p class="error">Generation failed: @Model.Error</p>
-        <p><a href="/Review?course=@Model.CourseId&node=@Model.NodeId">Go back and try again</a></p>
+        <p><a href="/Review?course=@Model.CourseId&node=@Model.NodeId&difficulty=@Model.Difficulty">Go back and try again</a></p>
     </div>
 }

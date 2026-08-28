@@ -63,6 +63,20 @@ h2 { font-size: 1.1rem; margin-top: 1.5rem; }
 .generate-unit-form { margin: 0; }
 .generate-unit-form .link-button { font-size: 0.85rem; }
 
+.difficulty-tabs { display: flex; gap: 6px; margin: 12px 0; }
+.difficulty-tab {
+    display: inline-block;
+    padding: 4px 14px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+.difficulty-tab-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.difficulty-badges { display: flex; gap: 6px; }
+.difficulty-badge { font-size: 0.75rem; padding: 2px 8px; border-radius: 999px; }
+
 .node-list { list-style: none; margin: 8px 0; padding: 0; }
 .node-row {
     display: flex;

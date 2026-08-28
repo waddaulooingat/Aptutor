@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text;
+using ApTutor.Content;
 using ApTutor.ContentFactory;
 using ApTutor.Curriculum;
 using Xunit;
@@ -62,13 +63,14 @@ public class GeneratorTests
         var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(CannedResponse));
         var generator = new Generator(client);
 
-        var pack = await generator.GenerateAsync("csa", SampleNode);
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Hard);
 
         Assert.Equal("csa", pack.CourseId);
         Assert.Equal("u1.2", pack.NodeId);
         Assert.False(pack.Verified); // always starts unverified — the reviewer flips this
         Assert.Equal("fake-model", pack.Model);
         Assert.Equal("Variables hold typed values.", pack.WalkthroughText);
+        Assert.Equal(Difficulty.Hard, pack.Difficulty); // assigned from the caller, not parsed from the model
 
         var item = Assert.Single(pack.PracticeItems);
         Assert.Equal("u1.2-q1", item.Id); // assigned by us, not the model
@@ -96,7 +98,7 @@ public class GeneratorTests
         // Missing required practiceItems/walkthroughSteps -> deserialization leaves them null ->
         // the .Select(...) call on a null list throws, which is the desired "fail loudly, don't
         // silently ship half-generated content" behavior.
-        await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode));
+        await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium));
     }
 
     // GenerateUnitStructureAsync (see the Shell-display-only/course-authoring plan's Part B) —

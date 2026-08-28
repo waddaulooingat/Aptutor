@@ -23,12 +23,12 @@ static void PrintUsage() => Console.WriteLine("""
     ApTutor.ContentFactory — Phase 7 build-time content generator/reviewer.
 
     Usage:
-      generate --dag <skill-dag.json> --course <courseId> --content <content-dir> [--units 1-5] --model <model-id>
+      generate --dag <skill-dag.json> --course <courseId> --content <content-dir> [--units 1-5] [--difficulty easy|medium|hard] --model <model-id>
       review   --content <content-dir>
 
     generate calls the live Claude API (needs ANTHROPIC_API_KEY set in the environment — this is
     real, billed spend on your own account) and writes one "<nodeId>.json" file per DAG node under
-    --content, each starting unverified.
+    --content, each starting unverified. --difficulty defaults to "medium" if omitted.
 
     review walks every unverified file under --content and lets you approve, reject (delete), or
     skip each one. Only approved (Verified: true) files are ever served to the running app — see
@@ -68,17 +68,21 @@ static async Task<int> RunGenerateAsync(string[] args)
     if (nodeList.Count == 0)
         return Fail("No nodes matched --units.");
 
+    var difficulty = Difficulty.Medium;
+    if (opts.TryGetValue("difficulty", out var difficultySpec) && !Enum.TryParse(difficultySpec, ignoreCase: true, out difficulty))
+        return Fail($"--difficulty must be one of: easy, medium, hard (got '{difficultySpec}').");
+
     var client = new ClaudeClient(apiKey, model);
     var generator = new Generator(client);
 
-    Console.WriteLine($"Generating content for {nodeList.Count} node(s) into '{contentDir}' using model '{model}'...");
+    Console.WriteLine($"Generating {difficulty} content for {nodeList.Count} node(s) into '{contentDir}' using model '{model}'...");
     var failures = 0;
     foreach (var node in nodeList)
     {
         Console.Write($"  {node.Id} ... ");
         try
         {
-            var pack = await generator.GenerateAsync(courseId, node);
+            var pack = await generator.GenerateAsync(courseId, node, difficulty);
             ContentPackStore.Save(contentDir, pack);
             Console.WriteLine("done (unverified — run 'review' next).");
         }

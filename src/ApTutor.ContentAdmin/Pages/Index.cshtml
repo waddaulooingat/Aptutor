@@ -28,36 +28,48 @@
         }
         @foreach (var unit in course.Units)
         {
-            var notStartedCount = unit.Nodes.Count(n => n.Status == ApTutor.ContentAdmin.Pages.NodeReviewStatus.NotStarted);
             <div class="unit-header">
                 <p class="unit-heading">Unit @unit.Unit — @unit.Title</p>
-                @if (notStartedCount > 0)
-                {
-                    <form method="post" asp-page-handler="GenerateUnit" asp-route-course="@course.CourseId" asp-route-unit="@unit.Unit" class="generate-unit-form">
-                        <button type="submit" class="link-button">Generate remaining (@notStartedCount)</button>
-                    </form>
-                }
+                <div class="difficulty-badges">
+                    @foreach (var d in ApTutor.ContentAdmin.Pages.Difficulties.All)
+                    {
+                        var count = unit.NotStartedCount(d);
+                        if (count > 0)
+                        {
+                            <form method="post" asp-page-handler="GenerateUnit" asp-route-course="@course.CourseId" asp-route-unit="@unit.Unit" asp-route-difficulty="@d" class="generate-unit-form">
+                                <button type="submit" class="link-button">Generate remaining @d (@count)</button>
+                            </form>
+                        }
+                    }
+                </div>
             </div>
             <ul class="node-list">
                 @foreach (var node in unit.Nodes)
                 {
                     <li class="node-row">
                         <a href="/Review?course=@course.CourseId&node=@node.NodeId">@node.Title</a>
-                        @switch (node.Status)
-                        {
-                            case ApTutor.ContentAdmin.Pages.NodeReviewStatus.Generating:
-                                <span class="badge badge-pending">Generating…</span>
-                                break;
-                            case ApTutor.ContentAdmin.Pages.NodeReviewStatus.PendingReview:
-                                <span class="badge badge-pending">Pending review</span>
-                                break;
-                            case ApTutor.ContentAdmin.Pages.NodeReviewStatus.Live:
-                                <span class="badge badge-live">Live</span>
-                                break;
-                            default:
-                                <span class="badge badge-empty">Not started</span>
-                                break;
-                        }
+                        <div class="difficulty-badges">
+                            @foreach (var d in ApTutor.ContentAdmin.Pages.Difficulties.All)
+                            {
+                                <a href="/Review?course=@course.CourseId&node=@node.NodeId&difficulty=@d" style="text-decoration: none;">
+                                    @switch (node.StatusByDifficulty[d])
+                                    {
+                                        case ApTutor.ContentAdmin.Pages.NodeReviewStatus.Generating:
+                                            <span class="badge badge-pending difficulty-badge">@d: generating…</span>
+                                            break;
+                                        case ApTutor.ContentAdmin.Pages.NodeReviewStatus.PendingReview:
+                                            <span class="badge badge-pending difficulty-badge">@d: pending</span>
+                                            break;
+                                        case ApTutor.ContentAdmin.Pages.NodeReviewStatus.Live:
+                                            <span class="badge badge-live difficulty-badge">@d: live</span>
+                                            break;
+                                        default:
+                                            <span class="badge badge-empty difficulty-badge">@d: not started</span>
+                                            break;
+                                    }
+                                </a>
+                            }
+                        </div>
                     </li>
                 }
             </ul>

@@ -1,3 +1,4 @@
+using ApTutor.Content;
 using ApTutor.Curriculum;
 
 namespace ApTutor.ContentFactory;
@@ -18,7 +19,7 @@ public static class PromptTemplates
         you'd say it out loud while teaching.
         """;
 
-    public static string ForNode(DagNode node) => $"""
+    public static string ForNode(DagNode node, Difficulty difficulty) => $"""
         Generate practice items, an explanation, and an animated walkthrough for this curriculum node:
 
         {NodeSummary(node)}
@@ -26,7 +27,29 @@ public static class PromptTemplates
         Assume the student has already mastered every listed prereq, but nothing beyond that. The
         walkthrough should center on the "{node.Viz}" primitive named above and directly illustrate
         this node's title.
+
+        Target difficulty for the practice items: {DifficultyGuidance(difficulty)}
         """;
+
+    /// Difficulty only shapes how demanding the practice items are (see the difficulty-levels plan)
+    /// — the walkthrough/explanation itself stays a clear, correct teaching of the concept regardless
+    /// of difficulty, since a harder walkthrough would just make a "hard" node illegible rather than
+    /// more rigorous.
+    private static string DifficultyGuidance(Difficulty difficulty) => difficulty switch
+    {
+        Difficulty.Easy =>
+            "EASY. Straightforward, single-step recall or direct application of the concept just " +
+            "explained. The correct answer should be clear to a student who understood the " +
+            "walkthrough; distractors should be plausible but not tricky.",
+        Difficulty.Hard =>
+            "HARD. Multi-step reasoning, edge cases, or combining this concept with an earlier " +
+            "prereq. Distractors should reflect common misconceptions a student could plausibly " +
+            "believe, not just be obviously wrong.",
+        _ =>
+            "MEDIUM. A step beyond pure recall — requires applying the concept to a situation that " +
+            "isn't identical to the walkthrough's example, but doesn't require combining multiple " +
+            "concepts.",
+    };
 
     /// Content Admin's "Create new course" (see the Shell-display-only/course-authoring plan's
     /// Part C) — the top-level entry point, one level above "Generate unit structure": drafts only

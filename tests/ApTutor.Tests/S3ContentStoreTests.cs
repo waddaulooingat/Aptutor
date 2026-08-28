@@ -40,7 +40,7 @@ public class S3ContentStoreTests
         var courseManifest = await store.GetCourseManifestAsync("csa");
         Assert.True(courseManifest.Nodes.ContainsKey("u1.1"));
 
-        var live = await store.TryGetLiveNodeAsync("csa", "u1.1");
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Medium);
         Assert.NotNull(live);
         Assert.Equal("first explanation", live!.WalkthroughText);
     }
@@ -98,7 +98,7 @@ public class S3ContentStoreTests
         Assert.True(store.ObjectCount > objectCountAfterFirst);
 
         // TryGetLiveNodeAsync resolves to the newest version...
-        var live = await store.TryGetLiveNodeAsync("csa", "u1.1");
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Medium);
         Assert.Equal("version two", live!.WalkthroughText);
 
         // ...but the manifest keeps BOTH versions, not just the latest — a node accumulates a
@@ -129,7 +129,39 @@ public class S3ContentStoreTests
     {
         var store = new FakeS3ContentStore();
 
-        Assert.Null(await store.TryGetLiveNodeAsync("csa", "never-approved"));
+        Assert.Null(await store.TryGetLiveNodeAsync("csa", "never-approved", Difficulty.Medium));
+    }
+
+    [Fact]
+    public async Task ApproveNodeAsync_DifficultyIsolated_QueryingAnotherDifficultyReturnsNull()
+    {
+        // A node approved at "hard" must not show up as live at "medium" — difficulty is a real
+        // scoping axis on top of the existing multi-set versioning, not just a label (see the
+        // difficulty-levels plan).
+        var store = new FakeS3ContentStore();
+        var hardPack = SamplePack("u1.1", "hard set") with { Difficulty = Difficulty.Hard };
+
+        await store.ApproveNodeAsync("csa", "u1.1", hardPack);
+
+        Assert.Null(await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Medium));
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Hard);
+        Assert.Equal("hard set", live!.WalkthroughText);
+    }
+
+    [Fact]
+    public async Task ApproveNodeAsync_SameNodeDifferentDifficulties_BothAccumulateIndependently()
+    {
+        var store = new FakeS3ContentStore();
+        var easyPack = SamplePack("u1.1", "easy set") with { Difficulty = Difficulty.Easy };
+        var hardPack = SamplePack("u1.1", "hard set") with { Difficulty = Difficulty.Hard };
+
+        await store.ApproveNodeAsync("csa", "u1.1", easyPack);
+        await store.ApproveNodeAsync("csa", "u1.1", hardPack);
+
+        var manifest = await store.GetCourseManifestAsync("csa");
+        Assert.Equal(2, manifest.Nodes["u1.1"].Versions.Count);
+        Assert.Equal("easy set", (await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Easy))!.WalkthroughText);
+        Assert.Equal("hard set", (await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Hard))!.WalkthroughText);
     }
 
     private static SkillDag SampleStructure(string courseTitle, int nodeCount = 1) => new(
@@ -197,7 +229,7 @@ public class S3ContentStoreTests
 
         await store.ApproveStructureAsync("csa", SampleStructure("Computer Science A"));
 
-        var live = await store.TryGetLiveNodeAsync("csa", "u1.1");
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Medium);
         Assert.Equal("explanation", live!.WalkthroughText);
     }
 

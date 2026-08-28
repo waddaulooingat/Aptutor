@@ -1,3 +1,4 @@
+using ApTutor.Content;
 using ApTutor.ContentAdmin.Services;
 using ApTutor.Curriculum;
 using Microsoft.AspNetCore.Mvc;
@@ -8,8 +9,21 @@ namespace ApTutor.ContentAdmin.Pages;
 
 public enum NodeReviewStatus { NotStarted, Generating, PendingReview, Live }
 
-public sealed record NodeRow(string NodeId, string Title, NodeReviewStatus Status);
-public sealed record UnitGroup(int Unit, string Title, IReadOnlyList<NodeRow> Nodes);
+// Status is now per difficulty, not a single value — a node can be Live at "medium" while still
+// NotStarted at "hard" (see the difficulty-levels plan). AllDifficulties gives the view a stable
+// iteration order without hardcoding the enum's members in the .cshtml.
+public static class Difficulties
+{
+    public static readonly IReadOnlyList<Difficulty> All = new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
+}
+
+public sealed record NodeRow(string NodeId, string Title, IReadOnlyDictionary<Difficulty, NodeReviewStatus> StatusByDifficulty);
+public sealed record UnitGroup(int Unit, string Title, IReadOnlyList<NodeRow> Nodes)
+{
+    /// How many nodes in this unit are NotStarted at a given difficulty — backs the per-difficulty
+    /// "Generate remaining" bulk action below.
+    public int NotStartedCount(Difficulty difficulty) => Nodes.Count(n => n.StatusByDifficulty[difficulty] == NodeReviewStatus.NotStarted);
+}
 
 /// HasStructure is false for a course that exists (it's in the S3 course index) but has no approved
 /// DAG yet — e.g. one just created via "Create new course" (unit list approved, no nodes filled in
@@ -49,13 +63,16 @@ public sealed class IndexModel : PageModel
         Courses = sections;
     }
 
-    /// Bulk-triggers Generate for every "Not started" node in one unit — a convenience over
-    /// clicking into each node's Review page individually when building out a course's content
-    /// library unit by unit. Each node still gets its own independent background job exactly like a
-    /// single Generate click (TryStartGeneration already refuses a duplicate for a node that's
-    /// already got one), and every draft still needs its own individual human review/approve
-    /// afterward — this only bulks the "kick off generation" step, nothing downstream of it.
-    public async Task<IActionResult> OnPostGenerateUnitAsync(string course, int unit)
+    /// Bulk-triggers Generate for every "Not started" node in one unit, at one chosen difficulty —
+    /// a convenience over clicking into each node's Review page individually when building out a
+    /// course's content library unit by unit. Scoped to a single difficulty per click (not "every
+    /// difficulty at once") since each difficulty is its own independent generation job and review
+    /// pass — bulk-firing all three at once would triple the SME's simultaneous review queue with
+    /// no way to ask for just one. Each node still gets its own independent background job exactly
+    /// like a single Generate click (TryStartGeneration already refuses a duplicate for a
+    /// node+difficulty that's already got one), and every draft still needs its own individual
+    /// human review/approve afterward — this only bulks the "kick off generation" step.
+    public async Task<IActionResult> OnPostGenerateUnitAsync(string course, int unit, Difficulty difficulty)
     {
         if (!_catalog.TryGet(course, out var courseInfo) || courseInfo.Graph is not { } graph)
             return NotFound();
@@ -63,8 +80,8 @@ public sealed class IndexModel : PageModel
         var manifest = await _store.GetCourseManifestAsync(course);
         foreach (var node in graph.Dag.Nodes.Where(n => n.Unit == unit))
         {
-            if (StatusFor(course, node, manifest) == NodeReviewStatus.NotStarted)
-                _generation.TryStartGeneration(course, node.Id);
+            if (StatusFor(course, node, difficulty, manifest) == NodeReviewStatus.NotStarted)
+                _generation.TryStartGeneration(course, node.Id, difficulty);
         }
 
         return RedirectToPage("/Index");
@@ -84,22 +101,26 @@ public sealed class IndexModel : PageModel
                 g.Key,
                 unitTitles.TryGetValue(g.Key, out var title) ? title : $"Unit {g.Key}",
                 g.OrderBy(n => n.Id, StringComparer.Ordinal)
-                    .Select(n => new NodeRow(n.Id, n.Title, StatusFor(course.CourseId, n, manifest)))
+                    .Select(n => new NodeRow(
+                        n.Id,
+                        n.Title,
+                        Difficulties.All.ToDictionary(d => d, d => StatusFor(course.CourseId, n, d, manifest))))
                     .ToList()))
             .ToList();
 
         return new CourseSection(course.CourseId, course.DisplayName, HasStructure: true, units);
     }
 
-    private NodeReviewStatus StatusFor(string courseId, DagNode node, CourseManifest manifest)
+    private NodeReviewStatus StatusFor(string courseId, DagNode node, Difficulty difficulty, CourseManifest manifest)
     {
         // Checked regardless of the manifest state — "generate a new attempt" on an already-live
         // node should show as in-flight/pending, not silently stay Live until the SME approves it.
-        var job = _generation.GetJob(courseId, node.Id);
+        var job = _generation.GetJob(courseId, node.Id, difficulty);
         if (job?.Status == GenerationStatus.Running) return NodeReviewStatus.Generating;
         if (job?.Status == GenerationStatus.Succeeded) return NodeReviewStatus.PendingReview;
 
-        if (manifest.Nodes.ContainsKey(node.Id)) return NodeReviewStatus.Live;
+        if (manifest.Nodes.TryGetValue(node.Id, out var entry) && entry.LatestFor(difficulty) is not null)
+            return NodeReviewStatus.Live;
         return NodeReviewStatus.NotStarted;
     }
 }

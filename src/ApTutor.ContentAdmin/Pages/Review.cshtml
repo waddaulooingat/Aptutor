@@ -8,6 +8,14 @@
 <h1>@Model.NodeTitle</h1>
 <p class="notice">@Model.CourseDisplayName</p>
 
+<div class="difficulty-tabs">
+    @foreach (var d in new[] { ApTutor.Content.Difficulty.Easy, ApTutor.Content.Difficulty.Medium, ApTutor.Content.Difficulty.Hard })
+    {
+        <a href="/Review?course=@Model.CourseId&node=@Model.NodeId&difficulty=@d"
+           class="difficulty-tab @(d == Model.Difficulty ? "difficulty-tab-active" : "")">@d</a>
+    }
+</div>
+
 @if (Model.Error is not null)
 {
     <p class="error">@Model.Error</p>
@@ -20,10 +28,11 @@
 @if (Model.Pack is null)
 {
     <div class="card">
-        <p>Nothing has been generated for this topic yet.</p>
+        <p>Nothing has been generated for this topic at @Model.Difficulty difficulty yet.</p>
         <form method="post" asp-page-handler="Generate">
             <input type="hidden" name="course" value="@Model.CourseId" />
             <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
             <button type="submit" class="btn-primary">Generate</button>
         </form>
     </div>
@@ -39,6 +48,7 @@ else if (!Model.PackIsPending)
             <form method="post" asp-page-handler="Generate">
                 <input type="hidden" name="course" value="@Model.CourseId" />
                 <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
                 <button type="submit">Generate another set</button>
             </form>
         </div>
@@ -55,6 +65,7 @@ else
         <form method="post" asp-page-handler="Approve">
             <input type="hidden" name="course" value="@Model.CourseId" />
             <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
 
             @foreach (var item in Model.Pack.PracticeItems)
             {
@@ -87,6 +98,7 @@ else
             <form method="post" asp-page-handler="Reject" style="margin-top: 10px;">
                 <input type="hidden" name="course" value="@Model.CourseId" />
                 <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
                 <label for="reason">Why are you rejecting this?</label>
                 <textarea id="reason" name="reason" rows="3" required></textarea>
                 <div class="actions">
@@ -99,6 +111,7 @@ else
             <form method="post" asp-page-handler="Generate">
                 <input type="hidden" name="course" value="@Model.CourseId" />
                 <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
                 <button type="submit">Generate a new attempt</button>
             </form>
         </div>

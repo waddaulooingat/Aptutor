@@ -3,7 +3,10 @@ using System.Text.Json.Serialization;
 
 namespace ApTutor.Content;
 
-public sealed record NodeVersionEntry(string Hash, DateTimeOffset UpdatedAt);
+// Difficulty defaults purely for backward compatibility with versions approved before difficulty
+// levels existed — see NodeContentPack's own Difficulty field for the same reasoning. New entries
+// are always written with an explicit difficulty (see ManifestMerge.UpsertNode).
+public sealed record NodeVersionEntry(string Hash, DateTimeOffset UpdatedAt, Difficulty Difficulty = Difficulty.Medium);
 
 /// One node's approved content, as one or more independently-generated, independently-approved
 /// versions — a node accumulates a growing library of sets over time (see the multi-set library
@@ -14,10 +17,16 @@ public sealed record NodeVersionEntry(string Hash, DateTimeOffset UpdatedAt);
 [JsonConverter(typeof(NodeManifestEntryConverter))]
 public sealed record NodeManifestEntry(IReadOnlyList<NodeVersionEntry> Versions)
 {
-    /// The most recently-approved version — used wherever only one representative pack is needed
-    /// (e.g. Content Admin's Review page showing "what's currently live" for context), as opposed to
-    /// the Shell, which downloads and rotates among every version.
+    /// The most recently-approved version, across every difficulty — used wherever only one
+    /// representative pack is needed with no difficulty scoping (e.g. the Index page's plain
+    /// live/not-live check before difficulty levels existed).
     public NodeVersionEntry Latest => Versions.OrderBy(v => v.UpdatedAt).Last();
+
+    /// The most recently-approved version AT a specific difficulty, or null if this node has never
+    /// been approved at that difficulty — the difficulty-scoped counterpart Content Admin's Review
+    /// page and Index page use now that difficulty is a real axis (see the difficulty-levels plan).
+    public NodeVersionEntry? LatestFor(Difficulty difficulty) =>
+        Versions.Where(v => v.Difficulty == difficulty).OrderBy(v => v.UpdatedAt).LastOrDefault();
 }
 
 /// Reads either the current shape (<c>{"Versions": [{"Hash": ..., "UpdatedAt": ...}, ...]}</c>) or

@@ -42,25 +42,25 @@ public class ContentGenerationServiceTests
     public void ClearJob_TwoConcurrentCallers_OnlyOneSucceeds()
     {
         var service = NewService();
-        service.RestoreJob(new GenerationJob("csa", "u1.1", GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow));
+        service.RestoreJob(new GenerationJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow));
 
         var results = new bool[8];
-        Parallel.For(0, results.Length, i => results[i] = service.ClearJob("csa", "u1.1", GenerationStatus.Succeeded));
+        Parallel.For(0, results.Length, i => results[i] = service.ClearJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded));
 
         Assert.Equal(1, results.Count(r => r));
-        Assert.Null(service.GetJob("csa", "u1.1"));
+        Assert.Null(service.GetJob("csa", "u1.1", Difficulty.Medium));
     }
 
     [Fact]
     public void ClearJob_WrongExpectedStatus_DoesNotClear()
     {
         var service = NewService();
-        service.RestoreJob(new GenerationJob("csa", "u1.1", GenerationStatus.Failed, "boom", null, DateTimeOffset.UtcNow));
+        service.RestoreJob(new GenerationJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Failed, "boom", null, DateTimeOffset.UtcNow));
 
-        var cleared = service.ClearJob("csa", "u1.1", GenerationStatus.Succeeded);
+        var cleared = service.ClearJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded);
 
         Assert.False(cleared);
-        Assert.NotNull(service.GetJob("csa", "u1.1"));
+        Assert.NotNull(service.GetJob("csa", "u1.1", Difficulty.Medium));
     }
 
     [Fact]
@@ -68,31 +68,43 @@ public class ContentGenerationServiceTests
     {
         var service = NewService();
 
-        Assert.False(service.ClearJob("csa", "ghost", GenerationStatus.Succeeded));
+        Assert.False(service.ClearJob("csa", "ghost", Difficulty.Medium, GenerationStatus.Succeeded));
     }
 
     [Fact]
     public void RestoreJob_DoesNotClobberANewerJobAlreadyInTheSlot()
     {
         var service = NewService();
-        var older = new GenerationJob("csa", "u1.1", GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow.AddMinutes(-5));
-        var newer = new GenerationJob("csa", "u1.1", GenerationStatus.Running, null, null, DateTimeOffset.UtcNow);
+        var older = new GenerationJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow.AddMinutes(-5));
+        var newer = new GenerationJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Running, null, null, DateTimeOffset.UtcNow);
 
         service.RestoreJob(newer);
         service.RestoreJob(older); // simulates: Approve claimed+removed `older`, its S3 write failed,
                                     // but a fresh Generate already started before the restore ran.
 
-        Assert.Equal(GenerationStatus.Running, service.GetJob("csa", "u1.1")!.Status);
+        Assert.Equal(GenerationStatus.Running, service.GetJob("csa", "u1.1", Difficulty.Medium)!.Status);
     }
 
     [Fact]
     public void TryStartGeneration_RefusesADuplicateWhileAJobIsAlreadyTracked()
     {
         var service = NewService();
-        service.RestoreJob(new GenerationJob("csa", "u1.1", GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow));
+        service.RestoreJob(new GenerationJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow));
 
-        var started = service.TryStartGeneration("csa", "u1.1");
+        var started = service.TryStartGeneration("csa", "u1.1", Difficulty.Medium);
 
         Assert.False(started);
+    }
+
+    [Fact]
+    public void TryStartGeneration_DifferentDifficultyForSameNode_IsIndependent()
+    {
+        // Generating "hard" for a node shouldn't be blocked by an in-flight "medium" job for the
+        // same node — each difficulty is its own job slot (see the difficulty-levels plan).
+        var service = NewService();
+        service.RestoreJob(new GenerationJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded, null, SamplePack("u1.1"), DateTimeOffset.UtcNow));
+
+        Assert.Null(service.GetJob("csa", "u1.1", Difficulty.Hard));
+        Assert.True(service.ClearJob("csa", "u1.1", Difficulty.Medium, GenerationStatus.Succeeded));
     }
 }

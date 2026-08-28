@@ -28,11 +28,11 @@ public sealed class Generator
 
     public Generator(ClaudeClient client) => _client = client;
 
-    public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, CancellationToken ct = default)
+    public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, Difficulty difficulty, CancellationToken ct = default)
     {
         var schema = GenerationSchema.NodeContentSchema();
         var system = PromptTemplates.System(courseId);
-        var user = PromptTemplates.ForNode(node);
+        var user = PromptTemplates.ForNode(node, difficulty);
 
         var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_node_content", ct);
         var generated = JsonSerializer.Deserialize<GeneratedNodeContent>(inputJson.GetRawText(), ParseOptions)
@@ -55,7 +55,8 @@ public sealed class Generator
             WalkthroughSteps: steps,
             Verified: false,
             GeneratedAt: DateTimeOffset.UtcNow,
-            Model: _client.Model);
+            Model: _client.Model,
+            Difficulty: difficulty);
     }
 
     /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring

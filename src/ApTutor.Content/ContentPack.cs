@@ -23,7 +23,13 @@ public sealed record NodeContentPack(
     IReadOnlyList<VisualStep> WalkthroughSteps,
     bool Verified,
     DateTimeOffset GeneratedAt,
-    string Model);
+    string Model,
+    // Defaulted (rather than a required positional param) purely for backward compatibility: every
+    // pack approved before difficulty levels existed has no "difficulty" property in its stored
+    // JSON at all, and there's no one-time migration step — a missing property just falls back to
+    // this default on load. Every NEW pack going through Generator.GenerateAsync always states its
+    // difficulty explicitly; nothing in this project relies on the default at write time.
+    Difficulty Difficulty = Difficulty.Medium);
 
 public static class ContentPackStore
 {

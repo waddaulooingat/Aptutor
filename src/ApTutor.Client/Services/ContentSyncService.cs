@@ -57,7 +57,7 @@ public class ContentSyncService
                 // approved versions now (see the multi-set library plan); every version listed in
                 // the manifest gets its own file, never overwriting a sibling version, so the Shell
                 // ends up with the node's whole approved library to pick from at serving time.
-                var pack = await GetNodeAsync(course.CourseId, node.NodeId, node.Hash, ct);
+                var pack = await GetNodeAsync(course.CourseId, node.NodeId, node.Difficulty, node.Hash, ct);
                 if (pack is not null)
                 {
                     ContentPackStore.SaveVersion(course.ContentDir, node.Hash, pack);
@@ -110,12 +110,13 @@ public class ContentSyncService
         }
     }
 
-    protected virtual async Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, string hash, CancellationToken ct)
+    protected virtual async Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, Difficulty difficulty, string hash, CancellationToken ct)
     {
         try
         {
+            var difficultySegment = difficulty.ToString().ToLowerInvariant();
             using var response = await _s3.GetObjectAsync(
-                new GetObjectRequest { BucketName = _bucket, Key = $"courses/{courseId}/nodes/{nodeId}/{hash}.json" }, ct);
+                new GetObjectRequest { BucketName = _bucket, Key = $"courses/{courseId}/nodes/{nodeId}/{difficultySegment}/{hash}.json" }, ct);
             using var reader = new StreamReader(response.ResponseStream);
             var body = await reader.ReadToEndAsync(ct);
             return JsonSerializer.Deserialize<NodeContentPack>(body, ContentHash.CanonicalOptions);

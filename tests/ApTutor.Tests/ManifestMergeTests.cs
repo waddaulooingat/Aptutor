@@ -14,25 +14,25 @@ public class ManifestMergeTests
         var empty = CourseManifest.Empty(schemaVersion: 1);
         var updatedAt = DateTimeOffset.UtcNow;
 
-        var updated = ManifestMerge.UpsertNode(empty, "u1.1", "abc123", updatedAt);
+        var updated = ManifestMerge.UpsertNode(empty, "u1.1", "abc123", updatedAt, Difficulty.Medium);
 
         Assert.Equal(1, updated.SchemaVersion);
         Assert.Single(updated.Nodes);
-        Assert.Equal(new[] { new NodeVersionEntry("abc123", updatedAt) }, updated.Nodes["u1.1"].Versions);
+        Assert.Equal(new[] { new NodeVersionEntry("abc123", updatedAt, Difficulty.Medium) }, updated.Nodes["u1.1"].Versions);
     }
 
     [Fact]
     public void UpsertNode_NewHashForAnAlreadyLiveNode_AppendsAVersion_LeavesTheOldOneInPlace()
     {
         var first = DateTimeOffset.UtcNow.AddMinutes(-5);
-        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-v1", first);
+        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-v1", first, Difficulty.Medium);
 
         var second = DateTimeOffset.UtcNow;
-        var updated = ManifestMerge.UpsertNode(manifest, "u1.1", "hash-v2", second);
+        var updated = ManifestMerge.UpsertNode(manifest, "u1.1", "hash-v2", second, Difficulty.Medium);
 
         Assert.Equal(2, updated.Nodes["u1.1"].Versions.Count);
-        Assert.Contains(new NodeVersionEntry("hash-v1", first), updated.Nodes["u1.1"].Versions);
-        Assert.Contains(new NodeVersionEntry("hash-v2", second), updated.Nodes["u1.1"].Versions);
+        Assert.Contains(new NodeVersionEntry("hash-v1", first, Difficulty.Medium), updated.Nodes["u1.1"].Versions);
+        Assert.Contains(new NodeVersionEntry("hash-v2", second, Difficulty.Medium), updated.Nodes["u1.1"].Versions);
         Assert.Equal("hash-v2", updated.Nodes["u1.1"].Latest.Hash);
     }
 
@@ -40,9 +40,9 @@ public class ManifestMergeTests
     public void UpsertNode_SameHashAlreadyPresent_IsAHarmlessNoOp_DoesNotDuplicate()
     {
         var when = DateTimeOffset.UtcNow;
-        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-v1", when);
+        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-v1", when, Difficulty.Medium);
 
-        var updated = ManifestMerge.UpsertNode(manifest, "u1.1", "hash-v1", DateTimeOffset.UtcNow.AddMinutes(1));
+        var updated = ManifestMerge.UpsertNode(manifest, "u1.1", "hash-v1", DateTimeOffset.UtcNow.AddMinutes(1), Difficulty.Medium);
 
         Assert.Single(updated.Nodes["u1.1"].Versions);
     }
@@ -52,9 +52,9 @@ public class ManifestMergeTests
     {
         var when = DateTimeOffset.UtcNow.AddMinutes(-5);
         var manifest = ManifestMerge.UpsertNode(
-            ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-v1", when), "u2.1", "hash-other", when);
+            ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-v1", when, Difficulty.Medium), "u2.1", "hash-other", when, Difficulty.Medium);
 
-        var updated = ManifestMerge.UpsertNode(manifest, "u1.1", "hash-v2", DateTimeOffset.UtcNow);
+        var updated = ManifestMerge.UpsertNode(manifest, "u1.1", "hash-v2", DateTimeOffset.UtcNow, Difficulty.Medium);
 
         Assert.Equal(2, updated.Nodes.Count);
         Assert.Equal("hash-other", updated.Nodes["u2.1"].Latest.Hash); // untouched
@@ -64,9 +64,24 @@ public class ManifestMergeTests
     public void UpsertNode_DoesNotMutateTheOriginalManifest()
     {
         var original = CourseManifest.Empty(1);
-        ManifestMerge.UpsertNode(original, "u1.1", "h", DateTimeOffset.UtcNow);
+        ManifestMerge.UpsertNode(original, "u1.1", "h", DateTimeOffset.UtcNow, Difficulty.Medium);
 
         Assert.Empty(original.Nodes);
+    }
+
+    [Fact]
+    public void UpsertNode_DifferentDifficultiesForSameNode_BothAppear_LatestForIsolatesEach()
+    {
+        var whenEasy = DateTimeOffset.UtcNow.AddMinutes(-5);
+        var whenHard = DateTimeOffset.UtcNow;
+        var manifest = ManifestMerge.UpsertNode(
+            ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "hash-easy", whenEasy, Difficulty.Easy),
+            "u1.1", "hash-hard", whenHard, Difficulty.Hard);
+
+        Assert.Equal(2, manifest.Nodes["u1.1"].Versions.Count);
+        Assert.Equal("hash-easy", manifest.Nodes["u1.1"].LatestFor(Difficulty.Easy)!.Hash);
+        Assert.Equal("hash-hard", manifest.Nodes["u1.1"].LatestFor(Difficulty.Hard)!.Hash);
+        Assert.Null(manifest.Nodes["u1.1"].LatestFor(Difficulty.Medium));
     }
 
     [Fact]
@@ -92,7 +107,7 @@ public class ManifestMergeTests
     [Fact]
     public void SetStructure_LeavesNodesAlone()
     {
-        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "node-hash", DateTimeOffset.UtcNow);
+        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "node-hash", DateTimeOffset.UtcNow, Difficulty.Medium);
 
         var updated = ManifestMerge.SetStructure(manifest, "structure-hash", DateTimeOffset.UtcNow);
 

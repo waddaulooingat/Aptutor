@@ -1,6 +1,6 @@
 namespace ApTutor.Content;
 
-public sealed record CourseManifestNode(string NodeId, string Hash);
+public sealed record CourseManifestNode(string NodeId, string Hash, Difficulty Difficulty);
 public sealed record CourseManifestSnapshot(IReadOnlyDictionary<string, NodeManifestEntry> Nodes);
 
 /// Pure diffing logic for pulling approved content down to a local cache (see ApTutor.Client's
@@ -17,7 +17,7 @@ public static class ContentSyncPlanner
     public static IReadOnlyList<CourseManifestNode> ComputeNodesToDownload(
         CourseManifestSnapshot manifest, Func<string, string, bool> existsLocally) =>
         manifest.Nodes
-            .SelectMany(kv => kv.Value.Versions.Select(v => new CourseManifestNode(kv.Key, v.Hash)))
+            .SelectMany(kv => kv.Value.Versions.Select(v => new CourseManifestNode(kv.Key, v.Hash, v.Difficulty)))
             .Where(n => !existsLocally(n.NodeId, n.Hash))
             .ToList();
 }

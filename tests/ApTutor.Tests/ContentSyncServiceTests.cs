@@ -168,7 +168,7 @@ public class ContentSyncServiceTests : IDisposable
             return Task.FromResult(new CourseManifestSnapshot(nodes));
         }
 
-        protected override Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, string hash, CancellationToken ct)
+        protected override Task<NodeContentPack?> GetNodeAsync(string courseId, string nodeId, Difficulty difficulty, string hash, CancellationToken ct)
         {
             RequestedNodes.Add((nodeId, hash));
             var pack = _remoteNodes.GetValueOrDefault(nodeId)?.FirstOrDefault(p => ContentHash.Compute(p) == hash);

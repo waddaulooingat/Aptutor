@@ -18,6 +18,7 @@ dotnet run --project src/ApTutor.ContentFactory -- generate \
   --course csa \
   --content src/ApTutor.Client/content/csa \
   --units 1-5 \
+  --difficulty medium \
   --model <a-current-model-id>
 ```
 
@@ -25,6 +26,8 @@ dotnet run --project src/ApTutor.ContentFactory -- generate \
   quietly pointing at something stale. Check <https://docs.anthropic.com> for what's current.
 - `--units` is optional; omit it to generate every node in the DAG. Ranges/lists both work: `1-5`,
   `1,3,7`, `1-3,9`.
+- `--difficulty` is optional (`easy`, `medium`, or `hard`; defaults to `medium`) — see the
+  difficulty-levels plan. Run this command once per difficulty you want to stock.
 - One `<nodeId>.json` file is written per node under `--content`, each starting `"Verified": false`.
   A failed node (bad JSON, API error) is skipped with a logged reason — it doesn't stop the run or
   leave a partial file.

@@ -36,7 +36,7 @@ public static class ManifestMerge
     /// growing library of independently-approved sets over time (see the multi-set library plan),
     /// not a single "latest" pointer. Idempotent: re-approving a pack whose hash is already present
     /// (a harmless no-op re-approval, not a genuinely new set) doesn't add a duplicate entry.
-    public static CourseManifest UpsertNode(CourseManifest current, string nodeId, string hash, DateTimeOffset updatedAt)
+    public static CourseManifest UpsertNode(CourseManifest current, string nodeId, string hash, DateTimeOffset updatedAt, Difficulty difficulty)
     {
         var existingVersions = current.Nodes.TryGetValue(nodeId, out var existing)
             ? existing.Versions
@@ -45,7 +45,7 @@ public static class ManifestMerge
         if (existingVersions.Any(v => v.Hash == hash))
             return current;
 
-        var updatedVersions = existingVersions.Append(new NodeVersionEntry(hash, updatedAt)).ToList();
+        var updatedVersions = existingVersions.Append(new NodeVersionEntry(hash, updatedAt, difficulty)).ToList();
         var nodes = new Dictionary<string, NodeManifestEntry>(current.Nodes, StringComparer.Ordinal)
         {
             [nodeId] = new NodeManifestEntry(updatedVersions),

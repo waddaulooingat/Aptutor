@@ -5,6 +5,13 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.RateLimiting;
 
+// Difficulty is a query-string parameter on every handler here, same standing as course/node — the
+// Review page always shows exactly one node+difficulty combination at a time; switching difficulty
+// (see the view's tab links) is a plain navigation to the same page with a different difficulty
+// value, not a separate page. Defaults to Medium when absent so a bookmarked or stale
+// pre-difficulty-levels URL (just ?course=&node=) still resolves to something sensible instead of
+// 400ing or crashing on a missing route value.
+
 namespace ApTutor.ContentAdmin.Pages;
 
 // Generate is the endpoint that spends real, billed API money — see Program.cs for why this
@@ -31,6 +38,7 @@ public sealed class ReviewModel : PageModel
 
     public string CourseId { get; private set; } = "";
     public string NodeId { get; private set; } = "";
+    public Difficulty Difficulty { get; private set; }
     public string NodeTitle { get; private set; } = "";
     public string CourseDisplayName { get; private set; } = "";
     public NodeContentPack? Pack { get; private set; }
@@ -38,18 +46,18 @@ public sealed class ReviewModel : PageModel
     public string? Notice { get; private set; }
     public string? Error { get; private set; }
 
-    public async Task<IActionResult> OnGetAsync(string course, string node)
+    public async Task<IActionResult> OnGetAsync(string course, string node, Difficulty difficulty = Difficulty.Medium)
     {
-        if (!TryLoadContext(course, node, out var courseInfo, out var actionResult))
+        if (!TryLoadContext(course, node, difficulty, out var courseInfo, out var actionResult))
             return actionResult!;
 
-        var job = _generation.GetJob(course, node);
+        var job = _generation.GetJob(course, node, difficulty);
         switch (job?.Status)
         {
             case GenerationStatus.Running:
                 // Don't show a stale/empty review view — send the SME to the page that's actually
                 // watching this generation.
-                return RedirectToPage("/Generating", new { course, node });
+                return RedirectToPage("/Generating", new { course, node, difficulty });
 
             case GenerationStatus.Succeeded:
                 // An unapproved draft always wins over whatever's live — this is how "generate a
@@ -60,12 +68,12 @@ public sealed class ReviewModel : PageModel
 
             case GenerationStatus.Failed:
                 Error = job.Error;
-                Pack = await _store.TryGetLiveNodeAsync(course, node);
+                Pack = await _store.TryGetLiveNodeAsync(course, node, difficulty);
                 PackIsPending = false;
                 break;
 
             default:
-                Pack = await _store.TryGetLiveNodeAsync(course, node);
+                Pack = await _store.TryGetLiveNodeAsync(course, node, difficulty);
                 PackIsPending = false;
                 break;
         }
@@ -73,28 +81,28 @@ public sealed class ReviewModel : PageModel
         return Page();
     }
 
-    public IActionResult OnPostGenerate(string course, string node)
+    public IActionResult OnPostGenerate(string course, string node, Difficulty difficulty = Difficulty.Medium)
     {
-        if (!TryLoadContext(course, node, out _, out var actionResult))
+        if (!TryLoadContext(course, node, difficulty, out _, out var actionResult))
             return actionResult!;
 
-        // TryStartGeneration itself refuses a duplicate job for a node already in flight — either
-        // way, the SME lands on the same polling page.
-        _generation.TryStartGeneration(course, node);
-        return RedirectToPage("/Generating", new { course, node });
+        // TryStartGeneration itself refuses a duplicate job for a node+difficulty already in
+        // flight — either way, the SME lands on the same polling page.
+        _generation.TryStartGeneration(course, node, difficulty);
+        return RedirectToPage("/Generating", new { course, node, difficulty });
     }
 
-    public async Task<IActionResult> OnPostApproveAsync(string course, string node)
+    public async Task<IActionResult> OnPostApproveAsync(string course, string node, Difficulty difficulty = Difficulty.Medium)
     {
-        if (!TryLoadContext(course, node, out var courseInfo, out var actionResult))
+        if (!TryLoadContext(course, node, difficulty, out var courseInfo, out var actionResult))
             return actionResult!;
 
-        var job = _generation.GetJob(course, node);
+        var job = _generation.GetJob(course, node, difficulty);
         if (job is not { Status: GenerationStatus.Succeeded })
         {
             // No draft to act on — either this was already approved (double-click/retry after
             // success) or nothing was ever generated. Check the live store to tell which.
-            await ShowAlreadyHandledOrNothingToApproveAsync(course, node);
+            await ShowAlreadyHandledOrNothingToApproveAsync(course, node, difficulty);
             return Page();
         }
 
@@ -129,9 +137,9 @@ public sealed class ReviewModel : PageModel
         // Claim the job atomically, only now that validation passed — a losing concurrent request
         // (double-click, browser retry) falls into the "already handled" branch above instead of
         // both writers racing to S3.
-        if (!_generation.ClearJob(course, node, GenerationStatus.Succeeded))
+        if (!_generation.ClearJob(course, node, difficulty, GenerationStatus.Succeeded))
         {
-            await ShowAlreadyHandledOrNothingToApproveAsync(course, node);
+            await ShowAlreadyHandledOrNothingToApproveAsync(course, node, difficulty);
             return Page();
         }
 
@@ -163,15 +171,15 @@ public sealed class ReviewModel : PageModel
         return Page();
     }
 
-    public async Task<IActionResult> OnPostRejectAsync(string course, string node, string reason)
+    public async Task<IActionResult> OnPostRejectAsync(string course, string node, string reason, Difficulty difficulty = Difficulty.Medium)
     {
-        if (!TryLoadContext(course, node, out var courseInfo, out var actionResult))
+        if (!TryLoadContext(course, node, difficulty, out var courseInfo, out var actionResult))
             return actionResult!;
 
         if (string.IsNullOrWhiteSpace(reason))
         {
             Error = "Please say why you're rejecting this before it can be discarded.";
-            if (_generation.GetJob(course, node) is { Status: GenerationStatus.Succeeded } pending)
+            if (_generation.GetJob(course, node, difficulty) is { Status: GenerationStatus.Succeeded } pending)
             {
                 Pack = pending.Pack;
                 PackIsPending = true;
@@ -179,7 +187,7 @@ public sealed class ReviewModel : PageModel
             return Page();
         }
 
-        if (!_generation.ClearJob(course, node, GenerationStatus.Succeeded))
+        if (!_generation.ClearJob(course, node, difficulty, GenerationStatus.Succeeded))
         {
             Notice = "There was nothing pending to reject for this topic.";
             return Page();
@@ -200,25 +208,26 @@ public sealed class ReviewModel : PageModel
         return Page();
     }
 
-    private async Task ShowAlreadyHandledOrNothingToApproveAsync(string course, string node)
+    private async Task ShowAlreadyHandledOrNothingToApproveAsync(string course, string node, Difficulty difficulty)
     {
-        var live = await _store.TryGetLiveNodeAsync(course, node);
+        var live = await _store.TryGetLiveNodeAsync(course, node, difficulty);
         if (live is not null)
         {
-            Notice = "This topic is already approved.";
+            Notice = "This topic is already approved at this difficulty.";
             Pack = live;
             PackIsPending = false;
         }
         else
         {
-            Error = "There's nothing generated for this topic yet.";
+            Error = "There's nothing generated for this topic at this difficulty yet.";
         }
     }
 
-    private bool TryLoadContext(string course, string node, out CourseInfo courseInfo, out IActionResult? actionResult)
+    private bool TryLoadContext(string course, string node, Difficulty difficulty, out CourseInfo courseInfo, out IActionResult? actionResult)
     {
         CourseId = course;
         NodeId = node;
+        Difficulty = difficulty;
         actionResult = null;
         courseInfo = null!;
 

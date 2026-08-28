@@ -21,7 +21,9 @@ public sealed class S3ContentStoreOptions
 ///   manifest.json                                    — top-level index of courses
 ///   courses/&lt;courseId&gt;/manifest.json                  — per-course node hash/version index, plus
 ///                                                        the course's current structure pointer
-///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;/&lt;hash&gt;.json      — one IMMUTABLE object per approved version
+///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;/&lt;difficulty&gt;/&lt;hash&gt;.json — one IMMUTABLE object per approved
+///                                                        version at that difficulty (see the
+///                                                        difficulty-levels plan)
 ///   courses/&lt;courseId&gt;/structure/&lt;hash&gt;.json           — one IMMUTABLE object per approved DAG
 ///                                                        revision (units/nodes/prereqs — see
 ///                                                        ApTutor.Curriculum.SkillDag)
@@ -93,17 +95,20 @@ public class S3ContentStore
         return manifest ?? TopLevelManifest.Empty(SchemaVersion);
     }
 
-    /// Resolves the most recently-approved version from the course manifest and fetches that exact
-    /// versioned object — a node can have several independently-approved versions now (see the
-    /// multi-set library plan), this always returns the newest one, e.g. for Content Admin's Review
-    /// page to show as context. The Shell doesn't use this — it downloads and rotates among every
-    /// version itself (see ApTutor.Client.Services.ContentSyncService).
-    public async Task<NodeContentPack?> TryGetLiveNodeAsync(string courseId, string nodeId, CancellationToken ct = default)
+    /// Resolves the most recently-approved version AT THIS DIFFICULTY from the course manifest and
+    /// fetches that exact versioned object — a node can have several independently-approved versions
+    /// per difficulty now (see the multi-set library plan and the difficulty-levels plan), this
+    /// always returns the newest one at the given difficulty, e.g. for Content Admin's Review page
+    /// to show as context for whichever difficulty tab the SME is looking at. Null if nothing has
+    /// been approved at this difficulty yet, even if the node has approved content at another
+    /// difficulty. The Shell doesn't use this — it downloads and rotates among every version itself
+    /// (see ApTutor.Client.Services.ContentSyncService).
+    public async Task<NodeContentPack?> TryGetLiveNodeAsync(string courseId, string nodeId, Difficulty difficulty, CancellationToken ct = default)
     {
         var manifest = await GetCourseManifestAsync(courseId, ct);
-        if (!manifest.Nodes.TryGetValue(nodeId, out var entry)) return null;
+        if (!manifest.Nodes.TryGetValue(nodeId, out var entry) || entry.LatestFor(difficulty) is not { } version) return null;
 
-        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId, entry.Latest.Hash), ct);
+        var (pack, _) = await TryGetObjectAsync<NodeContentPack>(NodeKey(courseId, nodeId, difficulty, version.Hash), ct);
         return pack;
     }
 
@@ -147,12 +152,15 @@ public class S3ContentStore
 
         // Content-addressed key: writing the same hash's content to the same key twice is an
         // idempotent no-op (identical bytes); a changed pack always lands on a new key, so this
-        // never needs a conditional write the way the manifest updates below do.
-        await PutObjectAsync(NodeKey(courseId, nodeId, hash), body, ifMatch: null, ifNoneMatch: null, ct);
+        // never needs a conditional write the way the manifest updates below do. Difficulty is read
+        // from the pack itself, not a separate parameter — the pack is the single source of truth
+        // for its own difficulty (assigned by Generator.GenerateAsync, never left to drift from the
+        // caller's own separately-tracked value).
+        await PutObjectAsync(NodeKey(courseId, nodeId, approvedPack.Difficulty, hash), body, ifMatch: null, ifNoneMatch: null, ct);
 
         var courseManifest = await UpdateWithRetryAsync<CourseManifest>(
             CourseManifestKey(courseId),
-            current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, hash, now),
+            current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, hash, now, approvedPack.Difficulty),
             ct);
         await ReindexCourseInTopLevelManifestAsync(courseId, courseManifest, now, ct);
     }
@@ -250,6 +258,9 @@ public class S3ContentStore
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(content))).ToLowerInvariant();
 
     private static string CourseManifestKey(string courseId) => $"courses/{courseId}/manifest.json";
-    private static string NodeKey(string courseId, string nodeId, string hash) => $"courses/{courseId}/nodes/{nodeId}/{hash}.json";
+
+    private static string NodeKey(string courseId, string nodeId, Difficulty difficulty, string hash) =>
+        $"courses/{courseId}/nodes/{nodeId}/{difficulty.ToString().ToLowerInvariant()}/{hash}.json";
+
     private static string StructureKey(string courseId, string hash) => $"courses/{courseId}/structure/{hash}.json";
 }
