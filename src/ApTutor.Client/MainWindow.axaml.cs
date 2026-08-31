@@ -26,9 +26,17 @@ public partial class MainWindow : Window
     private bool _refreshingContent;
     private AppSettings _settings = AppSettingsStore.Load(AppSettingsStore.DefaultDir);
 
+    // Local, per-installation student performance state (see the difficulty-and-progress-tracking
+    // plan's Part B) — never synced to S3, never seen by Content Admin. _selectedDifficulty starts
+    // at Medium deliberately (not the enum's default Easy) to match today's practice-item baseline.
+    private Difficulty _selectedDifficulty = Difficulty.Medium;
+    private bool _retryMode;
+
     public MainWindow()
     {
         InitializeComponent();
+        DifficultySelector.ItemsSource = new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
+        DifficultySelector.SelectedItem = _selectedDifficulty;
         _ = LoadCoursesAsync();
     }
 
@@ -58,6 +66,7 @@ public partial class MainWindow : Window
     {
         CourseSelector.IsEnabled = false;
         MockExamButton.IsEnabled = false;
+        ProgressChartButton.IsEnabled = false;
         RefreshContentButton.IsEnabled = false;
         DetailTitle.Text = "Loading courses…";
 
@@ -95,6 +104,7 @@ public partial class MainWindow : Window
 
             CourseSelector.ItemsSource = _registry.All;
             CourseSelector.IsEnabled = true;
+            ProgressChartButton.IsEnabled = true;
             RefreshContentButton.IsEnabled = true;
 
             var defaultCourse = _registry.All.FirstOrDefault(c => c.CourseId == "csa") ?? _registry.All.First();
@@ -157,6 +167,7 @@ public partial class MainWindow : Window
         _mastery = LoadMasteryFor(course);
         _nodeVms.Clear();
         _selectedNode = null;
+        _retryMode = false;
         Title = $"Tutor AI — {course.DisplayName}";
 
         BuildTree();
@@ -245,6 +256,7 @@ public partial class MainWindow : Window
             DetailPrereqs.Text = string.Empty;
             DetailViz.Text = string.Empty;
             MarkMasteredButton.IsEnabled = false;
+            RetryWrongButton.IsEnabled = false;
             return;
         }
 
@@ -298,17 +310,28 @@ public partial class MainWindow : Window
                 Foreground = Brushes.DarkOrange,
                 Margin = new Thickness(0, 8, 0, 0),
             });
+            // Unreviewed dev preview content — deliberately outside the difficulty picker/retry/
+            // attempt-log system below, same as before: this is a raw peek at a just-refreshed
+            // draft, not real student practice.
             foreach (var item in rawPack.PracticeItems)
-                ContentPanel.Children.Add(BuildPracticeItemBlock(item));
+                ContentPanel.Children.Add(BuildPreviewPracticeItemBlock(item));
             return;
         }
 
-        var items = _course.Content.GetPracticeItems(node.Id);
+        UpdateRetryButtonState(node);
+
+        if (_retryMode)
+        {
+            RenderRetryQuestions(node);
+            return;
+        }
+
+        var items = GetPracticeItemsForDifficulty(node.Id, _selectedDifficulty);
         if (items.Count == 0)
         {
             ContentPanel.Children.Add(new TextBlock
             {
-                Text = "(no practice items for this node yet)",
+                Text = $"(no {_selectedDifficulty.ToString().ToLowerInvariant()} practice items for this node yet)",
                 FontStyle = FontStyle.Italic,
                 Foreground = Brushes.Gray,
                 Margin = new Thickness(0, 8, 0, 0),
@@ -316,8 +339,81 @@ public partial class MainWindow : Window
             return;
         }
 
-        foreach (var item in items)
-            ContentPanel.Children.Add(BuildPracticeItemBlock(item));
+        foreach (var scoped in items)
+            ContentPanel.Children.Add(BuildPracticeItemBlock(node, scoped.PackHash, scoped.Item, _selectedDifficulty));
+    }
+
+    /// One node can have several independently-approved sets at the chosen difficulty (see the
+    /// multi-set library plan) — same "pick one set at random per visit" convention
+    /// FileContentSource already uses for its own (difficulty-agnostic) selection, so practice
+    /// varies across sessions without overwhelming the panel with every set at once. PackHash rides
+    /// along per item so an answered attempt can be logged (and later retried) against the exact
+    /// set it came from — see AttemptRecord's remarks on why a bare item id isn't enough.
+    private sealed record ScopedPracticeItem(string PackHash, PracticeItem Item);
+
+    private IReadOnlyList<ScopedPracticeItem> GetPracticeItemsForDifficulty(string nodeId, Difficulty difficulty)
+    {
+        var candidates = ContentPackStore.LoadVersions(_course.ContentDir, nodeId)
+            .Where(p => p.Verified && p.Difficulty == difficulty)
+            .ToList();
+        if (candidates.Count == 0) return Array.Empty<ScopedPracticeItem>();
+
+        var chosen = candidates[Random.Shared.Next(candidates.Count)];
+        var hash = ContentHash.Compute(chosen);
+        return chosen.PracticeItems.Select(i => new ScopedPracticeItem(hash, i)).ToList();
+    }
+
+    /// Resolves a specific, previously-answered question back to its exact PracticeItem for retry —
+    /// null if that particular set is no longer cached locally (e.g. it was superseded and never
+    /// re-synced), in which case the caller just skips it rather than crashing.
+    private PracticeItem? ResolvePracticeItem(string nodeId, string packHash, string questionId) =>
+        ContentPackStore.LoadVersions(_course.ContentDir, nodeId)
+            .FirstOrDefault(p => ContentHash.Compute(p) == packHash)
+            ?.PracticeItems.FirstOrDefault(i => i.Id == questionId);
+
+    /// "Retry wrong questions" (see the difficulty-and-progress-tracking plan's Part B) — replays
+    /// the EXACT items the student most recently missed on this node, across whichever difficulty
+    /// each one was originally attempted at, not a fresh difficulty-scoped draw. Answering one
+    /// correctly resolves it (AttemptAnalysis derives "unresolved" from the latest attempt per
+    /// question, not a mutable flag) — reopening this view afterward naturally drops it from the list.
+    private void RenderRetryQuestions(DagNode node)
+    {
+        var backButton = new Button { Content = "← Back to practice" };
+        backButton.Click += (_, _) =>
+        {
+            _retryMode = false;
+            RefreshDetail();
+        };
+        ContentPanel.Children.Add(backButton);
+
+        var attempts = AttemptLogStore.LoadAll(AttemptLogStore.DefaultDir);
+        var unresolved = AttemptAnalysis.UnresolvedWrongQuestions(attempts, _course.CourseId, node.Id);
+
+        if (unresolved.Count == 0)
+        {
+            ContentPanel.Children.Add(new TextBlock
+            {
+                Text = "Nothing left to retry for this topic — nice work.",
+                Foreground = Brushes.DarkGreen,
+                Margin = new Thickness(0, 8, 0, 0),
+            });
+            return;
+        }
+
+        foreach (var q in unresolved)
+        {
+            var item = ResolvePracticeItem(node.Id, q.PackHash, q.QuestionId);
+            if (item is null) continue; // that specific set isn't cached locally anymore
+            ContentPanel.Children.Add(BuildPracticeItemBlock(node, q.PackHash, item, q.Difficulty));
+        }
+    }
+
+    private void UpdateRetryButtonState(DagNode node)
+    {
+        var attempts = AttemptLogStore.LoadAll(AttemptLogStore.DefaultDir);
+        var unresolvedCount = AttemptAnalysis.UnresolvedWrongQuestions(attempts, _course.CourseId, node.Id).Count;
+        RetryWrongButton.IsEnabled = unresolvedCount > 0;
+        RetryWrongButton.Content = unresolvedCount > 0 ? $"Retry wrong questions ({unresolvedCount})" : "Retry wrong questions";
     }
 
     /// Right-click a node -> pulls that node's latest approved set from S3, if there's anything new
@@ -432,12 +528,11 @@ public partial class MainWindow : Window
         ContentPanel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = color });
     }
 
-    /// Practice items used to render with the correct choice already marked (✓) — fine for the
-    /// content factory's own review CLI, but this panel is user-facing, and showing the answer
-    /// before the student has even read the question defeats the entire point of a practice item.
-    /// Now: pick a choice, hit "Check answer", THEN see correct/incorrect + the explanation —
-    /// mirrors how MockExamWindow already withholds the answer until a question is submitted.
-    private static Control BuildPracticeItemBlock(PracticeItem item)
+    /// Dev-only raw preview of an unreviewed, just-refreshed draft (see RefreshContent's
+    /// rawPack-is-unverified branch) — same withhold-the-answer-until-checked UX as the real
+    /// tracked version below, but deliberately does NOT log an AttemptRecord: this is a peek at
+    /// content nobody has approved yet, not real student practice.
+    private static Control BuildPreviewPracticeItemBlock(PracticeItem item)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
         container.Children.Add(new TextBlock
@@ -483,11 +578,93 @@ public partial class MainWindow : Window
         return container;
     }
 
+    /// Real, tracked practice — same withhold-the-answer-until-checked UX as
+    /// BuildPreviewPracticeItemBlock, but every answer is logged locally (see AttemptLogStore),
+    /// which is what feeds the retry-wrong-questions and progress-chart features. GroupName is
+    /// scoped by packHash, not just the item id, since the retry view can show two questions that
+    /// happen to share an id from two different approved sets at once (see AttemptRecord's remarks)
+    /// — RadioButton's mutual-exclusion grouping needs those kept visually separate too.
+    private Control BuildPracticeItemBlock(DagNode node, string packHash, PracticeItem item, Difficulty difficulty)
+    {
+        var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        container.Children.Add(new TextBlock
+        {
+            Text = $"Q: {item.Prompt}",
+            TextWrapping = TextWrapping.Wrap,
+            FontWeight = FontWeight.SemiBold,
+        });
+
+        int? selected = null;
+        var radios = new List<RadioButton>();
+        for (var i = 0; i < item.Choices.Count; i++)
+        {
+            var choiceIndex = i;
+            var radio = new RadioButton { Content = item.Choices[i], GroupName = $"{packHash}-{item.Id}" };
+            radio.IsCheckedChanged += (_, _) =>
+            {
+                if (radio.IsChecked == true) selected = choiceIndex;
+            };
+            radios.Add(radio);
+            container.Children.Add(radio);
+        }
+
+        var resultText = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
+        var checkButton = new Button { Content = "Check answer" };
+        checkButton.Click += (_, _) =>
+        {
+            if (selected is not { } chosen) return;
+
+            foreach (var radio in radios) radio.IsEnabled = false;
+            checkButton.IsEnabled = false;
+
+            var correct = chosen == item.CorrectIndex;
+            resultText.Text = correct
+                ? $"✓ Correct! {item.Explanation}"
+                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {item.Choices[item.CorrectIndex]}\n{item.Explanation}";
+            resultText.Foreground = correct ? Brushes.DarkGreen : Brushes.DarkRed;
+            resultText.IsVisible = true;
+
+            AttemptLogStore.Append(AttemptLogStore.DefaultDir, new AttemptRecord(
+                DateTimeOffset.UtcNow, _course.CourseId, node.Id, difficulty, packHash, item.Id, correct));
+            UpdateRetryButtonState(node);
+        };
+
+        container.Children.Add(checkButton);
+        container.Children.Add(resultText);
+        return container;
+    }
+
+    private void OnDifficultySelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (DifficultySelector.SelectedItem is not Difficulty difficulty || difficulty == _selectedDifficulty) return;
+
+        _selectedDifficulty = difficulty;
+        _retryMode = false;
+        if (_selectedNode is not null) RefreshDetail();
+    }
+
+    private void OnRetryWrongClick(object? sender, RoutedEventArgs e)
+    {
+        _retryMode = true;
+        RefreshDetail();
+    }
+
+    /// Scoped to the currently-selected course, same as every other data-pulling action in this
+    /// window (Refresh content, Mock Exam) — there's no cross-course rollup here, matching how the
+    /// rest of the Shell treats "the selected course" as the unit of scope throughout.
+    private void OnProgressChartClick(object? sender, RoutedEventArgs e)
+    {
+        var attempts = AttemptLogStore.LoadAll(AttemptLogStore.DefaultDir);
+        var weeks = AttemptAnalysis.WeeklyAccuracyForCourse(attempts, _course.CourseId, weekCount: 8);
+        new ProgressChartWindow(_course.DisplayName, weeks).Show();
+    }
+
     private void OnTreeSelectionChanged(object? sender, SelectionChangedEventArgs e)
     {
         if (UnitTree.SelectedItem is NodeItemVm vm)
         {
             _selectedNode = vm.Node;
+            _retryMode = false;
             RefreshDetail();
         }
     }

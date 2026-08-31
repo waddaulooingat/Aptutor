@@ -19,6 +19,7 @@
       <ProgressBar Name="MasteryProgressBar" Width="240" Minimum="0" Maximum="100" VerticalAlignment="Center" />
       <TextBlock Name="ProgressLabel" VerticalAlignment="Center" />
       <Button Name="MockExamButton" Content="Mock Exam" Click="OnMockExamClick" Margin="24,0,0,0" />
+      <Button Name="ProgressChartButton" Content="Progress chart" Click="OnProgressChartClick" />
       <Button Name="RefreshContentButton" Content="Refresh content" Click="OnRefreshContentClick" />
       <Button Name="SettingsButton" Content="Settings" Click="OnSettingsClick" />
     </StackPanel>
@@ -53,7 +54,12 @@
             <Button Name="MarkMasteredButton" Content="Mark mastered" Click="OnMarkMasteredClick" IsEnabled="False" />
 
             <Separator Margin="0,8,0,0" />
-            <TextBlock Text="Content" FontWeight="Bold" Margin="0,4,0,0" />
+            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+              <TextBlock Text="Content" FontWeight="Bold" VerticalAlignment="Center" />
+              <TextBlock Text="Difficulty:" VerticalAlignment="Center" Margin="16,0,0,0" />
+              <ComboBox Name="DifficultySelector" SelectionChanged="OnDifficultySelectionChanged" MinWidth="90" />
+              <Button Name="RetryWrongButton" Content="Retry wrong questions" Click="OnRetryWrongClick" IsEnabled="False" />
+            </StackPanel>
             <StackPanel Name="ContentPanel" Spacing="8" />
           </StackPanel>
         </ScrollViewer>
