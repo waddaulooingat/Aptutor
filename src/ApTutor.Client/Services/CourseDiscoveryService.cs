@@ -19,16 +19,27 @@ public class CourseDiscoveryService
 {
     private readonly IAmazonS3 _s3;
     private readonly string _bucket;
+    private readonly IReadOnlyCollection<string>? _allowedCourseIds;
 
-    public CourseDiscoveryService(IAmazonS3 s3, string bucket)
+    /// allowedCourseIds is a branch-specific scoping hook (see the PSAT Tutor handoff's Part D) — a
+    /// null/empty set (the main aws line's behavior, unaffected) discovers every course as before;
+    /// a non-empty set restricts discovery to just those course ids, filtered before this even asks
+    /// S3 for each one's structure (skips the wasted calls too, not just the display). Deliberately
+    /// a plain constructor parameter driven by config/env var at the call site, not a code branch on
+    /// course id, so this stays a config difference rather than a fork in this class's logic.
+    public CourseDiscoveryService(IAmazonS3 s3, string bucket, IReadOnlyCollection<string>? allowedCourseIds = null)
     {
         _s3 = s3;
         _bucket = bucket;
+        _allowedCourseIds = allowedCourseIds is { Count: > 0 } ? allowedCourseIds : null;
     }
 
     public async Task<IReadOnlyList<DiscoveredCourse>> DiscoverCoursesAsync(CancellationToken ct = default)
     {
         var courseIds = await GetCourseIdsAsync(ct);
+        if (_allowedCourseIds is not null)
+            courseIds = courseIds.Where(id => _allowedCourseIds.Contains(id, StringComparer.OrdinalIgnoreCase)).ToList();
+
         var discovered = new List<DiscoveredCourse>();
 
         foreach (var courseId in courseIds)

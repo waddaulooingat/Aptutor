@@ -52,6 +52,37 @@ public class ContentPackTests : IDisposable
     public void TryLoad_MissingFile_ReturnsNull() =>
         Assert.Null(ContentPackStore.TryLoad(_dir, "ghost"));
 
+    // PracticeItem.StemImageUrl (see the PSAT Tutor handoff's Part E image stopgap) — additive and
+    // defaulted, so every item ever written before this field existed still loads correctly.
+    [Fact]
+    public void PracticeItem_StemImageUrl_DefaultsToNull_ForContentWrittenBeforeItExisted()
+    {
+        var pack = SamplePack("u1.1", verified: true);
+        ContentPackStore.Save(_dir, pack);
+
+        var loaded = ContentPackStore.TryLoad(_dir, "u1.1");
+
+        Assert.Null(loaded!.PracticeItems[0].StemImageUrl);
+    }
+
+    [Fact]
+    public void PracticeItem_StemImageUrl_RoundTripsWhenSet()
+    {
+        var pack = SamplePack("u1.1", verified: true) with
+        {
+            PracticeItems = new[]
+            {
+                new PracticeItem("u1.1-q1", "u1.1", "prompt?", Txt("a", "b", "c", "d"), 1, "because",
+                    StemImageUrl: "https://example.com/diagram.png"),
+            },
+        };
+        ContentPackStore.Save(_dir, pack);
+
+        var loaded = ContentPackStore.TryLoad(_dir, "u1.1");
+
+        Assert.Equal("https://example.com/diagram.png", loaded!.PracticeItems[0].StemImageUrl);
+    }
+
     [Fact]
     public void LoadAll_ReturnsEveryPack_SortedByNodeId()
     {

@@ -11,6 +11,8 @@
     </StackPanel>
 
     <StackPanel Grid.Row="1" Name="ExamPanel" Spacing="12">
+      <TextBlock Name="StemImageStatus" FontStyle="Italic" Foreground="Gray" IsVisible="False" />
+      <Image Name="StemImage" MaxWidth="400" MaxHeight="220" HorizontalAlignment="Left" IsVisible="False" />
       <TextBlock Name="PromptText" TextWrapping="Wrap" FontSize="16" />
       <StackPanel Name="ChoicesPanel" Spacing="8" />
     </StackPanel>

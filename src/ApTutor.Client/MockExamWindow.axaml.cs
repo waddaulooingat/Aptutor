@@ -4,6 +4,7 @@
 // MasteryTracker so they resurface in the frontier — then hands control back to the caller
 // (MainWindow) via onFinished so it can persist progress and refresh the shell.
 
+using ApTutor.Client.Services;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
 using Avalonia;
@@ -54,6 +55,20 @@ public partial class MockExamWindow : Window
         ProgressText.Text = $"Question {index + 1} / {_session.Items.Count}";
         PromptText.Text = item.Prompt;
 
+        // PSAT Tutor image stopgap (see that handoff's Part E) — a diagram, if this item has one.
+        StemImage.IsVisible = false;
+        StemImage.Source = null;
+        if (string.IsNullOrWhiteSpace(item.StemImageUrl))
+        {
+            StemImageStatus.IsVisible = false;
+        }
+        else
+        {
+            StemImageStatus.IsVisible = true;
+            StemImageStatus.Text = "Loading diagram…";
+            _ = LoadStemImageAsync(item.StemImageUrl, index);
+        }
+
         ChoicesPanel.Children.Clear();
         for (var i = 0; i < item.Choices.Count; i++)
         {
@@ -67,6 +82,25 @@ public partial class MockExamWindow : Window
         }
 
         NextButton.Content = index == _session.Items.Count - 1 ? "Submit" : "Next";
+    }
+
+    /// Guards on _currentIndex still matching the question this load was started for — the student
+    /// can click Next well before a slow diagram download finishes, and a stale load landing after
+    /// that must not overwrite whatever the NEW current question already set up.
+    private async Task LoadStemImageAsync(string url, int forIndex)
+    {
+        var bitmap = await RemoteImageLoader.TryLoadAsync(url);
+        if (_currentIndex != forIndex) return;
+
+        if (bitmap is null)
+        {
+            StemImageStatus.Text = "⚠ Could not load this question's diagram.";
+            return;
+        }
+
+        StemImage.Source = bitmap;
+        StemImage.IsVisible = true;
+        StemImageStatus.IsVisible = false;
     }
 
     private void OnTimerTick(object? sender, EventArgs e)

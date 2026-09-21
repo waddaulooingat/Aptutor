@@ -122,7 +122,12 @@ public sealed class ReviewModel : PageModel
         {
             if (Request.Form.ContainsKey($"keep_{item.Id}"))
             {
-                kept.Add(item);
+                // PSAT Tutor image stopgap (see that handoff's Part E) — an SME can attach a diagram
+                // URL to any item at approval time; the diagram itself is authored/hosted outside
+                // this codebase, this only records where to find it. Blank clears any existing URL
+                // rather than leaving a stale one from a prior draft.
+                var stemImageUrl = Request.Form[$"stemImageUrl_{item.Id}"].ToString().Trim();
+                kept.Add(item with { StemImageUrl = string.IsNullOrWhiteSpace(stemImageUrl) ? null : stemImageUrl });
                 continue;
             }
 

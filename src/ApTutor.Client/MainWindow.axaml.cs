@@ -80,7 +80,7 @@ public partial class MainWindow : Window
         try
         {
             using var s3 = BuildS3Client(region);
-            var discovered = await new CourseDiscoveryService(s3, bucket).DiscoverCoursesAsync();
+            var discovered = await new CourseDiscoveryService(s3, bucket, ResolveAllowedCourseIds()).DiscoverCoursesAsync();
 
             if (discovered.Count == 0)
             {
@@ -139,6 +139,20 @@ public partial class MainWindow : Window
         region = resolvedRegion;
         error = "";
         return true;
+    }
+
+    /// Branch-specific course-list scoping (see the PSAT Tutor handoff's Part D) — a comma-separated
+    /// allow-list of course ids, e.g. "psat-english,psat-math". Unset on the main aws line, where
+    /// every discovered course shows as before; set only in a scoped deployment's own environment
+    /// (this branch's build), never hardcoded here, so this stays a config difference rather than a
+    /// fork in MainWindow's own logic — merging this branch back doesn't require reverting anything
+    /// here, just not setting the variable.
+    private static IReadOnlyCollection<string>? ResolveAllowedCourseIds()
+    {
+        var raw = Environment.GetEnvironmentVariable("TUTORAI_ALLOWED_COURSES");
+        if (string.IsNullOrWhiteSpace(raw)) return null;
+
+        return raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
     }
 
     /// A Settings-saved credential isn't something the SDK's own resolution chain (env vars, shared
@@ -534,6 +548,37 @@ public partial class MainWindow : Window
     private static string ChoiceDisplayText(PracticeItemChoice choice) =>
         choice.Text ?? "[Graph-based answer — rendering not built yet]";
 
+    /// PSAT Tutor image stopgap (see that handoff's Part E) — if this item has a diagram URL
+    /// attached, adds an image placeholder and fires off the actual download in the background
+    /// (Avalonia has no built-in "load a bitmap from a URL" binding), swapping in the real image
+    /// once it lands. A failed load (see RemoteImageLoader) just leaves the placeholder text up
+    /// rather than breaking the rest of the question.
+    private static void AddStemImageIfPresent(StackPanel container, PracticeItem item)
+    {
+        if (string.IsNullOrWhiteSpace(item.StemImageUrl)) return;
+
+        var placeholder = new TextBlock { Text = "Loading diagram…", FontStyle = FontStyle.Italic, Foreground = Brushes.Gray };
+        var image = new Image { MaxWidth = 400, MaxHeight = 300, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left, IsVisible = false };
+        container.Children.Add(placeholder);
+        container.Children.Add(image);
+
+        _ = LoadStemImageAsync(item.StemImageUrl, placeholder, image);
+    }
+
+    private static async Task LoadStemImageAsync(string url, TextBlock placeholder, Image image)
+    {
+        var bitmap = await RemoteImageLoader.TryLoadAsync(url);
+        if (bitmap is null)
+        {
+            placeholder.Text = "⚠ Could not load this question's diagram.";
+            return;
+        }
+
+        image.Source = bitmap;
+        image.IsVisible = true;
+        placeholder.IsVisible = false;
+    }
+
     /// Dev-only raw preview of an unreviewed, just-refreshed draft (see RefreshContent's
     /// rawPack-is-unverified branch) — same withhold-the-answer-until-checked UX as the real
     /// tracked version below, but deliberately does NOT log an AttemptRecord: this is a peek at
@@ -541,6 +586,7 @@ public partial class MainWindow : Window
     private static Control BuildPreviewPracticeItemBlock(PracticeItem item)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        AddStemImageIfPresent(container, item);
         container.Children.Add(new TextBlock
         {
             Text = $"Q: {item.Prompt}",
@@ -593,6 +639,7 @@ public partial class MainWindow : Window
     private Control BuildPracticeItemBlock(DagNode node, string packHash, PracticeItem item, Difficulty difficulty)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        AddStemImageIfPresent(container, item);
         container.Children.Add(new TextBlock
         {
             Text = $"Q: {item.Prompt}",

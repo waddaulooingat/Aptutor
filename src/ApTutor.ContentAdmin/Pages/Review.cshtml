@@ -78,6 +78,10 @@ else
             @foreach (var item in Model.Pack.PracticeItems)
             {
                 <div class="card">
+                    @if (!string.IsNullOrWhiteSpace(item.StemImageUrl))
+                    {
+                        <img src="@item.StemImageUrl" alt="Diagram for this question" style="max-width: 100%; margin-bottom: 8px;" />
+                    }
                     <p><strong>@item.Prompt</strong></p>
                     @for (var i = 0; i < item.Choices.Count; i++)
                     {
@@ -87,6 +91,9 @@ else
                         </p>
                     }
                     <p class="notice">@item.Explanation</p>
+
+                    <label for="stemImageUrl_@item.Id">Diagram URL (optional — paste a link to an image authored/hosted elsewhere)</label>
+                    <input type="url" id="stemImageUrl_@item.Id" name="stemImageUrl_@item.Id" value="@item.StemImageUrl" placeholder="https://..." />
 
                     <label>
                         <input type="checkbox" name="keep_@item.Id" value="true" checked />

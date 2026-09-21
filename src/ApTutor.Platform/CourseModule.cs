@@ -64,8 +64,17 @@ public interface IContentSource
     IReadOnlyList<PracticeItem> GetPracticeItems(string nodeId);
 }
 
+// StemImageUrl is the PSAT Tutor image stopgap for diagrams (see that handoff's Part E) — a plain
+// URL to an image (a geometric figure, chart, etc.) authored/hosted OUTSIDE this codebase and
+// attached by an SME during review, not generated or stored by anything here. Deliberately just a
+// URL, not a new S3 object/content-addressing model — "less clean, harder to theme, but much
+// faster to stand up" is an accepted tradeoff for a scoped detour; a real structured
+// geometric-figure schema (mirroring GraphSpec) is future work if this proves insufficient.
+// Nullable/defaulted so every existing PracticeItem (which has no such property in its stored JSON)
+// deserializes with no migration step, same pattern as every other additive field in this codebase.
 public sealed record PracticeItem(string Id, string NodeId, string Prompt,
-                                  IReadOnlyList<PracticeItemChoice> Choices, int CorrectIndex, string Explanation);
+                                  IReadOnlyList<PracticeItemChoice> Choices, int CorrectIndex, string Explanation,
+                                  string? StemImageUrl = null);
 
 /// One answer option — plain text (the overwhelming case today) or a static line/point graph (see
 /// GraphSpec), for courses like Physics where an option is itself a graph, not text (e.g. four

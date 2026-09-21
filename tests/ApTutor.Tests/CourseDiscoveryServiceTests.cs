@@ -89,6 +89,54 @@ public class CourseDiscoveryServiceTests
         Assert.Contains(discovered, c => c.CourseId == "worldhistory");
     }
 
+    // allowedCourseIds (see the PSAT Tutor handoff's Part D) — a branch-specific course-list scope,
+    // e.g. a build that should only ever show PSAT courses regardless of what else is approved in
+    // the same bucket.
+    [Fact]
+    public async Task DiscoverCoursesAsync_AllowedCourseIdsSet_OnlyThoseCoursesAreReturned()
+    {
+        var fake = new FakeCourseDiscoveryService(
+            new()
+            {
+                ["csa"] = ("hash-1", SampleDagJson("Computer Science A")),
+                ["psat-math"] = ("hash-2", SampleDagJson("PSAT Math")),
+                ["psat-english"] = ("hash-3", SampleDagJson("PSAT English")),
+            },
+            allowedCourseIds: new[] { "psat-math", "psat-english" });
+
+        var discovered = await fake.DiscoverCoursesAsync();
+
+        Assert.Equal(2, discovered.Count);
+        Assert.DoesNotContain(discovered, c => c.CourseId == "csa");
+        Assert.Contains(discovered, c => c.CourseId == "psat-math");
+        Assert.Contains(discovered, c => c.CourseId == "psat-english");
+    }
+
+    [Fact]
+    public async Task DiscoverCoursesAsync_AllowedCourseIdsIsCaseInsensitive()
+    {
+        var fake = new FakeCourseDiscoveryService(
+            new() { ["psat-math"] = ("hash-1", SampleDagJson("PSAT Math")) },
+            allowedCourseIds: new[] { "PSAT-MATH" });
+
+        var discovered = await fake.DiscoverCoursesAsync();
+
+        Assert.Single(discovered);
+    }
+
+    [Fact]
+    public async Task DiscoverCoursesAsync_AllowedCourseIdsNullOrEmpty_ReturnsEveryCourse_SameAsMainLine()
+    {
+        var courses = new Dictionary<string, (string? Hash, string? Json)>
+        {
+            ["csa"] = ("hash-1", SampleDagJson("Computer Science A")),
+            ["worldhistory"] = ("hash-2", SampleDagJson("AP World History: Modern", displayName: "World History")),
+        };
+
+        Assert.Equal(2, (await new FakeCourseDiscoveryService(courses, allowedCourseIds: null).DiscoverCoursesAsync()).Count);
+        Assert.Equal(2, (await new FakeCourseDiscoveryService(courses, allowedCourseIds: Array.Empty<string>()).DiscoverCoursesAsync()).Count);
+    }
+
     /// Overrides only the three leaf methods that actually touch IAmazonS3, so DiscoverCoursesAsync's
     /// real discovery/skip logic runs for real. Keyed by courseId -> (StructureHash, raw DAG JSON) —
     /// a null Hash simulates a course registered in the top-level index with no structure approved
@@ -97,8 +145,8 @@ public class CourseDiscoveryServiceTests
     {
         private readonly Dictionary<string, (string? Hash, string? Json)> _courses;
 
-        public FakeCourseDiscoveryService(Dictionary<string, (string? Hash, string? Json)> courses)
-            : base(null!, "test-bucket") => _courses = courses;
+        public FakeCourseDiscoveryService(Dictionary<string, (string? Hash, string? Json)> courses, IReadOnlyCollection<string>? allowedCourseIds = null)
+            : base(null!, "test-bucket", allowedCourseIds) => _courses = courses;
 
         protected override Task<IReadOnlyList<string>> GetCourseIdsAsync(CancellationToken ct) =>
             Task.FromResult<IReadOnlyList<string>>(_courses.Keys.ToList());
