@@ -7,7 +7,7 @@ namespace ApTutor.ContentAdmin.Services;
 public enum GenerationStatus { Running, Succeeded, Failed }
 
 public sealed record GenerationJob(
-    string CourseId, string NodeId, Difficulty Difficulty, GenerationStatus Status, string? Error, NodeContentPack? Pack, DateTimeOffset StartedAt);
+    string CourseId, string NodeId, Difficulty Difficulty, bool AllowGraphChoices, GenerationStatus Status, string? Error, NodeContentPack? Pack, DateTimeOffset StartedAt);
 
 /// Wraps ApTutor.ContentFactory's Generator so a "Generate" click returns immediately (redirect to
 /// an auto-refreshing polling page) instead of blocking the HTTP request for the 10-30+ seconds a
@@ -48,16 +48,16 @@ public sealed class ContentGenerationService
     /// tracked (running, succeeded-but-not-yet-approved, or failed-but-not-yet-cleared), so the page
     /// handler can just redirect to the existing job's polling page instead of firing a duplicate,
     /// separately-billed API call.
-    public bool TryStartGeneration(string courseId, string nodeId, Difficulty difficulty)
+    public bool TryStartGeneration(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices)
     {
         var key = Key(courseId, nodeId, difficulty);
         var startedAt = DateTimeOffset.UtcNow;
-        var job = new GenerationJob(courseId, nodeId, difficulty, GenerationStatus.Running, Error: null, Pack: null, startedAt);
+        var job = new GenerationJob(courseId, nodeId, difficulty, allowGraphChoices, GenerationStatus.Running, Error: null, Pack: null, startedAt);
         if (!_jobs.TryAdd(key, job)) return false;
 
         var cts = new CancellationTokenSource();
         _cancellations[key] = cts;
-        _ = RunAsync(courseId, nodeId, difficulty, key, startedAt, cts.Token);
+        _ = RunAsync(courseId, nodeId, difficulty, allowGraphChoices, key, startedAt, cts.Token);
         return true;
     }
 
@@ -88,7 +88,7 @@ public sealed class ContentGenerationService
         return removed;
     }
 
-    private async Task RunAsync(string courseId, string nodeId, Difficulty difficulty, string key, DateTimeOffset startedAt, CancellationToken ct)
+    private async Task RunAsync(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, string key, DateTimeOffset startedAt, CancellationToken ct)
     {
         try
         {
@@ -97,7 +97,7 @@ public sealed class ContentGenerationService
             // calls after TryLoadContext has already confirmed this exact course/node has a
             // non-null Graph — see its own null check.
             var node = course.Graph!.Node(nodeId);
-            var pack = await _generator.GenerateAsync(courseId, node, difficulty, ct);
+            var pack = await _generator.GenerateAsync(courseId, node, difficulty, allowGraphChoices, ct);
             TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Pack = pack });
         }
         catch (OperationCanceledException)

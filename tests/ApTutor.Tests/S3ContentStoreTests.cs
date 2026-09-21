@@ -24,7 +24,7 @@ public class S3ContentStoreTests
         NodeId: nodeId,
         ExampleId: "generated",
         WalkthroughText: walkthroughText,
-        PracticeItems: new[] { new PracticeItem($"{nodeId}-q1", nodeId, "prompt?", new[] { "a", "b", "c", "d" }, 1, "because") },
+        PracticeItems: new[] { new PracticeItem($"{nodeId}-q1", nodeId, "prompt?", new[] { "a", "b", "c", "d" }.Select(PracticeItemChoice.OfText).ToList(), 1, "because") },
         WalkthroughSteps: Array.Empty<VisualStep>(),
         Verified: true,
         GeneratedAt: DateTimeOffset.UtcNow,

@@ -16,12 +16,15 @@ public class ContentPackTests : IDisposable
         if (Directory.Exists(_dir)) Directory.Delete(_dir, recursive: true);
     }
 
+    private static IReadOnlyList<PracticeItemChoice> Txt(params string[] choices) =>
+        choices.Select(PracticeItemChoice.OfText).ToList();
+
     private static NodeContentPack SamplePack(string nodeId, bool verified) => new(
         CourseId: "csa",
         NodeId: nodeId,
         ExampleId: "generated",
         WalkthroughText: "A short explanation.",
-        PracticeItems: new[] { new PracticeItem($"{nodeId}-q1", nodeId, "prompt?", new[] { "a", "b", "c", "d" }, 1, "because") },
+        PracticeItems: new[] { new PracticeItem($"{nodeId}-q1", nodeId, "prompt?", Txt("a", "b", "c", "d"), 1, "because") },
         WalkthroughSteps: new[] { new VisualStep(0, "first step", new SceneDelta(new SceneOp[] { new LineHighlight(1) })) },
         Verified: verified,
         GeneratedAt: DateTimeOffset.UtcNow,
@@ -173,11 +176,11 @@ public class ContentPackTests : IDisposable
     {
         var setA = SamplePack("u1.1", verified: true) with
         {
-            PracticeItems = new[] { new PracticeItem("a-q1", "u1.1", "prompt A", new[] { "x", "y" }, 0, "because") },
+            PracticeItems = new[] { new PracticeItem("a-q1", "u1.1", "prompt A", Txt("x", "y"), 0, "because") },
         };
         var setB = SamplePack("u1.1", verified: true) with
         {
-            PracticeItems = new[] { new PracticeItem("b-q1", "u1.1", "prompt B", new[] { "x", "y" }, 0, "because") },
+            PracticeItems = new[] { new PracticeItem("b-q1", "u1.1", "prompt B", Txt("x", "y"), 0, "because") },
         };
         ContentPackStore.SaveVersion(_dir, "hash-a", setA);
         ContentPackStore.SaveVersion(_dir, "hash-b", setB);

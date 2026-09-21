@@ -19,7 +19,7 @@ public static class PromptTemplates
         you'd say it out loud while teaching.
         """;
 
-    public static string ForNode(DagNode node, Difficulty difficulty) => $"""
+    public static string ForNode(DagNode node, Difficulty difficulty, bool allowGraphChoices) => $"""
         Generate practice items, an explanation, and an animated walkthrough for this curriculum node:
 
         {NodeSummary(node)}
@@ -29,6 +29,25 @@ public static class PromptTemplates
         this node's title.
 
         Target difficulty for the practice items: {DifficultyGuidance(difficulty)}
+        {(allowGraphChoices ? GraphChoiceGuidance : "")}
+        """;
+
+    /// Only appended when the SME has explicitly opted into graph-based answer choices for this
+    /// generation (see the graph-spec-rendering plan's Part 2) — real AP Physics/Chemistry-style
+    /// questions where an option is itself a graph (e.g. four lettered velocity-time plots), not
+    /// text. Kept out of the prompt entirely otherwise, so ordinary text-only generation (every
+    /// course/node that hasn't opted in) is unaffected.
+    private const string GraphChoiceGuidance = """
+        This node may call for GRAPH-BASED answer choices instead of (or alongside) plain text — use
+        your judgment on whether this specific question actually needs a graph, and only use one
+        when it genuinely does. A graph choice must state real axis labels and units matching the
+        problem's physical quantities (e.g. "Velocity (relative to the ground)" / "Time (s)"), and
+        its line segments' slope/values must actually be consistent with the choice they represent —
+        an incorrect choice should be graphically wrong in a way a student who misunderstood the
+        concept could plausibly draw, not an arbitrary scribble. Use the solid-vs-dashed distinction
+        deliberately (e.g. two different objects, or before-vs-after some event) — never just for
+        visual variety. A question's four choices can all be graphs, all be text, or mix, whichever
+        the question actually calls for.
         """;
 
     /// Difficulty only shapes how demanding the practice items are (see the difficulty-levels plan)

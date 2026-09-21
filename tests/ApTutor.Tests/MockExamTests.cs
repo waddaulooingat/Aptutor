@@ -8,7 +8,9 @@ namespace ApTutor.Tests;
 public class MockExamTests
 {
     private static PracticeItem Item(string id, string nodeId, int correctIndex) =>
-        new(id, nodeId, $"prompt for {id}", new[] { "a", "b", "c", "d" }, correctIndex, $"explanation for {id}");
+        new(id, nodeId, $"prompt for {id}",
+            new[] { "a", "b", "c", "d" }.Select(PracticeItemChoice.OfText).ToList(),
+            correctIndex, $"explanation for {id}");
 
     private sealed class FakeContentSource : IContentSource
     {

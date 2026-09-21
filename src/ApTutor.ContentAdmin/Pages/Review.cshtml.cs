@@ -81,14 +81,17 @@ public sealed class ReviewModel : PageModel
         return Page();
     }
 
-    public IActionResult OnPostGenerate(string course, string node, Difficulty difficulty = Difficulty.Medium)
+    public IActionResult OnPostGenerate(string course, string node, Difficulty difficulty = Difficulty.Medium, bool allowGraphChoices = false)
     {
         if (!TryLoadContext(course, node, difficulty, out _, out var actionResult))
             return actionResult!;
 
         // TryStartGeneration itself refuses a duplicate job for a node+difficulty already in
-        // flight — either way, the SME lands on the same polling page.
-        _generation.TryStartGeneration(course, node, difficulty);
+        // flight — either way, the SME lands on the same polling page. allowGraphChoices is the
+        // explicit SME signal that this generation's answer options may be graphs, not text (see
+        // the graph-spec-rendering plan's Part 2) — unchecked by default, so every existing
+        // course/node keeps generating text-only choices exactly as before unless opted in here.
+        _generation.TryStartGeneration(course, node, difficulty, allowGraphChoices);
         return RedirectToPage("/Generating", new { course, node, difficulty });
     }
 

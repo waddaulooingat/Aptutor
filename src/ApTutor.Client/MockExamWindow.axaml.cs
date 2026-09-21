@@ -40,6 +40,11 @@ public partial class MockExamWindow : Window
         ShowQuestion(0);
     }
 
+    /// A graph-typed choice has no renderer yet (see the graph-spec-rendering plan) — shown as a
+    /// clearly-labeled placeholder rather than falling back to the record's default ToString().
+    private static string ChoiceDisplayText(PracticeItemChoice choice) =>
+        choice.Text ?? "[Graph-based answer — rendering not built yet]";
+
     private void ShowQuestion(int index)
     {
         _currentIndex = index;
@@ -53,7 +58,7 @@ public partial class MockExamWindow : Window
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = item.Choices[i], GroupName = "mockExamChoices" };
+            var radio = new RadioButton { Content = ChoiceDisplayText(item.Choices[i]), GroupName = "mockExamChoices" };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) _selectedForCurrent = choiceIndex;
@@ -116,8 +121,8 @@ public partial class MockExamWindow : Window
         {
             var text = item.Correct
                 ? $"✓ {item.Item.Prompt}"
-                : $"✗ {item.Item.Prompt}\n   Your answer: {(item.SelectedIndex is { } si ? item.Item.Choices[si] : "(unanswered)")}\n" +
-                  $"   Correct answer: {item.Item.Choices[item.Item.CorrectIndex]}\n   {item.Item.Explanation}";
+                : $"✗ {item.Item.Prompt}\n   Your answer: {(item.SelectedIndex is { } si ? ChoiceDisplayText(item.Item.Choices[si]) : "(unanswered)")}\n" +
+                  $"   Correct answer: {ChoiceDisplayText(item.Item.Choices[item.Item.CorrectIndex])}\n   {item.Item.Explanation}";
 
             ResultsList.Children.Add(new TextBlock
             {

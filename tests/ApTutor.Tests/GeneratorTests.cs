@@ -3,6 +3,7 @@ using System.Text;
 using ApTutor.Content;
 using ApTutor.ContentFactory;
 using ApTutor.Curriculum;
+using ApTutor.Platform;
 using Xunit;
 
 namespace ApTutor.Tests;
@@ -63,7 +64,7 @@ public class GeneratorTests
         var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(CannedResponse));
         var generator = new Generator(client);
 
-        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Hard);
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Hard, allowGraphChoices: false);
 
         Assert.Equal("csa", pack.CourseId);
         Assert.Equal("u1.2", pack.NodeId);
@@ -98,7 +99,167 @@ public class GeneratorTests
         // Missing required practiceItems/walkthroughSteps -> deserialization leaves them null ->
         // the .Select(...) call on a null list throws, which is the desired "fail loudly, don't
         // silently ship half-generated content" behavior.
-        await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium));
+        await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+    }
+
+    // GenerateAsync with allowGraphChoices: true (see the graph-spec-rendering plan's Part 2) — a
+    // practice item's choices can now be graphs, text, or a mix, discriminated by "kind".
+    private static readonly DagNode PhysicsNode = new(
+        "u1.1", 1, NodeType.Concept, "Velocity vs. time graphs", Array.Empty<string>(), "graph");
+
+    private const string GraphChoiceResponse = """
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "emit_node_content",
+                    "input": {
+                        "walkthroughText": "A velocity-time graph's slope is acceleration.",
+                        "practiceItems": [
+                            {
+                                "prompt": "Which graph shows an object at constant velocity?",
+                                "choices": [
+                                    {
+                                        "kind": "graph",
+                                        "graph": {
+                                            "xAxis": { "label": "Time", "unit": "s" },
+                                            "yAxis": { "label": "Velocity", "unit": "m/s", "min": 0, "max": 10 },
+                                            "segments": [
+                                                { "points": [ { "x": 0, "y": 5 }, { "x": 10, "y": 5 } ], "solid": true }
+                                            ],
+                                            "referenceValues": [ { "axis": "y", "value": 5, "label": "v_t" } ]
+                                        }
+                                    },
+                                    {
+                                        "kind": "graph",
+                                        "graph": {
+                                            "xAxis": { "label": "Time", "unit": "s" },
+                                            "yAxis": { "label": "Velocity", "unit": "m/s" },
+                                            "segments": [
+                                                { "points": [ { "x": 0, "y": 0 }, { "x": 10, "y": 10 } ], "solid": true }
+                                            ]
+                                        }
+                                    },
+                                    { "kind": "text", "text": "Neither graph shows constant velocity" },
+                                    { "kind": "text", "text": "Both graphs show constant velocity" }
+                                ],
+                                "correctIndex": 0,
+                                "explanation": "A flat line on a velocity-time graph means velocity isn't changing."
+                            }
+                        ],
+                        "walkthroughSteps": [
+                            { "caption": "Plot velocity over time.", "sourceLine": null, "ops": [ { "op": "lineHighlight", "line": 1 } ] }
+                        ]
+                    }
+                }
+            ]
+        }
+        """;
+
+    [Fact]
+    public async Task GenerateAsync_AllowGraphChoicesTrue_MixedTextAndGraphChoices_ParsesCorrectly()
+    {
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(GraphChoiceResponse));
+        var generator = new Generator(client);
+
+        var pack = await generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true);
+
+        var item = Assert.Single(pack.PracticeItems);
+        Assert.Equal(4, item.Choices.Count);
+
+        Assert.True(item.Choices[0].IsGraph);
+        Assert.Equal("Time", item.Choices[0].Graph!.XAxis.Label);
+        Assert.Equal("s", item.Choices[0].Graph!.XAxis.Unit);
+        Assert.Equal("Velocity", item.Choices[0].Graph!.YAxis.Label);
+        Assert.Equal(0, item.Choices[0].Graph!.YAxis.Min);
+        Assert.Equal(10, item.Choices[0].Graph!.YAxis.Max);
+        Assert.Single(item.Choices[0].Graph!.Segments);
+        Assert.True(item.Choices[0].Graph!.Segments[0].Solid);
+        Assert.Equal(2, item.Choices[0].Graph!.Segments[0].Points.Count);
+        Assert.NotNull(item.Choices[0].Graph!.ReferenceValues);
+        Assert.Equal(GraphAxisKind.Y, item.Choices[0].Graph!.ReferenceValues![0].Axis);
+        Assert.Equal("v_t", item.Choices[0].Graph!.ReferenceValues![0].Label);
+
+        Assert.True(item.Choices[1].IsGraph);
+        Assert.Null(item.Choices[1].Graph!.ReferenceValues); // optional field genuinely omitted
+
+        Assert.False(item.Choices[2].IsGraph);
+        Assert.Equal("Neither graph shows constant velocity", item.Choices[2].Text);
+        Assert.False(item.Choices[3].IsGraph);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_AllowGraphChoicesFalse_StillAcceptsPlainStringChoices()
+    {
+        // The unchanged, pre-graph-spec wire shape — GeneratedChoiceConverter must keep parsing it
+        // exactly as before when the caller hasn't opted into graph-based choices.
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(CannedResponse));
+        var generator = new Generator(client);
+
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false);
+
+        var item = Assert.Single(pack.PracticeItems);
+        Assert.All(item.Choices, c => Assert.False(c.IsGraph));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_GraphChoice_SegmentWithOnlyOnePoint_ThrowsRatherThanShippingAnUndrawableLine()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "correctIndex": 0, "explanation": "e", "choices": [
+                    { "kind": "graph", "graph": {
+                        "xAxis": { "label": "Time" }, "yAxis": { "label": "Velocity" },
+                        "segments": [ { "points": [ { "x": 0, "y": 0 } ] } ] } },
+                    { "kind": "text", "text": "b" }, { "kind": "text", "text": "c" }, { "kind": "text", "text": "d" }
+                ] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_UnrecognizedChoiceKind_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "correctIndex": 0, "explanation": "e", "choices": [
+                    { "kind": "image" }, { "kind": "text", "text": "b" }, { "kind": "text", "text": "c" }, { "kind": "text", "text": "d" }
+                ] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_GraphChoiceMissingXAxisLabel_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "correctIndex": 0, "explanation": "e", "choices": [
+                    { "kind": "graph", "graph": {
+                        "xAxis": { "label": "" }, "yAxis": { "label": "Velocity" },
+                        "segments": [ { "points": [ { "x": 0, "y": 0 }, { "x": 1, "y": 1 } ] } ] } },
+                    { "kind": "text", "text": "b" }, { "kind": "text", "text": "c" }, { "kind": "text", "text": "d" }
+                ] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
     }
 
     // GenerateUnitStructureAsync (see the Shell-display-only/course-authoring plan's Part B) —

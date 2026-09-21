@@ -528,6 +528,12 @@ public partial class MainWindow : Window
         ContentPanel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = color });
     }
 
+    /// A graph-typed choice has no renderer yet (see the graph-spec-rendering plan — the Avalonia
+    /// chart control is a separate, later piece of that work); shown as a clearly-labeled
+    /// placeholder rather than silently falling back to the record's default ToString().
+    private static string ChoiceDisplayText(PracticeItemChoice choice) =>
+        choice.Text ?? "[Graph-based answer — rendering not built yet]";
+
     /// Dev-only raw preview of an unreviewed, just-refreshed draft (see RefreshContent's
     /// rawPack-is-unverified branch) — same withhold-the-answer-until-checked UX as the real
     /// tracked version below, but deliberately does NOT log an AttemptRecord: this is a peek at
@@ -547,7 +553,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = item.Choices[i], GroupName = item.Id };
+            var radio = new RadioButton { Content = ChoiceDisplayText(item.Choices[i]), GroupName = item.Id };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) selected = choiceIndex;
@@ -568,7 +574,7 @@ public partial class MainWindow : Window
             var correct = chosen == item.CorrectIndex;
             resultText.Text = correct
                 ? $"✓ Correct! {item.Explanation}"
-                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {item.Choices[item.CorrectIndex]}\n{item.Explanation}";
+                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {ChoiceDisplayText(item.Choices[item.CorrectIndex])}\n{item.Explanation}";
             resultText.Foreground = correct ? Brushes.DarkGreen : Brushes.DarkRed;
             resultText.IsVisible = true;
         };
@@ -599,7 +605,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = item.Choices[i], GroupName = $"{packHash}-{item.Id}" };
+            var radio = new RadioButton { Content = ChoiceDisplayText(item.Choices[i]), GroupName = $"{packHash}-{item.Id}" };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) selected = choiceIndex;
@@ -620,7 +626,7 @@ public partial class MainWindow : Window
             var correct = chosen == item.CorrectIndex;
             resultText.Text = correct
                 ? $"✓ Correct! {item.Explanation}"
-                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {item.Choices[item.CorrectIndex]}\n{item.Explanation}";
+                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {ChoiceDisplayText(item.Choices[item.CorrectIndex])}\n{item.Explanation}";
             resultText.Foreground = correct ? Brushes.DarkGreen : Brushes.DarkRed;
             resultText.IsVisible = true;
 

@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ApTutor.Content;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
@@ -8,7 +9,46 @@ namespace ApTutor.ContentFactory;
 
 // The model-generated shape: identity fields (item id, node id, step index) are assigned by us
 // afterward, not left for the model to invent — those are structural, not content.
-public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<string> Choices, int CorrectIndex, string Explanation);
+//
+// GeneratedChoice (see the graph-spec-rendering plan's Part 2) is a discriminated union over the
+// wire: Kind picks which of Text/Graph is meaningful. The model is required to state Kind
+// explicitly rather than us guessing it from which field is present — the same "never trust the
+// model with structural facts it could get subtly wrong" posture as every other Generated* shape
+// in this file. Real validation (kind matches a populated field, a graph is actually well-formed)
+// happens in Generator.GenerateAsync, not here.
+//
+// GeneratedChoiceConverter also accepts a bare JSON string with no "kind" wrapper at all — that's
+// exactly what GenerationSchema.PracticeItemsArraySchema still asks for when allowGraphChoices is
+// false (the unchanged, pre-graph-spec choice shape), so ordinary text-only generation keeps
+// deserializing into this same type without the caller needing to know or care which wire shape
+// Claude actually returned.
+[JsonConverter(typeof(GeneratedChoiceConverter))]
+public sealed record GeneratedChoice(string Kind, string? Text, GraphSpec? Graph);
+
+public sealed class GeneratedChoiceConverter : JsonConverter<GeneratedChoice>
+{
+    public override GeneratedChoice Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+            return new GeneratedChoice("text", reader.GetString(), null);
+
+        using var doc = JsonDocument.ParseValue(ref reader);
+        var root = doc.RootElement;
+        var kind = root.TryGetProperty("kind", out var kindEl) ? kindEl.GetString() ?? "" : "";
+        var text = root.TryGetProperty("text", out var textEl) && textEl.ValueKind == JsonValueKind.String
+            ? textEl.GetString()
+            : null;
+        var graph = root.TryGetProperty("graph", out var graphEl) && graphEl.ValueKind == JsonValueKind.Object
+            ? graphEl.Deserialize<GraphSpec>(options)
+            : null;
+        return new GeneratedChoice(kind, text, graph);
+    }
+
+    public override void Write(Utf8JsonWriter writer, GeneratedChoice value, JsonSerializerOptions options) =>
+        throw new NotSupportedException($"{nameof(GeneratedChoice)} is only ever parsed from Claude's response, never written.");
+}
+
+public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<GeneratedChoice> Choices, int CorrectIndex, string Explanation);
 public sealed record GeneratedStep(string Caption, int? SourceLine, IReadOnlyList<SceneOp> Ops);
 public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
@@ -21,25 +61,41 @@ public sealed class Generator
 {
     // CamelCase + case-insensitive so "frameId" (our schema/prompt) maps onto SceneOp's "FrameId"
     // etc., reusing the same [JsonPolymorphic]/[JsonDerivedType] "op" discriminator that
-    // ApTutor.Scene already declares — no hand-written op-shape mapping needed.
-    private static readonly JsonSerializerOptions ParseOptions = new() { PropertyNameCaseInsensitive = true };
+    // ApTutor.Scene already declares — no hand-written op-shape mapping needed. JsonStringEnumConverter
+    // is needed for GraphAxisKind (the schema asks for "x"/"y" strings, not numbers) — it's the
+    // first enum-typed field any Generated* shape has ever had; every other enum in this file
+    // (NodeType, Difficulty) is parsed as a plain string and hand-converted via Enum.TryParse
+    // instead, so adding this converter can't change how any of those already behave.
+    private static readonly JsonSerializerOptions ParseOptions = new()
+    {
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() },
+    };
 
     private readonly ClaudeClient _client;
 
     public Generator(ClaudeClient client) => _client = client;
 
-    public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, Difficulty difficulty, CancellationToken ct = default)
+    /// allowGraphChoices is the real, explicit signal that this generation's answer options may be
+    /// static line/point graphs instead of plain text (see the graph-spec-rendering plan's Part 2)
+    /// — required, not defaulted, so every call site states its intent rather than the prompt
+    /// vaguely hoping the model infers it. False preserves today's text-only generation exactly;
+    /// existing courses/nodes are entirely unaffected unless a caller opts in.
+    public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, CancellationToken ct = default)
     {
-        var schema = GenerationSchema.NodeContentSchema();
+        var schema = GenerationSchema.NodeContentSchema(allowGraphChoices);
         var system = PromptTemplates.System(courseId);
-        var user = PromptTemplates.ForNode(node, difficulty);
+        var user = PromptTemplates.ForNode(node, difficulty, allowGraphChoices);
 
         var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_node_content", ct);
         var generated = JsonSerializer.Deserialize<GeneratedNodeContent>(inputJson.GetRawText(), ParseOptions)
             ?? throw new InvalidOperationException($"Claude returned an empty/unparsable content block for node '{node.Id}'.");
 
         var practiceItems = generated.PracticeItems
-            .Select((item, i) => new PracticeItem($"{node.Id}-q{i + 1}", node.Id, item.Prompt, item.Choices, item.CorrectIndex, item.Explanation))
+            .Select((item, i) => new PracticeItem(
+                $"{node.Id}-q{i + 1}", node.Id, item.Prompt,
+                item.Choices.Select((choice, ci) => ToPracticeItemChoice(choice, node.Id, i, ci)).ToList(),
+                item.CorrectIndex, item.Explanation))
             .ToList();
 
         var steps = generated.WalkthroughSteps
@@ -57,6 +113,51 @@ public sealed class Generator
             GeneratedAt: DateTimeOffset.UtcNow,
             Model: _client.Model,
             Difficulty: difficulty);
+    }
+
+    /// Turns one raw generated choice into a real PracticeItemChoice, failing loudly on anything
+    /// that doesn't parse as a genuinely well-formed choice — "the JSON parses" and "the JSON
+    /// correctly represents what was asked for" are different bars (see the graph-spec-rendering
+    /// plan's Part 5), and this is the boundary that catches the first one before a malformed draft
+    /// ever reaches an SME's review screen. A validation failure here fails the whole generation
+    /// (see ContentGenerationService.RunAsync's existing catch-and-fail handling) exactly like any
+    /// other bad generation — never silently downgraded to a broken or half-populated choice.
+    private static PracticeItemChoice ToPracticeItemChoice(GeneratedChoice choice, string nodeId, int itemIndex, int choiceIndex)
+    {
+        var where = $"node '{nodeId}' item {itemIndex + 1} choice {choiceIndex + 1}";
+        return choice.Kind?.ToLowerInvariant() switch
+        {
+            "text" => !string.IsNullOrWhiteSpace(choice.Text)
+                ? PracticeItemChoice.OfText(choice.Text)
+                : throw new InvalidOperationException($"{where}: kind is 'text' but no text was provided."),
+            "graph" => choice.Graph is { } graph
+                ? PracticeItemChoice.OfGraph(ValidateGraph(graph, where))
+                : throw new InvalidOperationException($"{where}: kind is 'graph' but no graph was provided."),
+            _ => throw new InvalidOperationException($"{where}: unrecognized choice kind '{choice.Kind}'."),
+        };
+    }
+
+    /// Structural sanity, not physics correctness (see the graph-spec-rendering plan's Part 5 —
+    /// "the JSON correctly represents the physics" is a separate, iterative concern this method
+    /// can't judge). This only catches a graph that couldn't possibly render sensibly: missing axis
+    /// labels, no segments at all, or a segment too short to draw a line from.
+    private static GraphSpec ValidateGraph(GraphSpec graph, string where)
+    {
+        if (string.IsNullOrWhiteSpace(graph.XAxis.Label))
+            throw new InvalidOperationException($"{where}: graph is missing an X axis label.");
+        if (string.IsNullOrWhiteSpace(graph.YAxis.Label))
+            throw new InvalidOperationException($"{where}: graph is missing a Y axis label.");
+        if (graph.Segments.Count == 0)
+            throw new InvalidOperationException($"{where}: graph has zero line segments.");
+        foreach (var segment in graph.Segments)
+            if (segment.Points.Count < 2)
+                throw new InvalidOperationException($"{where}: a graph segment needs at least 2 points to draw a line, got {segment.Points.Count}.");
+        if (graph.ReferenceValues is { } refs)
+            foreach (var reference in refs)
+                if (string.IsNullOrWhiteSpace(reference.Label))
+                    throw new InvalidOperationException($"{where}: a graph reference value is missing its label.");
+
+        return graph;
     }
 
     /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring

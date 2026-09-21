@@ -6,6 +6,8 @@
 // reporting are course-agnostic and built exactly once. Adding a course = adding a module,
 // not touching the platform.
 
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using ApTutor.Curriculum; // SkillGraph, DagNode
 using ApTutor.Scene;      // SceneOp, SceneDelta
 
@@ -63,7 +65,57 @@ public interface IContentSource
 }
 
 public sealed record PracticeItem(string Id, string NodeId, string Prompt,
-                                  IReadOnlyList<string> Choices, int CorrectIndex, string Explanation);
+                                  IReadOnlyList<PracticeItemChoice> Choices, int CorrectIndex, string Explanation);
+
+/// One answer option — plain text (the overwhelming case today) or a static line/point graph (see
+/// GraphSpec), for courses like Physics where an option is itself a graph, not text (e.g. four
+/// lettered velocity-time plots). Exactly one of Text/Graph is meaningful per choice; IsGraph says
+/// which. A single item's Choices can mix text and graph options — nothing here assumes a whole
+/// question is one or the other (see the graph-spec-rendering plan).
+[JsonConverter(typeof(PracticeItemChoiceConverter))]
+public sealed record PracticeItemChoice(string? Text, GraphSpec? Graph)
+{
+    public bool IsGraph => Graph is not null;
+
+    public static PracticeItemChoice OfText(string text) => new(text, null);
+    public static PracticeItemChoice OfGraph(GraphSpec graph) => new(null, graph);
+}
+
+/// Reads either the current shape (<c>{"Text": "...", "Graph": null}</c>) or the bare-string shape
+/// every choice was written in before graph-based choices existed
+/// (<c>"int x = 5;"</c>) — real approved content already sits in S3 on the old shape, and there's no
+/// one-time migration step; a choice written under the old shape simply upgrades in place the next
+/// time its item is approved again. Always writes the current (object) shape.
+public sealed class PracticeItemChoiceConverter : JsonConverter<PracticeItemChoice>
+{
+    public override PracticeItemChoice Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+            return PracticeItemChoice.OfText(reader.GetString()!);
+
+        using var doc = JsonDocument.ParseValue(ref reader);
+        var root = doc.RootElement;
+        var text = root.TryGetProperty("Text", out var textEl) && textEl.ValueKind == JsonValueKind.String
+            ? textEl.GetString()
+            : null;
+        var graph = root.TryGetProperty("Graph", out var graphEl) && graphEl.ValueKind == JsonValueKind.Object
+            ? graphEl.Deserialize<GraphSpec>(options)
+            : null;
+        return new PracticeItemChoice(text, graph);
+    }
+
+    public override void Write(Utf8JsonWriter writer, PracticeItemChoice value, JsonSerializerOptions options)
+    {
+        writer.WriteStartObject();
+        writer.WriteString("Text", value.Text);
+        if (value.Graph is not null)
+        {
+            writer.WritePropertyName("Graph");
+            JsonSerializer.Serialize(writer, value.Graph, options);
+        }
+        writer.WriteEndObject();
+    }
+}
 
 /// Draws one domain primitive onto the scene canvas (Skia). The renderer dispatches SceneOps
 /// to the primitive that owns them; new courses add primitives without touching the core loop.

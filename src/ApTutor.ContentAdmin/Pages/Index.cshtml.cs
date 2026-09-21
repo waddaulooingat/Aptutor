@@ -80,8 +80,11 @@ public sealed class IndexModel : PageModel
         var manifest = await _store.GetCourseManifestAsync(course);
         foreach (var node in graph.Dag.Nodes.Where(n => n.Unit == unit))
         {
+            // Bulk generation always stays text-only (see the graph-spec-rendering plan's Part 2) —
+            // graph-based choices are an explicit, per-node SME decision made on the Review page,
+            // not something to fire unattended across a whole unit at once.
             if (StatusFor(course, node, difficulty, manifest) == NodeReviewStatus.NotStarted)
-                _generation.TryStartGeneration(course, node.Id, difficulty);
+                _generation.TryStartGeneration(course, node.Id, difficulty, allowGraphChoices: false);
         }
 
         return RedirectToPage("/Index");

@@ -33,6 +33,10 @@
             <input type="hidden" name="course" value="@Model.CourseId" />
             <input type="hidden" name="node" value="@Model.NodeId" />
             <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+            <label>
+                <input type="checkbox" name="allowGraphChoices" value="true" />
+                Allow graph-based answer options (e.g. velocity-vs-time plots) — for Physics/Chemistry-style questions
+            </label>
             <button type="submit" class="btn-primary">Generate</button>
         </form>
     </div>
@@ -48,7 +52,11 @@ else if (!Model.PackIsPending)
             <form method="post" asp-page-handler="Generate">
                 <input type="hidden" name="course" value="@Model.CourseId" />
                 <input type="hidden" name="node" value="@Model.NodeId" />
-            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <label>
+                    <input type="checkbox" name="allowGraphChoices" value="true" />
+                    Allow graph-based answer options
+                </label>
                 <button type="submit">Generate another set</button>
             </form>
         </div>
@@ -74,7 +82,8 @@ else
                     @for (var i = 0; i < item.Choices.Count; i++)
                     {
                         <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
-                            @(i == item.CorrectIndex ? "✓" : "—") @item.Choices[i]
+                            @(i == item.CorrectIndex ? "✓" : "—")
+                            @(item.Choices[i].IsGraph ? "[Graph-based answer — review rendering not built yet]" : item.Choices[i].Text)
                         </p>
                     }
                     <p class="notice">@item.Explanation</p>
@@ -111,7 +120,11 @@ else
             <form method="post" asp-page-handler="Generate">
                 <input type="hidden" name="course" value="@Model.CourseId" />
                 <input type="hidden" name="node" value="@Model.NodeId" />
-            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <label>
+                    <input type="checkbox" name="allowGraphChoices" value="true" />
+                    Allow graph-based answer options
+                </label>
                 <button type="submit">Generate a new attempt</button>
             </form>
         </div>

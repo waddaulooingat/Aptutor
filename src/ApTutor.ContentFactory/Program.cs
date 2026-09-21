@@ -23,12 +23,15 @@ static void PrintUsage() => Console.WriteLine("""
     ApTutor.ContentFactory — Phase 7 build-time content generator/reviewer.
 
     Usage:
-      generate --dag <skill-dag.json> --course <courseId> --content <content-dir> [--units 1-5] [--difficulty easy|medium|hard] --model <model-id>
+      generate --dag <skill-dag.json> --course <courseId> --content <content-dir> [--units 1-5] [--difficulty easy|medium|hard] [--allow-graph-choices] --model <model-id>
       review   --content <content-dir>
 
     generate calls the live Claude API (needs ANTHROPIC_API_KEY set in the environment — this is
     real, billed spend on your own account) and writes one "<nodeId>.json" file per DAG node under
     --content, each starting unverified. --difficulty defaults to "medium" if omitted.
+    --allow-graph-choices lets a practice item's answer options be static line/point graphs (e.g.
+    velocity-vs-time plots) instead of plain text — see the graph-spec-rendering plan. Off by
+    default; only worth setting for Physics/Chemistry-style nodes that actually need it.
 
     review walks every unverified file under --content and lets you approve, reject (delete), or
     skip each one. Only approved (Verified: true) files are ever served to the running app — see
@@ -72,6 +75,10 @@ static async Task<int> RunGenerateAsync(string[] args)
     if (opts.TryGetValue("difficulty", out var difficultySpec) && !Enum.TryParse(difficultySpec, ignoreCase: true, out difficulty))
         return Fail($"--difficulty must be one of: easy, medium, hard (got '{difficultySpec}').");
 
+    // A bare boolean flag, not a --key value pair like the options above — ParseOptions only
+    // handles the latter, so this is checked directly against the raw args instead.
+    var allowGraphChoices = args.Contains("--allow-graph-choices", StringComparer.Ordinal);
+
     var client = new ClaudeClient(apiKey, model);
     var generator = new Generator(client);
 
@@ -82,7 +89,7 @@ static async Task<int> RunGenerateAsync(string[] args)
         Console.Write($"  {node.Id} ... ");
         try
         {
-            var pack = await generator.GenerateAsync(courseId, node, difficulty);
+            var pack = await generator.GenerateAsync(courseId, node, difficulty, allowGraphChoices);
             ContentPackStore.Save(contentDir, pack);
             Console.WriteLine("done (unverified — run 'review' next).");
         }

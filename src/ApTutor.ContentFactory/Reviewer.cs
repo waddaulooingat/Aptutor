@@ -54,7 +54,10 @@ public static class Reviewer
         {
             Console.WriteLine($"  Q: {item.Prompt}");
             for (var i = 0; i < item.Choices.Count; i++)
-                Console.WriteLine($"     {(i == item.CorrectIndex ? "*" : " ")} {(char)('A' + i)}. {item.Choices[i]}");
+            {
+                var display = item.Choices[i].IsGraph ? "[graph-based answer — no console renderer yet]" : item.Choices[i].Text;
+                Console.WriteLine($"     {(i == item.CorrectIndex ? "*" : " ")} {(char)('A' + i)}. {display}");
+            }
             Console.WriteLine($"     explanation: {item.Explanation}\n");
         }
 

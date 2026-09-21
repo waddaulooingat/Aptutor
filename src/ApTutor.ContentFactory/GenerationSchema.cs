@@ -8,7 +8,7 @@ namespace ApTutor.ContentFactory;
 /// op fails loudly there and that node is skipped, it never silently ships wrong content.
 public static class GenerationSchema
 {
-    public static JsonNode NodeContentSchema() => new JsonObject
+    public static JsonNode NodeContentSchema(bool allowGraphChoices) => new JsonObject
     {
         ["type"] = "object",
         ["required"] = new JsonArray { "walkthroughText", "practiceItems", "walkthroughSteps" },
@@ -20,7 +20,7 @@ public static class GenerationSchema
                 ["description"] = "A short (2-4 sentence) original explanation of the concept, " +
                                    "written for a high-school AP CS A student. Plain prose, no markdown.",
             },
-            ["practiceItems"] = PracticeItemsArraySchema(),
+            ["practiceItems"] = PracticeItemsArraySchema(allowGraphChoices),
             ["walkthroughSteps"] = new JsonObject
             {
                 ["type"] = "array",
@@ -121,7 +121,7 @@ public static class GenerationSchema
         },
     };
 
-    private static JsonNode PracticeItemsArraySchema() => new JsonObject
+    private static JsonNode PracticeItemsArraySchema(bool allowGraphChoices) => new JsonObject
     {
         ["type"] = "array",
         ["minItems"] = 2,
@@ -138,7 +138,7 @@ public static class GenerationSchema
                     ["type"] = "array",
                     ["minItems"] = 4,
                     ["maxItems"] = 4,
-                    ["items"] = new JsonObject { ["type"] = "string" },
+                    ["items"] = allowGraphChoices ? ChoiceSchema() : new JsonObject { ["type"] = "string" },
                 },
                 ["correctIndex"] = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 3 },
                 ["explanation"] = new JsonObject
@@ -147,6 +147,113 @@ public static class GenerationSchema
                     ["description"] = "Why the correct choice is right AND why at least one distractor is wrong.",
                 },
             },
+        },
+    };
+
+    /// One answer option when graph-based choices are allowed (see the graph-spec-rendering plan's
+    /// Part 2) — a discriminated union: "kind" says which of text/graph is meaningful. Only used
+    /// when the caller explicitly opts in; the plain-string choice shape above is untouched
+    /// otherwise, so existing text-only generation is byte-for-byte the same schema as before.
+    private static JsonNode ChoiceSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["required"] = new JsonArray { "kind" },
+        ["description"] =
+            "Either a plain text choice or a static line/point graph. Set kind to \"text\" and fill " +
+            "in text, OR set kind to \"graph\" and fill in graph — never both, never neither. A " +
+            "question's four choices may all be graphs, all be text, or mix — whatever the question " +
+            "actually calls for.",
+        ["properties"] = new JsonObject
+        {
+            ["kind"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray { "text", "graph" } },
+            ["text"] = new JsonObject { ["type"] = "string", ["description"] = "Required when kind is \"text\"." },
+            ["graph"] = GraphSpecSchema(),
+        },
+    };
+
+    /// Mirrors ApTutor.Platform.GraphSpec field-for-field — see that type's remarks for what each
+    /// field means and why it's scoped to line/point graphs only.
+    private static JsonNode GraphSpecSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["description"] = "Required when kind is \"graph\". A static line/point graph — axes, one " +
+                           "or more line segments, and optional labeled reference values.",
+        ["required"] = new JsonArray { "xAxis", "yAxis", "segments" },
+        ["properties"] = new JsonObject
+        {
+            ["xAxis"] = GraphAxisSchema(),
+            ["yAxis"] = GraphAxisSchema(),
+            ["segments"] = new JsonObject
+            {
+                ["type"] = "array",
+                ["minItems"] = 1,
+                ["description"] = "One entry per drawn line. A graph with multiple curves on it is " +
+                                   "just multiple entries here — nothing else changes.",
+                ["items"] = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["required"] = new JsonArray { "points" },
+                    ["properties"] = new JsonObject
+                    {
+                        ["points"] = new JsonObject
+                        {
+                            ["type"] = "array",
+                            ["minItems"] = 2,
+                            ["description"] = "Ordered (x, y) points connecting to form this line — " +
+                                               "two points for a straight segment of constant slope, " +
+                                               "more for a piecewise or curved line.",
+                            ["items"] = new JsonObject
+                            {
+                                ["type"] = "object",
+                                ["required"] = new JsonArray { "x", "y" },
+                                ["properties"] = new JsonObject
+                                {
+                                    ["x"] = new JsonObject { ["type"] = "number" },
+                                    ["y"] = new JsonObject { ["type"] = "number" },
+                                },
+                            },
+                        },
+                        ["solid"] = new JsonObject
+                        {
+                            ["type"] = "boolean",
+                            ["description"] = "Defaults to true (solid) if omitted. Use false for a " +
+                                               "dashed segment — pick whichever the question's own " +
+                                               "solid-vs-dashed convention actually requires.",
+                        },
+                        ["label"] = new JsonObject { ["type"] = "string" },
+                    },
+                },
+            },
+            ["referenceValues"] = new JsonObject
+            {
+                ["type"] = "array",
+                ["description"] = "Optional labeled tick marks/guides on an axis, e.g. a Y-axis " +
+                                   "value labeled \"v_t\". Omit if the question needs none.",
+                ["items"] = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["required"] = new JsonArray { "axis", "value", "label" },
+                    ["properties"] = new JsonObject
+                    {
+                        ["axis"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray { "x", "y" } },
+                        ["value"] = new JsonObject { ["type"] = "number" },
+                        ["label"] = new JsonObject { ["type"] = "string" },
+                    },
+                },
+            },
+        },
+    };
+
+    private static JsonNode GraphAxisSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["required"] = new JsonArray { "label" },
+        ["properties"] = new JsonObject
+        {
+            ["label"] = new JsonObject { ["type"] = "string", ["description"] = "e.g. \"Velocity (relative to the ground)\"." },
+            ["unit"] = new JsonObject { ["type"] = "string", ["description"] = "e.g. \"m/s\". Omit if the axis is unitless." },
+            ["min"] = new JsonObject { ["type"] = "number" },
+            ["max"] = new JsonObject { ["type"] = "number" },
         },
     };
 
