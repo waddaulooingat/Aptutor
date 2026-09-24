@@ -28,6 +28,12 @@ public sealed class S3ContentStoreOptions
 ///                                                        revision (units/nodes/prereqs — see
 ///                                                        ApTutor.Curriculum.SkillDag)
 ///   courses/&lt;courseId&gt;/rejections/&lt;nodeId&gt;-&lt;ticks&gt;.json — one object per rejection event
+///   courses/&lt;courseId&gt;/nodes/&lt;nodeId&gt;/learn.json         — a node's current teaching content (see
+///                                                        the learn-quiz-mode-switch plan) — a plain
+///                                                        MUTABLE, overwritten-in-place object, not
+///                                                        content-addressed like practice content:
+///                                                        there's exactly one live explanation per
+///                                                        node, no per-difficulty/multi-set concept
 ///
 /// Content-addressed by design: a node's key is derived from its own content hash, so re-approving
 /// unchanged content writes the same key with the same bytes (a harmless idempotent no-op) and
@@ -165,6 +171,23 @@ public class S3ContentStore
         await ReindexCourseInTopLevelManifestAsync(courseId, courseManifest, now, ct);
     }
 
+    /// A node's teaching content (see the learn-quiz-mode-switch plan's Part B) — deliberately NOT
+    /// content-addressed/hashed and NOT tracked in the course manifest at all, unlike node practice
+    /// content: there's exactly one current explanation per node (no per-difficulty or multi-set
+    /// concept for this), so a plain fixed key that's simply overwritten on each approval is the
+    /// correct, simpler shape here — no manifest read-merge-write, no retry loop needed.
+    public async Task<LearnContent?> TryGetLiveLearnContentAsync(string courseId, string nodeId, CancellationToken ct = default)
+    {
+        var (content, _) = await TryGetObjectAsync<LearnContent>(LearnContentKey(courseId, nodeId), ct);
+        return content;
+    }
+
+    public async Task ApproveLearnContentAsync(string courseId, string nodeId, LearnContent approved, CancellationToken ct = default)
+    {
+        var body = JsonSerializer.Serialize(approved, CanonicalJsonOptions);
+        await PutObjectAsync(LearnContentKey(courseId, nodeId), body, ifMatch: null, ifNoneMatch: null, ct);
+    }
+
     /// Shared tail of ApproveNodeAsync/ApproveStructureAsync — both end by pointing the top-level
     /// course index at this course's just-updated manifest hash, so the Shell/Content Admin can
     /// discover which courses exist (and whether any of their manifests changed) from one object
@@ -263,4 +286,6 @@ public class S3ContentStore
         $"courses/{courseId}/nodes/{nodeId}/{difficulty.ToString().ToLowerInvariant()}/{hash}.json";
 
     private static string StructureKey(string courseId, string hash) => $"courses/{courseId}/structure/{hash}.json";
+
+    private static string LearnContentKey(string courseId, string nodeId) => $"courses/{courseId}/nodes/{nodeId}/learn.json";
 }

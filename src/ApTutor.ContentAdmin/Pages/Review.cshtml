@@ -130,3 +130,106 @@ else
         </div>
     </div>
 }
+
+<h2>Learn content <span style="font-weight: normal; color: gray; font-size: 0.8em;">(not difficulty-specific — same for every difficulty tab)</span></h2>
+
+@if (Model.LearnError is not null)
+{
+    <p class="error">@Model.LearnError</p>
+}
+@if (Model.LearnNotice is not null)
+{
+    <p class="notice">@Model.LearnNotice</p>
+}
+
+@if (Model.LearnContent is null)
+{
+    <div class="card">
+        <p>No learn content has been generated for this topic yet.</p>
+        <form method="post" asp-page-handler="GenerateLearn">
+            <input type="hidden" name="course" value="@Model.CourseId" />
+            <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+            <button type="submit" class="btn-primary">Generate learn content</button>
+        </form>
+    </div>
+}
+else if (!Model.LearnContentIsPending)
+{
+    <div class="card">
+        <p><span class="badge badge-live">Live</span> This topic's learn content has been approved and is already in the app.</p>
+        <p>@Model.LearnContent.Overview</p>
+        <ol>
+            @foreach (var step in Model.LearnContent.Steps)
+            {
+                <li>
+                    <strong>@step.Caption</strong>
+                    @if (!string.IsNullOrWhiteSpace(step.Detail))
+                    {
+                        <p>@step.Detail</p>
+                    }
+                </li>
+            }
+        </ol>
+
+        <div class="actions" style="margin-top: 16px;">
+            <form method="post" asp-page-handler="GenerateLearn">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <button type="submit">Generate another attempt</button>
+            </form>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <p><span class="badge badge-pending">Pending review</span></p>
+        <p>@Model.LearnContent.Overview</p>
+        <ol>
+            @foreach (var step in Model.LearnContent.Steps)
+            {
+                <li>
+                    <strong>@step.Caption</strong>
+                    @if (!string.IsNullOrWhiteSpace(step.Detail))
+                    {
+                        <p>@step.Detail</p>
+                    }
+                </li>
+            }
+        </ol>
+
+        <form method="post" asp-page-handler="ApproveLearn">
+            <input type="hidden" name="course" value="@Model.CourseId" />
+            <input type="hidden" name="node" value="@Model.NodeId" />
+            <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+            <div class="actions">
+                <button type="submit" class="btn-approve">Approve</button>
+            </div>
+        </form>
+
+        <details style="margin-top: 16px;">
+            <summary>Reject this learn content instead</summary>
+            <form method="post" asp-page-handler="RejectLearn" style="margin-top: 10px;">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <label for="learnReason">Why are you rejecting this?</label>
+                <textarea id="learnReason" name="learnReason" rows="3" required></textarea>
+                <div class="actions">
+                    <button type="submit" class="btn-reject">Reject</button>
+                </div>
+            </form>
+        </details>
+
+        <div class="actions" style="margin-top: 16px;">
+            <form method="post" asp-page-handler="GenerateLearn">
+                <input type="hidden" name="course" value="@Model.CourseId" />
+                <input type="hidden" name="node" value="@Model.NodeId" />
+                <input type="hidden" name="difficulty" value="@Model.Difficulty" />
+                <button type="submit">Generate a new attempt</button>
+            </form>
+        </div>
+    </div>
+}

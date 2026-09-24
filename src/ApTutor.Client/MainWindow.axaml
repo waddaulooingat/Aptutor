@@ -8,6 +8,10 @@
   <Grid RowDefinitions="Auto,*" Margin="12">
 
     <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="12" Margin="0,0,0,12">
+      <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+        <RadioButton Name="LearnModeRadio" Content="Learn" GroupName="shellMode" IsCheckedChanged="OnModeRadioChanged" />
+        <RadioButton Name="QuizModeRadio" Content="Quiz" GroupName="shellMode" IsCheckedChanged="OnModeRadioChanged" />
+      </StackPanel>
       <ComboBox Name="CourseSelector" SelectionChanged="OnCourseSelectionChanged" VerticalAlignment="Center" MinWidth="160">
         <ComboBox.ItemTemplate>
           <DataTemplate DataType="platform:ICourseModule">
@@ -54,12 +58,13 @@
             <Button Name="MarkMasteredButton" Content="Mark mastered" Click="OnMarkMasteredClick" IsEnabled="False" />
 
             <Separator Margin="0,8,0,0" />
-            <StackPanel Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
+            <StackPanel Name="QuizControlsRow" Orientation="Horizontal" Spacing="12" Margin="0,4,0,0">
               <TextBlock Text="Content" FontWeight="Bold" VerticalAlignment="Center" />
               <TextBlock Text="Difficulty:" VerticalAlignment="Center" Margin="16,0,0,0" />
               <ComboBox Name="DifficultySelector" SelectionChanged="OnDifficultySelectionChanged" MinWidth="90" />
               <Button Name="RetryWrongButton" Content="Retry wrong questions" Click="OnRetryWrongClick" IsEnabled="False" />
             </StackPanel>
+            <TextBlock Name="LearnModeHeading" Text="Learn" FontWeight="Bold" Margin="0,4,0,0" IsVisible="False" />
             <StackPanel Name="ContentPanel" Spacing="8" />
           </StackPanel>
         </ScrollViewer>

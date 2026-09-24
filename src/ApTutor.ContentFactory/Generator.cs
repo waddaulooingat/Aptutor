@@ -52,6 +52,8 @@ public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<Generate
 public sealed record GeneratedStep(string Caption, int? SourceLine, IReadOnlyList<SceneOp> Ops);
 public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
+public sealed record GeneratedLearnStep(string Caption, string? Detail);
+public sealed record GeneratedLearnContent(string Overview, IReadOnlyList<GeneratedLearnStep> Steps);
 public sealed record GeneratedUnitNode(string Id, string Title, string Type, IReadOnlyList<string> Prereqs, string Viz);
 public sealed record GeneratedUnitStructure(IReadOnlyList<GeneratedUnitNode> Nodes);
 public sealed record GeneratedCourseUnit(int Unit, string Title);
@@ -158,6 +160,32 @@ public sealed class Generator
                     throw new InvalidOperationException($"{where}: a graph reference value is missing its label.");
 
         return graph;
+    }
+
+    /// Content Admin's Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B) —
+    /// not difficulty-scoped and not tied to any allow-graph-choices toggle; a node has exactly one
+    /// current explanation, reused across every difficulty (see S3ContentStore.ApproveLearnContentAsync's
+    /// remarks on why this isn't content-addressed like practice content).
+    public async Task<LearnContent> GenerateLearnContentAsync(string courseId, DagNode node, CancellationToken ct = default)
+    {
+        var schema = GenerationSchema.LearnContentSchema();
+        var system = PromptTemplates.System(courseId);
+        var user = PromptTemplates.ForLearnContent(node);
+
+        var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_learn_content", ct);
+        var generated = JsonSerializer.Deserialize<GeneratedLearnContent>(inputJson.GetRawText(), ParseOptions)
+            ?? throw new InvalidOperationException($"Claude returned an empty/unparsable learn-content block for node '{node.Id}'.");
+
+        if (string.IsNullOrWhiteSpace(generated.Overview))
+            throw new InvalidOperationException($"Node '{node.Id}': learn content is missing an overview.");
+        if (generated.Steps.Count == 0)
+            throw new InvalidOperationException($"Node '{node.Id}': learn content has zero steps.");
+        foreach (var step in generated.Steps)
+            if (string.IsNullOrWhiteSpace(step.Caption))
+                throw new InvalidOperationException($"Node '{node.Id}': a learn-content step is missing its caption.");
+
+        var steps = generated.Steps.Select(s => new LearnStep(s.Caption, s.Detail)).ToList();
+        return new LearnContent(generated.Overview, steps, Verified: false, DateTimeOffset.UtcNow, _client.Model);
     }
 
     /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring

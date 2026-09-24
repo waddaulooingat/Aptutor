@@ -431,4 +431,83 @@ public class GeneratorTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => generator.GenerateCourseUnitListAsync("physics1", "AP Physics 1", guidance: null));
     }
+
+    // GenerateLearnContentAsync (see the learn-quiz-mode-switch plan's Part B) — teaching content
+    // for a node, generated and reviewed alongside (not replacing) practice items.
+    private const string LearnContentResponse = """
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "emit_learn_content",
+                    "input": {
+                        "overview": "This node covers variables and primitive types.",
+                        "steps": [
+                            { "caption": "Declare a variable.", "detail": "int x = 5; reserves memory typed as int." },
+                            { "caption": "Reassign it." }
+                        ]
+                    }
+                }
+            ]
+        }
+        """;
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_ParsesCannedResponseIntoLearnContent()
+    {
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(LearnContentResponse));
+        var generator = new Generator(client);
+
+        var content = await generator.GenerateLearnContentAsync("csa", SampleNode);
+
+        Assert.Equal("This node covers variables and primitive types.", content.Overview);
+        Assert.False(content.Verified); // always starts unverified — the reviewer flips this
+        Assert.Equal("fake-model", content.Model);
+        Assert.Equal(2, content.Steps.Count);
+        Assert.Equal("Declare a variable.", content.Steps[0].Caption);
+        Assert.Equal("int x = 5; reserves memory typed as int.", content.Steps[0].Detail);
+        Assert.Null(content.Steps[1].Detail); // detail is optional per step
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_MissingOverview_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "", "steps": [ { "caption": "A step." } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_ZeroSteps_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.", "steps": [] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_StepMissingCaption_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.", "steps": [ { "caption": "" } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
 }

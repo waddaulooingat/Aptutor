@@ -32,12 +32,42 @@ public partial class MainWindow : Window
     private Difficulty _selectedDifficulty = Difficulty.Medium;
     private bool _retryMode;
 
+    // Learn/Quiz — a top-level, always-switchable mode (see the learn-quiz-mode-switch plan's Part
+    // A), not per-node gating. Loaded once at startup from local storage; Quiz mode is completely
+    // unchanged existing behavior, so this defaults to it for anyone who's never picked a mode.
+    private ShellMode _mode = ShellModeStore.Load(AppSettingsStore.DefaultDir);
+
     public MainWindow()
     {
         InitializeComponent();
         DifficultySelector.ItemsSource = new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
         DifficultySelector.SelectedItem = _selectedDifficulty;
+
+        // Set directly rather than relying on OnModeRadioChanged to fire — if the persisted mode is
+        // already Learn, LearnModeRadio.IsChecked flips from its XAML default (false) to true, which
+        // DOES fire the handler, but that handler's own "already matches _mode" guard would then
+        // skip updating visibility. Setting both explicitly here means the initial UI state is
+        // correct regardless of which mode was loaded or whether the handler happens to fire.
+        LearnModeRadio.IsChecked = _mode == ShellMode.Learn;
+        QuizModeRadio.IsChecked = _mode == ShellMode.Quiz;
+        QuizControlsRow.IsVisible = _mode == ShellMode.Quiz;
+        LearnModeHeading.IsVisible = _mode == ShellMode.Learn;
+
         _ = LoadCoursesAsync();
+    }
+
+    /// Learn/Quiz radio group — either radio's IsCheckedChanged fires this (one goes true, the other
+    /// false), so it's driven off which one is currently checked rather than the specific sender.
+    private void OnModeRadioChanged(object? sender, RoutedEventArgs e)
+    {
+        var newMode = LearnModeRadio.IsChecked == true ? ShellMode.Learn : ShellMode.Quiz;
+        if (newMode == _mode) return;
+
+        _mode = newMode;
+        ShellModeStore.Save(AppSettingsStore.DefaultDir, _mode);
+        QuizControlsRow.IsVisible = _mode == ShellMode.Quiz;
+        LearnModeHeading.IsVisible = _mode == ShellMode.Learn;
+        if (_selectedNode is not null) RefreshDetail();
     }
 
     /// Reloads settings after the dialog closes — Save or Cancel both just close the window, so
@@ -295,6 +325,24 @@ public partial class MainWindow : Window
             Foreground = walkthroughText is null ? Brushes.Gray : Brushes.Black,
         });
 
+        // Learn mode shows teaching content instead of practice items and never touches mastery
+        // (see the learn-quiz-mode-switch plan's Part A/B). Learn content isn't synced/cached
+        // locally like practice content (see ContentSyncService.TryFetchLearnContentAsync's
+        // remarks) — fetched live, on demand, each time a node is opened in Learn mode.
+        if (_mode == ShellMode.Learn)
+        {
+            var loadingText = new TextBlock
+            {
+                Text = "Loading learn content…",
+                FontStyle = FontStyle.Italic,
+                Foreground = Brushes.Gray,
+                Margin = new Thickness(0, 8, 0, 0),
+            };
+            ContentPanel.Children.Add(loadingText);
+            _ = LoadLearnContentAsync(node, loadingText);
+            return;
+        }
+
         // Dev-only "Refresh questions" (see OnRefreshQuestionsClick) writes a fresh, Verified: false
         // pack straight to disk, bypassing the normal verified-only Content.GetPracticeItems path on
         // purpose — peek at the raw pack here so a refresh is actually visible, clearly labeled as
@@ -341,6 +389,66 @@ public partial class MainWindow : Window
 
         foreach (var scoped in items)
             ContentPanel.Children.Add(BuildPracticeItemBlock(node, scoped.PackHash, scoped.Item, _selectedDifficulty));
+    }
+
+    /// Fetches and renders this node's learn content, guarding against the student having switched
+    /// to a different node or back to Quiz mode while the S3 call was in flight — same guard pattern
+    /// as MockExamWindow's diagram loading. Caches the fetched content in a plain local file
+    /// (LearnContentStore) and falls back to that cache when the live fetch fails, so a previously-
+    /// viewed node's learn content still works offline — the same "already downloaded content keeps
+    /// working" guarantee ContentSyncService's own offline handling gives practice content.
+    private async Task LoadLearnContentAsync(DagNode node, TextBlock placeholder)
+    {
+        LearnContent? content = null;
+        if (TryResolveS3Config(out var bucket, out var region, out _))
+        {
+            try
+            {
+                using var s3 = BuildS3Client(region);
+                content = await new ContentSyncService(s3, bucket).TryFetchLearnContentAsync(_course.CourseId, node.Id);
+                if (content is { Verified: true })
+                    LearnContentStore.Save(_course.ContentDir, node.Id, content);
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"[LoadLearnContentAsync] {ex}");
+            }
+        }
+
+        content ??= LearnContentStore.TryLoad(_course.ContentDir, node.Id);
+
+        if (_selectedNode?.Id != node.Id || _mode != ShellMode.Learn) return;
+
+        ContentPanel.Children.Remove(placeholder);
+        if (content is not { Verified: true })
+        {
+            ContentPanel.Children.Add(new TextBlock
+            {
+                Text = "Learn content for this topic isn't available yet. Switch to Quiz to practice.",
+                TextWrapping = TextWrapping.Wrap,
+                FontStyle = FontStyle.Italic,
+                Foreground = Brushes.Gray,
+            });
+            return;
+        }
+
+        var overview = MathTextRenderer.Build(content.Overview);
+        overview.Margin = new Thickness(0, 4, 0, 8);
+        ContentPanel.Children.Add(overview);
+
+        for (var i = 0; i < content.Steps.Count; i++)
+        {
+            var step = content.Steps[i];
+            var stepPanel = new StackPanel { Spacing = 2, Margin = new Thickness(0, 4, 0, 0) };
+            stepPanel.Children.Add(MathTextRenderer.Build($"{i + 1}. {step.Caption}", fontWeight: FontWeight.SemiBold));
+            if (!string.IsNullOrWhiteSpace(step.Detail))
+            {
+                var detail = MathTextRenderer.Build(step.Detail);
+                detail.Margin = new Thickness(12, 0, 0, 0);
+                stepPanel.Children.Add(detail);
+            }
+            ContentPanel.Children.Add(stepPanel);
+        }
     }
 
     /// One node can have several independently-approved sets at the chosen difficulty (see the
@@ -541,19 +649,14 @@ public partial class MainWindow : Window
     private static Control BuildPreviewPracticeItemBlock(PracticeItem item)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
-        container.Children.Add(new TextBlock
-        {
-            Text = $"Q: {item.Prompt}",
-            TextWrapping = TextWrapping.Wrap,
-            FontWeight = FontWeight.SemiBold,
-        });
+        container.Children.Add(MathTextRenderer.Build($"Q: {item.Prompt}", fontWeight: FontWeight.SemiBold));
 
         int? selected = null;
         var radios = new List<RadioButton>();
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = ChoiceDisplayText(item.Choices[i]), GroupName = item.Id };
+            var radio = new RadioButton { Content = MathTextRenderer.Build(ChoiceDisplayText(item.Choices[i])), GroupName = item.Id };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) selected = choiceIndex;
@@ -562,7 +665,7 @@ public partial class MainWindow : Window
             container.Children.Add(radio);
         }
 
-        var resultText = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
+        var resultContainer = new ContentControl { IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
         var checkButton = new Button { Content = "Check answer" };
         checkButton.Click += (_, _) =>
         {
@@ -572,15 +675,15 @@ public partial class MainWindow : Window
             checkButton.IsEnabled = false;
 
             var correct = chosen == item.CorrectIndex;
-            resultText.Text = correct
+            var resultTextValue = correct
                 ? $"✓ Correct! {item.Explanation}"
                 : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {ChoiceDisplayText(item.Choices[item.CorrectIndex])}\n{item.Explanation}";
-            resultText.Foreground = correct ? Brushes.DarkGreen : Brushes.DarkRed;
-            resultText.IsVisible = true;
+            resultContainer.Content = MathTextRenderer.Build(resultTextValue, foreground: correct ? Brushes.DarkGreen : Brushes.DarkRed);
+            resultContainer.IsVisible = true;
         };
 
         container.Children.Add(checkButton);
-        container.Children.Add(resultText);
+        container.Children.Add(resultContainer);
         return container;
     }
 
@@ -593,19 +696,14 @@ public partial class MainWindow : Window
     private Control BuildPracticeItemBlock(DagNode node, string packHash, PracticeItem item, Difficulty difficulty)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
-        container.Children.Add(new TextBlock
-        {
-            Text = $"Q: {item.Prompt}",
-            TextWrapping = TextWrapping.Wrap,
-            FontWeight = FontWeight.SemiBold,
-        });
+        container.Children.Add(MathTextRenderer.Build($"Q: {item.Prompt}", fontWeight: FontWeight.SemiBold));
 
         int? selected = null;
         var radios = new List<RadioButton>();
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = ChoiceDisplayText(item.Choices[i]), GroupName = $"{packHash}-{item.Id}" };
+            var radio = new RadioButton { Content = MathTextRenderer.Build(ChoiceDisplayText(item.Choices[i])), GroupName = $"{packHash}-{item.Id}" };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) selected = choiceIndex;
@@ -614,7 +712,7 @@ public partial class MainWindow : Window
             container.Children.Add(radio);
         }
 
-        var resultText = new TextBlock { TextWrapping = TextWrapping.Wrap, IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
+        var resultContainer = new ContentControl { IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
         var checkButton = new Button { Content = "Check answer" };
         checkButton.Click += (_, _) =>
         {
@@ -624,11 +722,11 @@ public partial class MainWindow : Window
             checkButton.IsEnabled = false;
 
             var correct = chosen == item.CorrectIndex;
-            resultText.Text = correct
+            var resultTextValue = correct
                 ? $"✓ Correct! {item.Explanation}"
                 : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {ChoiceDisplayText(item.Choices[item.CorrectIndex])}\n{item.Explanation}";
-            resultText.Foreground = correct ? Brushes.DarkGreen : Brushes.DarkRed;
-            resultText.IsVisible = true;
+            resultContainer.Content = MathTextRenderer.Build(resultTextValue, foreground: correct ? Brushes.DarkGreen : Brushes.DarkRed);
+            resultContainer.IsVisible = true;
 
             AttemptLogStore.Append(AttemptLogStore.DefaultDir, new AttemptRecord(
                 DateTimeOffset.UtcNow, _course.CourseId, node.Id, difficulty, packHash, item.Id, correct));
@@ -636,7 +734,7 @@ public partial class MainWindow : Window
         };
 
         container.Children.Add(checkButton);
-        container.Children.Add(resultText);
+        container.Children.Add(resultContainer);
         return container;
     }
 

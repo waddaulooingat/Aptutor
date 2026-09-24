@@ -148,10 +148,43 @@ public class ContentSyncServiceTests : IDisposable
         Assert.Empty(result.UpdatedNodeIds);
     }
 
+    // TryFetchLearnContentAsync (see the learn-quiz-mode-switch plan's Part B) — a direct fetch, not
+    // part of the manifest-diffing model above.
+    [Fact]
+    public async Task TryFetchLearnContentAsync_ContentApproved_ReturnsIt()
+    {
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>>())
+        {
+            LearnContentByNode = { ["u1.1"] = new LearnContent("overview", new[] { new LearnStep("step") }, true, DateTimeOffset.UtcNow, "test-model") },
+        };
+
+        var content = await fake.TryFetchLearnContentAsync("csa", "u1.1");
+
+        Assert.Equal("overview", content!.Overview);
+    }
+
+    [Fact]
+    public async Task TryFetchLearnContentAsync_NothingApproved_ReturnsNull()
+    {
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>>());
+
+        Assert.Null(await fake.TryFetchLearnContentAsync("csa", "u1.1"));
+    }
+
+    [Fact]
+    public async Task TryFetchLearnContentAsync_ThrowingLeaf_ReturnsNull_DoesNotThrow()
+    {
+        var fake = new FakeContentSyncService(new Dictionary<string, List<NodeContentPack>>()) { ThrowOnLearnContent = true };
+
+        Assert.Null(await fake.TryFetchLearnContentAsync("csa", "u1.1"));
+    }
+
     private sealed class FakeContentSyncService : ContentSyncService
     {
         private readonly Dictionary<string, List<NodeContentPack>> _remoteNodes;
         public bool ThrowOnManifest { get; set; }
+        public bool ThrowOnLearnContent { get; set; }
+        public Dictionary<string, LearnContent> LearnContentByNode { get; } = new(StringComparer.Ordinal);
         public List<(string NodeId, string Hash)> RequestedNodes { get; } = new();
 
         public FakeContentSyncService(Dictionary<string, List<NodeContentPack>> remoteNodes) : base(null!, "test-bucket") =>
@@ -173,6 +206,12 @@ public class ContentSyncServiceTests : IDisposable
             RequestedNodes.Add((nodeId, hash));
             var pack = _remoteNodes.GetValueOrDefault(nodeId)?.FirstOrDefault(p => ContentHash.Compute(p) == hash);
             return Task.FromResult(pack);
+        }
+
+        protected override Task<LearnContent?> GetLearnContentAsync(string courseId, string nodeId, CancellationToken ct)
+        {
+            if (ThrowOnLearnContent) throw new InvalidOperationException("simulated network failure");
+            return Task.FromResult(LearnContentByNode.GetValueOrDefault(nodeId));
         }
     }
 }

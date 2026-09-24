@@ -22,15 +22,18 @@ public sealed class ReviewModel : PageModel
 {
     private readonly CourseCatalog _catalog;
     private readonly ContentGenerationService _generation;
+    private readonly LearnContentGenerationService _learnGeneration;
     private readonly S3ContentStore _store;
     private readonly RejectionLog _rejectionLog;
     private readonly ILogger<ReviewModel> _logger;
 
     public ReviewModel(
-        CourseCatalog catalog, ContentGenerationService generation, S3ContentStore store, RejectionLog rejectionLog, ILogger<ReviewModel> logger)
+        CourseCatalog catalog, ContentGenerationService generation, LearnContentGenerationService learnGeneration,
+        S3ContentStore store, RejectionLog rejectionLog, ILogger<ReviewModel> logger)
     {
         _catalog = catalog;
         _generation = generation;
+        _learnGeneration = learnGeneration;
         _store = store;
         _rejectionLog = rejectionLog;
         _logger = logger;
@@ -45,6 +48,15 @@ public sealed class ReviewModel : PageModel
     public bool PackIsPending { get; private set; }
     public string? Notice { get; private set; }
     public string? Error { get; private set; }
+
+    // Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B) — a separate
+    // section on this same page, not difficulty-scoped (unaffected by which difficulty tab is
+    // active), with its own notice/error so its messages never get crossed with the practice-item
+    // section's.
+    public LearnContent? LearnContent { get; private set; }
+    public bool LearnContentIsPending { get; private set; }
+    public string? LearnNotice { get; private set; }
+    public string? LearnError { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(string course, string node, Difficulty difficulty = Difficulty.Medium)
     {
@@ -75,6 +87,29 @@ public sealed class ReviewModel : PageModel
             default:
                 Pack = await _store.TryGetLiveNodeAsync(course, node, difficulty);
                 PackIsPending = false;
+                break;
+        }
+
+        var learnJob = _learnGeneration.GetJob(course, node);
+        switch (learnJob?.Status)
+        {
+            case GenerationStatus.Running:
+                return RedirectToPage("/GeneratingLearn", new { course, node, difficulty });
+
+            case GenerationStatus.Succeeded:
+                LearnContent = learnJob.Content;
+                LearnContentIsPending = true;
+                break;
+
+            case GenerationStatus.Failed:
+                LearnError = learnJob.Error;
+                LearnContent = await _store.TryGetLiveLearnContentAsync(course, node);
+                LearnContentIsPending = false;
+                break;
+
+            default:
+                LearnContent = await _store.TryGetLiveLearnContentAsync(course, node);
+                LearnContentIsPending = false;
                 break;
         }
 
@@ -209,6 +244,107 @@ public sealed class ReviewModel : PageModel
 
         Notice = "Rejected. You can generate a new attempt for this topic any time.";
         return Page();
+    }
+
+    public IActionResult OnPostGenerateLearn(string course, string node, Difficulty difficulty = Difficulty.Medium)
+    {
+        if (!TryLoadContext(course, node, difficulty, out _, out var actionResult))
+            return actionResult!;
+
+        _learnGeneration.TryStartGeneration(course, node);
+        return RedirectToPage("/GeneratingLearn", new { course, node, difficulty });
+    }
+
+    public async Task<IActionResult> OnPostApproveLearnAsync(string course, string node, Difficulty difficulty = Difficulty.Medium)
+    {
+        if (!TryLoadContext(course, node, difficulty, out _, out var actionResult))
+            return actionResult!;
+
+        var job = _learnGeneration.GetJob(course, node);
+        if (job is not { Status: GenerationStatus.Succeeded })
+        {
+            await ShowLearnAlreadyHandledOrNothingToApproveAsync(course, node);
+            return Page();
+        }
+
+        // Claimed atomically only now — no per-item validation needed here (unlike practice items,
+        // there's no keep/discard choice for learn content: the SME approves or rejects the whole
+        // draft, same posture as the whole-node practice-item Reject).
+        if (!_learnGeneration.ClearJob(course, node, GenerationStatus.Succeeded))
+        {
+            await ShowLearnAlreadyHandledOrNothingToApproveAsync(course, node);
+            return Page();
+        }
+
+        var approved = job.Content! with { Verified = true };
+        try
+        {
+            await _store.ApproveLearnContentAsync(course, node, approved);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Approve learn content failed for {Course}/{Node}; restoring draft so it can be retried", course, node);
+            _learnGeneration.RestoreJob(job);
+            LearnError = "Approving failed — please try again in a moment.";
+            LearnContent = job.Content;
+            LearnContentIsPending = true;
+            return Page();
+        }
+
+        LearnNotice = "Approved. This learn content is now live.";
+        LearnContent = approved;
+        LearnContentIsPending = false;
+        return Page();
+    }
+
+    public async Task<IActionResult> OnPostRejectLearnAsync(string course, string node, string learnReason, Difficulty difficulty = Difficulty.Medium)
+    {
+        if (!TryLoadContext(course, node, difficulty, out _, out var actionResult))
+            return actionResult!;
+
+        if (string.IsNullOrWhiteSpace(learnReason))
+        {
+            LearnError = "Please say why you're rejecting this before it can be discarded.";
+            if (_learnGeneration.GetJob(course, node) is { Status: GenerationStatus.Succeeded } pending)
+            {
+                LearnContent = pending.Content;
+                LearnContentIsPending = true;
+            }
+            return Page();
+        }
+
+        if (!_learnGeneration.ClearJob(course, node, GenerationStatus.Succeeded))
+        {
+            LearnNotice = "There was nothing pending to reject for this topic's learn content.";
+            return Page();
+        }
+
+        try
+        {
+            await _rejectionLog.RecordAsync(course, node, $"[learn content] {learnReason.Trim()}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to record learn-content rejection reason for {Course}/{Node} (draft was already discarded)", course, node);
+        }
+
+        LearnNotice = "Rejected. You can generate a new attempt for this topic's learn content any time.";
+        return Page();
+    }
+
+    private async Task ShowLearnAlreadyHandledOrNothingToApproveAsync(string course, string node)
+    {
+        var live = await _store.TryGetLiveLearnContentAsync(course, node);
+        if (live is not null)
+        {
+            LearnNotice = "This topic's learn content is already approved.";
+            LearnContent = live;
+            LearnContentIsPending = false;
+        }
+        else
+        {
+            LearnError = "There's no learn content generated for this topic yet.";
+        }
     }
 
     private async Task ShowAlreadyHandledOrNothingToApproveAsync(string course, string node, Difficulty difficulty)

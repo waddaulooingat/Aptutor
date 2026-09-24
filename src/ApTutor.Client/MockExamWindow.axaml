@@ -11,7 +11,7 @@
     </StackPanel>
 
     <StackPanel Grid.Row="1" Name="ExamPanel" Spacing="12">
-      <TextBlock Name="PromptText" TextWrapping="Wrap" FontSize="16" />
+      <ContentControl Name="PromptContainer" HorizontalContentAlignment="Left" />
       <StackPanel Name="ChoicesPanel" Spacing="8" />
     </StackPanel>
 

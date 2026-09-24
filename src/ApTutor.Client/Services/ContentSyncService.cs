@@ -38,6 +38,25 @@ public class ContentSyncService
     public Task<SyncResult> RefreshNodeAsync(ICourseModule course, string nodeId, CancellationToken ct = default) =>
         RefreshCoreAsync(course, nodeId, ct);
 
+    /// Fetches a node's Learn-mode teaching content directly (see the learn-quiz-mode-switch plan's
+    /// Part B) — not part of the manifest/hash-diffing model above, since there's no per-difficulty
+    /// or multi-set concept for this content type (see S3ContentStore.ApproveLearnContentAsync's
+    /// remarks): just one live object per node, fetched on demand rather than synced/cached locally.
+    /// Null on any failure (missing, offline, malformed) — the caller shows a plain "not available"
+    /// placeholder either way, so there's no need to distinguish causes the way RefreshAsync does.
+    public async Task<LearnContent?> TryFetchLearnContentAsync(string courseId, string nodeId, CancellationToken ct = default)
+    {
+        try
+        {
+            return await GetLearnContentAsync(courseId, nodeId, ct);
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"[ContentSyncService] Could not fetch learn content for '{courseId}/{nodeId}': {ex}");
+            return null;
+        }
+    }
+
     private async Task<SyncResult> RefreshCoreAsync(ICourseModule course, string? nodeIdFilter, CancellationToken ct)
     {
         try
@@ -120,6 +139,22 @@ public class ContentSyncService
             using var reader = new StreamReader(response.ResponseStream);
             var body = await reader.ReadToEndAsync(ct);
             return JsonSerializer.Deserialize<NodeContentPack>(body, ContentHash.CanonicalOptions);
+        }
+        catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+    }
+
+    protected virtual async Task<LearnContent?> GetLearnContentAsync(string courseId, string nodeId, CancellationToken ct)
+    {
+        try
+        {
+            using var response = await _s3.GetObjectAsync(
+                new GetObjectRequest { BucketName = _bucket, Key = $"courses/{courseId}/nodes/{nodeId}/learn.json" }, ct);
+            using var reader = new StreamReader(response.ResponseStream);
+            var body = await reader.ReadToEndAsync(ct);
+            return JsonSerializer.Deserialize<LearnContent>(body, ContentHash.CanonicalOptions);
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {

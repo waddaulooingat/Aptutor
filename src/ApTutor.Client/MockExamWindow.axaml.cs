@@ -4,6 +4,7 @@
 // MasteryTracker so they resurface in the frontier — then hands control back to the caller
 // (MainWindow) via onFinished so it can persist progress and refresh the shell.
 
+using ApTutor.Client.Services;
 using ApTutor.Curriculum;
 using ApTutor.Platform;
 using Avalonia;
@@ -52,13 +53,13 @@ public partial class MockExamWindow : Window
         var item = _session.Items[index];
 
         ProgressText.Text = $"Question {index + 1} / {_session.Items.Count}";
-        PromptText.Text = item.Prompt;
+        PromptContainer.Content = MathTextRenderer.Build(item.Prompt, fontSize: 16);
 
         ChoicesPanel.Children.Clear();
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = ChoiceDisplayText(item.Choices[i]), GroupName = "mockExamChoices" };
+            var radio = new RadioButton { Content = MathTextRenderer.Build(ChoiceDisplayText(item.Choices[i])), GroupName = "mockExamChoices" };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) _selectedForCurrent = choiceIndex;
@@ -109,27 +110,29 @@ public partial class MockExamWindow : Window
         ResultsList.Children.Clear();
 
         if (result.WeakNodeIds.Count > 0)
-            ResultsList.Children.Add(new TextBlock
-            {
-                Text = $"Flagged for review: {string.Join(", ", result.WeakNodeIds)}",
-                FontWeight = FontWeight.Bold,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 12),
-            });
+        {
+            var flagged = MathTextRenderer.Build($"Flagged for review: {string.Join(", ", result.WeakNodeIds)}", fontWeight: FontWeight.Bold);
+            flagged.Margin = new Thickness(0, 0, 0, 12);
+            ResultsList.Children.Add(flagged);
+        }
 
+        // Each result is rendered line-by-line (rather than one multi-line string) because
+        // MathTextRenderer.Build lays a line's $...$ segments out in a horizontal WrapPanel, which
+        // doesn't understand embedded "\n" the way a plain TextBlock did.
         foreach (var item in result.Items)
         {
-            var text = item.Correct
-                ? $"✓ {item.Item.Prompt}"
-                : $"✗ {item.Item.Prompt}\n   Your answer: {(item.SelectedIndex is { } si ? ChoiceDisplayText(item.Item.Choices[si]) : "(unanswered)")}\n" +
-                  $"   Correct answer: {ChoiceDisplayText(item.Item.Choices[item.Item.CorrectIndex])}\n   {item.Item.Explanation}";
+            var container = new StackPanel { Spacing = 2, Margin = new Thickness(0, 0, 0, 8) };
+            container.Children.Add(MathTextRenderer.Build(item.Correct ? $"✓ {item.Item.Prompt}" : $"✗ {item.Item.Prompt}"));
 
-            ResultsList.Children.Add(new TextBlock
+            if (!item.Correct)
             {
-                Text = text,
-                TextWrapping = TextWrapping.Wrap,
-                Margin = new Thickness(0, 0, 0, 8),
-            });
+                var yourAnswer = item.SelectedIndex is { } si ? ChoiceDisplayText(item.Item.Choices[si]) : "(unanswered)";
+                container.Children.Add(MathTextRenderer.Build($"   Your answer: {yourAnswer}"));
+                container.Children.Add(MathTextRenderer.Build($"   Correct answer: {ChoiceDisplayText(item.Item.Choices[item.Item.CorrectIndex])}"));
+                container.Children.Add(MathTextRenderer.Build($"   {item.Item.Explanation}"));
+            }
+
+            ResultsList.Children.Add(container);
         }
     }
 }

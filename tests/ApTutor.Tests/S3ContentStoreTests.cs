@@ -233,6 +233,61 @@ public class S3ContentStoreTests
         Assert.Equal("explanation", live!.WalkthroughText);
     }
 
+    // Learn content (see the learn-quiz-mode-switch plan's Part B) — a plain fixed-key object, no
+    // manifest/hash involved, unlike node practice content above.
+    private static LearnContent SampleLearnContent(string overview) => new(
+        Overview: overview,
+        Steps: new[] { new LearnStep("Step one", "Detail") },
+        Verified: true,
+        GeneratedAt: DateTimeOffset.UtcNow,
+        Model: "test-model");
+
+    [Fact]
+    public async Task TryGetLiveLearnContentAsync_NothingApprovedYet_ReturnsNull()
+    {
+        var store = new FakeS3ContentStore();
+
+        Assert.Null(await store.TryGetLiveLearnContentAsync("csa", "u1.1"));
+    }
+
+    [Fact]
+    public async Task ApproveLearnContentAsync_ThenTryGetLiveLearnContentAsync_RoundTrips()
+    {
+        var store = new FakeS3ContentStore();
+
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent("first"));
+
+        var live = await store.TryGetLiveLearnContentAsync("csa", "u1.1");
+        Assert.Equal("first", live!.Overview);
+    }
+
+    [Fact]
+    public async Task ApproveLearnContentAsync_ReapprovingOverwritesInPlace_DoesNotAccumulateVersions()
+    {
+        var store = new FakeS3ContentStore();
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent("first"));
+        var objectCountAfterFirst = store.ObjectCount;
+
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent("second"));
+
+        // Same key overwritten, not a new content-addressed object — object count doesn't grow the
+        // way it would for practice content (see ApproveNodeAsync_ChangedContent_WritesANewObject).
+        Assert.Equal(objectCountAfterFirst, store.ObjectCount);
+        Assert.Equal("second", (await store.TryGetLiveLearnContentAsync("csa", "u1.1"))!.Overview);
+    }
+
+    [Fact]
+    public async Task ApproveLearnContentAsync_LeavesNodePracticeContentAlone()
+    {
+        var store = new FakeS3ContentStore();
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", "explanation"));
+
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent("overview"));
+
+        var live = await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Medium);
+        Assert.Equal("explanation", live!.WalkthroughText);
+    }
+
     [Fact]
     public async Task GetCourseManifestAsync_ReadsAManifestStillOnTheOldSingleHashShape()
     {

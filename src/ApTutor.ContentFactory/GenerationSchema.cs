@@ -8,6 +8,46 @@ namespace ApTutor.ContentFactory;
 /// op fails loudly there and that node is skipped, it never silently ships wrong content.
 public static class GenerationSchema
 {
+    /// Content Admin's Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B).
+    /// One generic shape for every subject — see PromptTemplates.ForLearnContent for why "steps"
+    /// covers both a worked-example step and a structured section without two separate schemas.
+    public static JsonNode LearnContentSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["required"] = new JsonArray { "overview", "steps" },
+        ["properties"] = new JsonObject
+        {
+            ["overview"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "1-3 sentences framing what this node covers and why it matters.",
+            },
+            ["steps"] = new JsonObject
+            {
+                ["type"] = "array",
+                ["minItems"] = 2,
+                ["items"] = new JsonObject
+                {
+                    ["type"] = "object",
+                    ["required"] = new JsonArray { "caption" },
+                    ["properties"] = new JsonObject
+                    {
+                        ["caption"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "A worked-example step's action, or a section's subheading.",
+                        },
+                        ["detail"] = new JsonObject
+                        {
+                            ["type"] = "string",
+                            ["description"] = "The reasoning/equation behind the step, or the section's explanatory paragraph with a concrete example.",
+                        },
+                    },
+                },
+            },
+        },
+    };
+
     public static JsonNode NodeContentSchema(bool allowGraphChoices) => new JsonObject
     {
         ["type"] = "object",

@@ -70,6 +70,30 @@ public static class PromptTemplates
             "concepts.",
     };
 
+    /// Content Admin's Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B) —
+    /// generated and reviewed alongside practice items, never replacing them. Deliberately one
+    /// generic prompt for every subject rather than a Physics-vs-English branch: the "steps" concept
+    /// is described flexibly enough (a worked-example step OR a structured section, whichever suits
+    /// the node) that the model adapts naturally from the node/course context already given, the
+    /// same way practice-item generation already adapts its own wording per course today.
+    public static string ForLearnContent(DagNode node) => $"""
+        Write teaching content for a student encountering this curriculum node for the first time,
+        BEFORE they attempt any practice questions on it:
+
+        {NodeSummary(node)}
+
+        Assume the student has already mastered every listed prereq, but nothing beyond that.
+
+        Write an overview (1-3 sentences framing what this node covers and why it matters) followed
+        by an ordered sequence of steps building understanding one piece at a time. Judge from the
+        node's subject matter which shape best serves a step: for a Math/Physics-style node, each
+        step should be a worked-example step (a concrete action or calculation, with the reasoning or
+        equation behind it); for an English/History-style node, each step should be a short section
+        (a subheading-style caption with an explanatory paragraph, including a concrete illustrative
+        example). Do not just restate the practice items' explanations — this is the teaching moment
+        that comes before a student ever sees a question, not a recap after one.
+        """;
+
     /// Content Admin's "Create new course" (see the Shell-display-only/course-authoring plan's
     /// Part C) — the top-level entry point, one level above "Generate unit structure": drafts only
     /// a course's unit list (its table of contents), not any unit's node structure.

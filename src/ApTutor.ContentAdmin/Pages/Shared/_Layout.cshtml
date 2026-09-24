@@ -5,6 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>@(ViewData["Title"] is string t ? $"{t} — Tutor AI Content Review" : "Tutor AI Content Review")</title>
     <link rel="stylesheet" href="~/css/site.css" />
+    <!-- Equation rendering (see the learn-quiz-mode-switch plan's Part C) — inline math delimited by
+         $...$ (see MainWindow's PracticeItem/LearnStep text) is rendered wherever it appears on this
+         page. KaTeX is the real, well-established rendering library the plan calls for; a browser
+         page can load it directly, unlike the Shell (desktop, Avalonia — see MathTextRenderer's
+         remarks on why that side needs a smaller, purpose-built subset instead). -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+            onload="renderMathInElement(document.body, { delimiters: [{ left: '$', right: '$', display: false }] });"></script>
 </head>
 <body>
     <header class="topbar">
