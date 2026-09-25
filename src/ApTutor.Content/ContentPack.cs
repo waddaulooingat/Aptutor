@@ -29,7 +29,12 @@ public sealed record NodeContentPack(
     // JSON at all, and there's no one-time migration step — a missing property just falls back to
     // this default on load. Every NEW pack going through Generator.GenerateAsync always states its
     // difficulty explicitly; nothing in this project relies on the default at write time.
-    Difficulty Difficulty = Difficulty.Medium);
+    Difficulty Difficulty = Difficulty.Medium,
+    // AiGenerated/AiReviewed (see the AI-content-agent interim-stopgap plan) — see LearnContent's
+    // matching fields for the full reasoning. Both default false so every pack approved before this
+    // plan existed (always human-generated, human-verified) deserializes unchanged.
+    bool AiGenerated = false,
+    bool AiReviewed = false);
 
 public static class ContentPackStore
 {

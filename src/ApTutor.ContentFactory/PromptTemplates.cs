@@ -1,5 +1,6 @@
 using ApTutor.Content;
 using ApTutor.Curriculum;
+using ApTutor.Platform;
 
 namespace ApTutor.ContentFactory;
 
@@ -139,4 +140,91 @@ public static class PromptTemplates
         prereqs: {(node.Prereqs.Count == 0 ? "(none)" : string.Join(", ", node.Prereqs))}
         primary visualization: {node.Viz}
         """;
+
+    // ---------- AI Content Agent: interim AI review pass (see the AI-content-agent handoff) ----------
+    //
+    // This is an explicit, temporary trust-tier compromise while human SME recruiting is blocked —
+    // NOT a permanent replacement for human review (see AiReviewer's remarks). The rubric below is
+    // the same criteria a human reviewer is already asked to check on Content Admin's Review page:
+    // correctness, appropriate difficulty, clear wording, no ambiguous/multiple defensible answers,
+    // and topical alignment with the node — nothing invented beyond that.
+
+    public static string SystemForAiReview() => """
+        You are standing in for a human subject-matter-expert reviewer on a test-prep product, ONLY
+        because no human reviewer is currently available. Your job is to catch anything a careful
+        human reviewer would catch before content reaches a paying student — you are the last check
+        before this content goes live with no further human look.
+
+        Review against this rubric:
+        - Correctness: is every factual claim, calculation, and the marked correct answer actually
+          correct?
+        - Difficulty-appropriateness: does the content match its stated target difficulty (not
+          trivially easy for "hard", not confusingly advanced for "easy")?
+        - Clarity: is the wording clear and unambiguous for a high-school student?
+        - No ambiguous/multiple defensible answers: for a practice item, is exactly one choice
+          correct, with no other choice a reasonable student could also defend as correct?
+        - Topical alignment: does the content actually teach/test what its node title and prereqs say
+          it should, without drifting onto an unrelated topic?
+
+        Because nothing else checks this content afterward, resolve any real doubt by flagging rather
+        than approving — an unnecessary flag costs a few minutes of a future human's time; a wrongly
+        approved error reaches a student directly. Flag whenever you are not confident the content
+        clears every rubric item above, not only when you're certain it's wrong.
+        """;
+
+    public static string ForNodeContentReview(DagNode node, Difficulty difficulty, NodeContentPack pack) => $"""
+        Review this generated content for the curriculum node below. Decide "approve" only if it
+        clearly satisfies every rubric item; otherwise "flag".
+
+        {NodeSummary(node)}
+        target difficulty: {difficulty}
+
+        Explanation/walkthrough text:
+        {pack.WalkthroughText}
+
+        Practice items:
+        {DescribePracticeItems(pack.PracticeItems)}
+        """;
+
+    public static string ForLearnContentReview(DagNode node, LearnContent content) => $"""
+        Review this generated teaching content for the curriculum node below. Decide "approve" only
+        if it clearly satisfies every rubric item; otherwise "flag".
+
+        {NodeSummary(node)}
+
+        Overview:
+        {content.Overview}
+
+        Steps:
+        {DescribeLearnSteps(content.Steps)}
+        """;
+
+    private static string DescribePracticeItems(IReadOnlyList<PracticeItem> items)
+    {
+        if (items.Count == 0) return "(no practice items)";
+
+        return string.Join("\n\n", items.Select((item, i) => $"""
+            {i + 1}. {item.Prompt}
+            {string.Join("\n", item.Choices.Select((c, ci) => $"   {(ci == item.CorrectIndex ? "* " : "  ")}{(char)('A' + ci)}. {DescribeChoice(c)}"))}
+               explanation: {item.Explanation}
+            """));
+    }
+
+    /// A graph-based choice (see the graph-spec-rendering plan) is reviewed as a structural
+    /// description, not a rendered image — the AI reviewer reasons about stated axis labels/units and
+    /// segment values textually, the same information a renderer would draw, just not visually. Real
+    /// image-based review is a separate, larger capability this stopgap doesn't attempt.
+    private static string DescribeChoice(PracticeItemChoice choice)
+    {
+        if (!choice.IsGraph) return choice.Text ?? "";
+
+        var graph = choice.Graph!;
+        var segments = string.Join("; ", graph.Segments.Select(s =>
+            $"{(s.Label is null ? "" : $"\"{s.Label}\" ")}{(s.Solid ? "solid" : "dashed")} through [{string.Join(" -> ", s.Points.Select(p => $"({p.X},{p.Y})"))}]"));
+        return $"[graph] x-axis \"{graph.XAxis.Label}\"{(graph.XAxis.Unit is null ? "" : $" ({graph.XAxis.Unit})")}, " +
+               $"y-axis \"{graph.YAxis.Label}\"{(graph.YAxis.Unit is null ? "" : $" ({graph.YAxis.Unit})")}, segments: {segments}";
+    }
+
+    private static string DescribeLearnSteps(IReadOnlyList<LearnStep> steps) =>
+        string.Join("\n", steps.Select((s, i) => $"{i + 1}. {s.Caption}{(string.IsNullOrWhiteSpace(s.Detail) ? "" : $" — {s.Detail}")}"));
 }

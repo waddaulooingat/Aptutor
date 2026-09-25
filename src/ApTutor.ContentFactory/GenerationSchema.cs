@@ -8,6 +8,29 @@ namespace ApTutor.ContentFactory;
 /// op fails loudly there and that node is skipped, it never silently ships wrong content.
 public static class GenerationSchema
 {
+    /// The AI Content Agent's interim review pass (see AiReviewer) — a forced-choice verdict plus a
+    /// short justification, not free-form prose, so Generator-style code can branch on the verdict
+    /// reliably instead of parsing natural language.
+    public static JsonNode AiReviewSchema() => new JsonObject
+    {
+        ["type"] = "object",
+        ["required"] = new JsonArray { "verdict", "reasoning" },
+        ["properties"] = new JsonObject
+        {
+            ["verdict"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = new JsonArray { "approve", "flag" },
+                ["description"] = "\"approve\" only if the content clearly satisfies every rubric item; \"flag\" otherwise.",
+            },
+            ["reasoning"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "1-3 sentences: what you checked and why you approved or flagged it. Be specific if flagging — name the exact issue.",
+            },
+        },
+    };
+
     /// Content Admin's Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B).
     /// One generic shape for every subject — see PromptTemplates.ForLearnContent for why "steps"
     /// covers both a worked-example step and a structured section without two separate schemas.

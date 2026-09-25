@@ -84,6 +84,30 @@ public class ManifestMergeTests
         Assert.Null(manifest.Nodes["u1.1"].LatestFor(Difficulty.Medium));
     }
 
+    // AI Content Agent interim stopgap (see the handoff) — aiGenerated/aiReviewed default false so
+    // every existing call above (all of which omit them) is completely unaffected; these two tests
+    // cover the new, explicitly-opted-in path.
+    [Fact]
+    public void UpsertNode_DefaultCall_AiGeneratedAndAiReviewedAreFalse()
+    {
+        var manifest = ManifestMerge.UpsertNode(CourseManifest.Empty(1), "u1.1", "h", DateTimeOffset.UtcNow, Difficulty.Medium);
+
+        var version = manifest.Nodes["u1.1"].Latest;
+        Assert.False(version.AiGenerated);
+        Assert.False(version.AiReviewed);
+    }
+
+    [Fact]
+    public void UpsertNode_AiGeneratedAndAiReviewedTrue_ArePersistedOnTheVersionEntry()
+    {
+        var manifest = ManifestMerge.UpsertNode(
+            CourseManifest.Empty(1), "u1.1", "h", DateTimeOffset.UtcNow, Difficulty.Medium, aiGenerated: true, aiReviewed: true);
+
+        var version = manifest.Nodes["u1.1"].Latest;
+        Assert.True(version.AiGenerated);
+        Assert.True(version.AiReviewed);
+    }
+
     [Fact]
     public void SetStructure_OnACourseWithNoStructureYet_SetsThePointer()
     {

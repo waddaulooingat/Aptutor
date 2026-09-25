@@ -49,6 +49,11 @@ public sealed class ReviewModel : PageModel
     public string? Notice { get; private set; }
     public string? Error { get; private set; }
 
+    // Set only while a pending draft's AI review flagged it (see ContentGenerationService.RunAsync)
+    // — not persisted on the pack itself, just surfaced here so the human reviewer sees why the AI
+    // reviewer didn't auto-approve this before they decide themselves.
+    public string? AiReviewNote { get; private set; }
+
     // Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B) — a separate
     // section on this same page, not difficulty-scoped (unaffected by which difficulty tab is
     // active), with its own notice/error so its messages never get crossed with the practice-item
@@ -57,6 +62,7 @@ public sealed class ReviewModel : PageModel
     public bool LearnContentIsPending { get; private set; }
     public string? LearnNotice { get; private set; }
     public string? LearnError { get; private set; }
+    public string? LearnAiReviewNote { get; private set; }
 
     public async Task<IActionResult> OnGetAsync(string course, string node, Difficulty difficulty = Difficulty.Medium)
     {
@@ -76,6 +82,7 @@ public sealed class ReviewModel : PageModel
                 // new attempt" on an already-approved node lets the SME review the replacement.
                 Pack = job.Pack;
                 PackIsPending = true;
+                AiReviewNote = job.AiReviewNote;
                 break;
 
             case GenerationStatus.Failed:
@@ -99,6 +106,7 @@ public sealed class ReviewModel : PageModel
             case GenerationStatus.Succeeded:
                 LearnContent = learnJob.Content;
                 LearnContentIsPending = true;
+                LearnAiReviewNote = learnJob.AiReviewNote;
                 break;
 
             case GenerationStatus.Failed:

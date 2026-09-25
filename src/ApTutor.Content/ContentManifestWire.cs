@@ -6,7 +6,14 @@ namespace ApTutor.Content;
 // Difficulty defaults purely for backward compatibility with versions approved before difficulty
 // levels existed — see NodeContentPack's own Difficulty field for the same reasoning. New entries
 // are always written with an explicit difficulty (see ManifestMerge.UpsertNode).
-public sealed record NodeVersionEntry(string Hash, DateTimeOffset UpdatedAt, Difficulty Difficulty = Difficulty.Medium);
+//
+// AiGenerated/AiReviewed are denormalized copies of NodeContentPack's own same-named fields (see
+// its remarks) — kept here too, not just inside the versioned content object, so a future human-SME
+// re-review pass (or this plan's own AiAgent page) can find every AI-touched version by scanning
+// just the manifest, without fetching every node's every approved content object from S3 one by one.
+public sealed record NodeVersionEntry(
+    string Hash, DateTimeOffset UpdatedAt, Difficulty Difficulty = Difficulty.Medium,
+    bool AiGenerated = false, bool AiReviewed = false);
 
 /// One node's approved content, as one or more independently-generated, independently-approved
 /// versions — a node accumulates a growing library of sets over time (see the multi-set library

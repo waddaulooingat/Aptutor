@@ -1,11 +1,16 @@
 using System.Collections.Concurrent;
 using ApTutor.Content;
 using ApTutor.ContentFactory;
+using ApTutor.Curriculum;
+using Microsoft.Extensions.Options;
 
 namespace ApTutor.ContentAdmin.Services;
 
+// AiGenerated/AiReviewNote mirror GenerationJob's own same-named fields — see its remarks for the
+// full reasoning (AI Content Agent interim stopgap).
 public sealed record LearnContentJob(
-    string CourseId, string NodeId, GenerationStatus Status, string? Error, LearnContent? Content, DateTimeOffset StartedAt);
+    string CourseId, string NodeId, GenerationStatus Status, string? Error, LearnContent? Content, DateTimeOffset StartedAt,
+    bool AiGenerated = false, string? AiReviewNote = null);
 
 /// Same shape as ContentGenerationService (background job + polling page instead of blocking the
 /// HTTP request for the 10-30+ second Claude call), kept as its own near-identical class rather than
@@ -21,12 +26,20 @@ public sealed class LearnContentGenerationService
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancellations = new(StringComparer.Ordinal);
     private readonly Generator _generator;
     private readonly CourseCatalog _catalog;
+    private readonly AiReviewer _aiReviewer;
+    private readonly S3ContentStore _store;
+    private readonly IOptions<AiContentAgentOptions> _agentOptions;
     private readonly ILogger<LearnContentGenerationService> _logger;
 
-    public LearnContentGenerationService(Generator generator, CourseCatalog catalog, ILogger<LearnContentGenerationService> logger)
+    public LearnContentGenerationService(
+        Generator generator, CourseCatalog catalog, AiReviewer aiReviewer, S3ContentStore store,
+        IOptions<AiContentAgentOptions> agentOptions, ILogger<LearnContentGenerationService> logger)
     {
         _generator = generator;
         _catalog = catalog;
+        _aiReviewer = aiReviewer;
+        _store = store;
+        _agentOptions = agentOptions;
         _logger = logger;
     }
 
@@ -73,7 +86,14 @@ public sealed class LearnContentGenerationService
             var course = _catalog.Get(courseId);
             var node = course.Graph!.Node(nodeId);
             var content = await _generator.GenerateLearnContentAsync(courseId, node, ct);
-            TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content });
+
+            if (!_agentOptions.Value.Enabled)
+            {
+                TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content });
+                return;
+            }
+
+            await ReviewAndResolveAsync(courseId, nodeId, node, content, key, startedAt, ct);
         }
         catch (OperationCanceledException)
         {
@@ -83,6 +103,53 @@ public sealed class LearnContentGenerationService
             _logger.LogError(ex, "Learn-content generation failed for {Course}/{Node}", courseId, nodeId);
             TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Failed, Error = ex.Message });
         }
+    }
+
+    /// Same interim AI review pass as ContentGenerationService — see its ReviewAndResolveAsync for
+    /// the full reasoning; this is the learn-content counterpart.
+    private async Task ReviewAndResolveAsync(
+        string courseId, string nodeId, DagNode node, LearnContent content, string key, DateTimeOffset startedAt, CancellationToken ct)
+    {
+        AiReviewResult review;
+        try
+        {
+            review = await _aiReviewer.ReviewLearnContentAsync(node, content, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI review failed for {Course}/{Node} learn content; leaving as a pending draft for manual review", courseId, nodeId);
+            TryCompleteJob(key, startedAt, job => job with
+            {
+                Status = GenerationStatus.Succeeded, Content = content,
+                AiReviewNote = "The AI review pass itself failed, so this needs manual review.",
+            });
+            return;
+        }
+
+        if (review.Verdict == AiReviewVerdict.Flag)
+        {
+            TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content, AiReviewNote = review.Reasoning });
+            return;
+        }
+
+        var approved = content with { Verified = true, AiReviewed = true };
+        try
+        {
+            await _store.ApproveLearnContentAsync(courseId, nodeId, approved, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI auto-approve failed for {Course}/{Node} learn content; leaving as a pending draft for manual approval", courseId, nodeId);
+            TryCompleteJob(key, startedAt, job => job with
+            {
+                Status = GenerationStatus.Succeeded, Content = content,
+                AiReviewNote = $"The AI reviewer approved this, but saving it failed ({ex.Message}) — please approve it manually.",
+            });
+            return;
+        }
+
+        TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = approved });
+        ClearJob(courseId, nodeId, GenerationStatus.Succeeded);
     }
 
     private void TryCompleteJob(string key, DateTimeOffset startedAt, Func<LearnContentJob, LearnContentJob> update)

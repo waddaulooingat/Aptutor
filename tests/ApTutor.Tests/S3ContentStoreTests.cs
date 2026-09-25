@@ -164,6 +164,36 @@ public class S3ContentStoreTests
         Assert.Equal("hard set", (await store.TryGetLiveNodeAsync("csa", "u1.1", Difficulty.Hard))!.WalkthroughText);
     }
 
+    // AI Content Agent interim stopgap (see the handoff) — AiGenerated/AiReviewed on the approved
+    // pack must flow through to the manifest's NodeVersionEntry, end to end through the real
+    // ApproveNodeAsync/UpdateWithRetryAsync path, not just the pure ManifestMerge unit tests.
+    [Fact]
+    public async Task ApproveNodeAsync_AiGeneratedAndAiReviewedPack_PersistsBothFlagsOnTheManifestVersion()
+    {
+        var store = new FakeS3ContentStore();
+        var aiPack = SamplePack("u1.1", "ai-reviewed set") with { AiGenerated = true, AiReviewed = true };
+
+        await store.ApproveNodeAsync("csa", "u1.1", aiPack);
+
+        var manifest = await store.GetCourseManifestAsync("csa");
+        var version = manifest.Nodes["u1.1"].LatestFor(Difficulty.Medium)!;
+        Assert.True(version.AiGenerated);
+        Assert.True(version.AiReviewed);
+    }
+
+    [Fact]
+    public async Task ApproveNodeAsync_OrdinaryHumanApprovedPack_LeavesBothFlagsFalse()
+    {
+        var store = new FakeS3ContentStore();
+
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", "human set"));
+
+        var manifest = await store.GetCourseManifestAsync("csa");
+        var version = manifest.Nodes["u1.1"].LatestFor(Difficulty.Medium)!;
+        Assert.False(version.AiGenerated);
+        Assert.False(version.AiReviewed);
+    }
+
     private static SkillDag SampleStructure(string courseTitle, int nodeCount = 1) => new(
         Meta: new DagMeta(courseTitle, nodeCount),
         ScenePrimitives: new Dictionary<string, string>(),

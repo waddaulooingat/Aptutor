@@ -166,7 +166,9 @@ public class S3ContentStore
 
         var courseManifest = await UpdateWithRetryAsync<CourseManifest>(
             CourseManifestKey(courseId),
-            current => ManifestMerge.UpsertNode(current ?? CourseManifest.Empty(SchemaVersion), nodeId, hash, now, approvedPack.Difficulty),
+            current => ManifestMerge.UpsertNode(
+                current ?? CourseManifest.Empty(SchemaVersion), nodeId, hash, now, approvedPack.Difficulty,
+                approvedPack.AiGenerated, approvedPack.AiReviewed),
             ct);
         await ReindexCourseInTopLevelManifestAsync(courseId, courseManifest, now, ct);
     }

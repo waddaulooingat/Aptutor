@@ -44,7 +44,14 @@
 else if (!Model.PackIsPending)
 {
     <div class="card">
-        <p><span class="badge badge-live">Live</span> This topic's content has been approved and is already in the app.</p>
+        <p>
+            <span class="badge badge-live">Live</span>
+            @if (Model.Pack.AiReviewed)
+            {
+                <span class="badge badge-pending" title="Approved by the AI reviewer, not a human — see the AI Content Agent page.">AI-reviewed</span>
+            }
+            This topic's content has been approved and is already in the app.
+        </p>
         <h2>Explanation</h2>
         <p>@Model.Pack.WalkthroughText</p>
 
@@ -65,7 +72,17 @@ else if (!Model.PackIsPending)
 else
 {
     <div class="card">
-        <p><span class="badge badge-pending">Pending review</span></p>
+        <p>
+            <span class="badge badge-pending">Pending review</span>
+            @if (Model.Pack.AiGenerated)
+            {
+                <span class="badge badge-pending" title="Generation was triggered by the AI Content Agent's scan, not a person.">AI-generated</span>
+            }
+        </p>
+        @if (Model.AiReviewNote is not null)
+        {
+            <p class="error">⚠ AI reviewer flagged this for human review: @Model.AiReviewNote</p>
+        }
         <h2>Explanation</h2>
         <p>@Model.Pack.WalkthroughText</p>
 
@@ -157,7 +174,14 @@ else
 else if (!Model.LearnContentIsPending)
 {
     <div class="card">
-        <p><span class="badge badge-live">Live</span> This topic's learn content has been approved and is already in the app.</p>
+        <p>
+            <span class="badge badge-live">Live</span>
+            @if (Model.LearnContent.AiReviewed)
+            {
+                <span class="badge badge-pending" title="Approved by the AI reviewer, not a human — see the AI Content Agent page.">AI-reviewed</span>
+            }
+            This topic's learn content has been approved and is already in the app.
+        </p>
         <p>@Model.LearnContent.Overview</p>
         <ol>
             @foreach (var step in Model.LearnContent.Steps)
@@ -185,7 +209,17 @@ else if (!Model.LearnContentIsPending)
 else
 {
     <div class="card">
-        <p><span class="badge badge-pending">Pending review</span></p>
+        <p>
+            <span class="badge badge-pending">Pending review</span>
+            @if (Model.LearnContent.AiGenerated)
+            {
+                <span class="badge badge-pending" title="Generation was triggered by the AI Content Agent's scan, not a person.">AI-generated</span>
+            }
+        </p>
+        @if (Model.LearnAiReviewNote is not null)
+        {
+            <p class="error">⚠ AI reviewer flagged this for human review: @Model.LearnAiReviewNote</p>
+        }
         <p>@Model.LearnContent.Overview</p>
         <ol>
             @foreach (var step in Model.LearnContent.Steps)

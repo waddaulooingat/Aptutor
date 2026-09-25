@@ -24,7 +24,12 @@ public class ContentGenerationServiceTests
         // called since nothing here invokes CourseCatalog.RefreshAsync.
         var store = new S3ContentStore(null!, Options.Create(new S3ContentStoreOptions { Bucket = "test-bucket", Region = "us-east-1" }), NullLogger<S3ContentStore>.Instance);
         var catalog = new CourseCatalog(store, NullLogger<CourseCatalog>.Instance);
-        return new ContentGenerationService(generator, catalog, NullLogger<ContentGenerationService>.Instance);
+        // AiReviewer never gets called either — these tests seed jobs directly via RestoreJob rather
+        // than going through TryStartGeneration/RunAsync (see the class remarks above), and
+        // AiContentAgentOptions defaults to Enabled=false so RunAsync wouldn't invoke it anyway.
+        var aiReviewer = new AiReviewer(client);
+        var agentOptions = Options.Create(new AiContentAgentOptions());
+        return new ContentGenerationService(generator, catalog, aiReviewer, store, agentOptions, NullLogger<ContentGenerationService>.Instance);
     }
 
     private static NodeContentPack SamplePack(string nodeId) => new(

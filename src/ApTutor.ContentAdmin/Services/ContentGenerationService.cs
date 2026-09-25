@@ -1,13 +1,25 @@
 using System.Collections.Concurrent;
 using ApTutor.Content;
 using ApTutor.ContentFactory;
+using ApTutor.Curriculum;
+using Microsoft.Extensions.Options;
 
 namespace ApTutor.ContentAdmin.Services;
 
 public enum GenerationStatus { Running, Succeeded, Failed }
 
+// AiGenerated/AiReviewNote (see the AI-content-agent handoff) are additive to the original shape.
+// AiGenerated records whether AutonomousContentAgentService triggered this job (vs. a person
+// clicking Generate) regardless of how it's eventually reviewed. AiReviewNote is set only when the
+// interim AI review pass ran and did NOT auto-approve — it carries the AI's flag reasoning so the
+// human who eventually reviews this pending draft sees why the AI didn't trust it, same spirit as
+// RejectionLog recording why a human discarded something, just surfaced inline instead of logged.
+// A job the AI reviewer DID auto-approve never sits here at all — see ContentGenerationService's
+// RunAsync remarks for why it's removed from this dictionary entirely, same end state as a human's
+// own Approve click.
 public sealed record GenerationJob(
-    string CourseId, string NodeId, Difficulty Difficulty, bool AllowGraphChoices, GenerationStatus Status, string? Error, NodeContentPack? Pack, DateTimeOffset StartedAt);
+    string CourseId, string NodeId, Difficulty Difficulty, bool AllowGraphChoices, GenerationStatus Status, string? Error, NodeContentPack? Pack, DateTimeOffset StartedAt,
+    bool AiGenerated = false, string? AiReviewNote = null);
 
 /// Wraps ApTutor.ContentFactory's Generator so a "Generate" click returns immediately (redirect to
 /// an auto-refreshing polling page) instead of blocking the HTTP request for the 10-30+ seconds a
@@ -25,12 +37,20 @@ public sealed class ContentGenerationService
     private readonly ConcurrentDictionary<string, CancellationTokenSource> _cancellations = new(StringComparer.Ordinal);
     private readonly Generator _generator;
     private readonly CourseCatalog _catalog;
+    private readonly AiReviewer _aiReviewer;
+    private readonly S3ContentStore _store;
+    private readonly IOptions<AiContentAgentOptions> _agentOptions;
     private readonly ILogger<ContentGenerationService> _logger;
 
-    public ContentGenerationService(Generator generator, CourseCatalog catalog, ILogger<ContentGenerationService> logger)
+    public ContentGenerationService(
+        Generator generator, CourseCatalog catalog, AiReviewer aiReviewer, S3ContentStore store,
+        IOptions<AiContentAgentOptions> agentOptions, ILogger<ContentGenerationService> logger)
     {
         _generator = generator;
         _catalog = catalog;
+        _aiReviewer = aiReviewer;
+        _store = store;
+        _agentOptions = agentOptions;
         _logger = logger;
     }
 
@@ -47,17 +67,19 @@ public sealed class ContentGenerationService
     /// Returns false — and starts nothing — if a job for this exact node+difficulty is already
     /// tracked (running, succeeded-but-not-yet-approved, or failed-but-not-yet-cleared), so the page
     /// handler can just redirect to the existing job's polling page instead of firing a duplicate,
-    /// separately-billed API call.
-    public bool TryStartGeneration(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices)
+    /// separately-billed API call. aiGenerated is true only when AutonomousContentAgentService's scan
+    /// triggered this (see the AI-content-agent handoff) — every existing caller (a person clicking
+    /// Generate) omits it and gets the same behavior as before.
+    public bool TryStartGeneration(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, bool aiGenerated = false)
     {
         var key = Key(courseId, nodeId, difficulty);
         var startedAt = DateTimeOffset.UtcNow;
-        var job = new GenerationJob(courseId, nodeId, difficulty, allowGraphChoices, GenerationStatus.Running, Error: null, Pack: null, startedAt);
+        var job = new GenerationJob(courseId, nodeId, difficulty, allowGraphChoices, GenerationStatus.Running, Error: null, Pack: null, startedAt, aiGenerated);
         if (!_jobs.TryAdd(key, job)) return false;
 
         var cts = new CancellationTokenSource();
         _cancellations[key] = cts;
-        _ = RunAsync(courseId, nodeId, difficulty, allowGraphChoices, key, startedAt, cts.Token);
+        _ = RunAsync(courseId, nodeId, difficulty, allowGraphChoices, aiGenerated, key, startedAt, cts.Token);
         return true;
     }
 
@@ -88,7 +110,7 @@ public sealed class ContentGenerationService
         return removed;
     }
 
-    private async Task RunAsync(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, string key, DateTimeOffset startedAt, CancellationToken ct)
+    private async Task RunAsync(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, bool aiGenerated, string key, DateTimeOffset startedAt, CancellationToken ct)
     {
         try
         {
@@ -98,7 +120,18 @@ public sealed class ContentGenerationService
             // non-null Graph — see its own null check.
             var node = course.Graph!.Node(nodeId);
             var pack = await _generator.GenerateAsync(courseId, node, difficulty, allowGraphChoices, ct);
-            TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Pack = pack });
+            if (aiGenerated) pack = pack with { AiGenerated = true };
+
+            // The AI review pass (see the AI-content-agent handoff) is an explicit, disabled-by-
+            // default opt-in — see AiContentAgentOptions.Enabled's remarks. Off, this job behaves
+            // exactly as it always has: sits Succeeded, pending a human's Approve/Reject.
+            if (!_agentOptions.Value.Enabled)
+            {
+                TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Pack = pack });
+                return;
+            }
+
+            await ReviewAndResolveAsync(courseId, node.Id, difficulty, node, pack, aiGenerated, key, startedAt, ct);
         }
         catch (OperationCanceledException)
         {
@@ -109,6 +142,66 @@ public sealed class ContentGenerationService
             _logger.LogError(ex, "Generation failed for {Course}/{Node}", courseId, nodeId);
             TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Failed, Error = ex.Message });
         }
+    }
+
+    /// The interim AI review pass — runs uniformly on every generation completion once
+    /// AiContentAgentOptions.Enabled is true, regardless of whether a person or the autonomous scan
+    /// triggered generation (see the AI-content-agent handoff's Part B: "whether triggered by the
+    /// scan above or manually as today"). An Approve verdict goes live immediately, tagged
+    /// AiReviewed so it's never indistinguishable from human-verified content; a Flag verdict (or a
+    /// failure in the review call itself) leaves the draft as an ordinary pending job, exactly like
+    /// today's ungated flow, with the AI's reasoning attached so the human who eventually looks at it
+    /// sees why it wasn't auto-approved.
+    private async Task ReviewAndResolveAsync(
+        string courseId, string nodeId, Difficulty difficulty, DagNode node, NodeContentPack pack, bool aiGenerated,
+        string key, DateTimeOffset startedAt, CancellationToken ct)
+    {
+        AiReviewResult review;
+        try
+        {
+            review = await _aiReviewer.ReviewNodeContentAsync(node, difficulty, pack, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI review failed for {Course}/{Node}; leaving as a pending draft for manual review", courseId, nodeId);
+            TryCompleteJob(key, startedAt, job => job with
+            {
+                Status = GenerationStatus.Succeeded, Pack = pack, AiGenerated = aiGenerated,
+                AiReviewNote = "The AI review pass itself failed, so this needs manual review.",
+            });
+            return;
+        }
+
+        if (review.Verdict == AiReviewVerdict.Flag)
+        {
+            TryCompleteJob(key, startedAt, job => job with
+            {
+                Status = GenerationStatus.Succeeded, Pack = pack, AiGenerated = aiGenerated, AiReviewNote = review.Reasoning,
+            });
+            return;
+        }
+
+        var approvedPack = pack with { Verified = true, AiReviewed = true };
+        try
+        {
+            await _store.ApproveNodeAsync(courseId, nodeId, approvedPack, ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "AI auto-approve failed for {Course}/{Node}; leaving as a pending draft for manual approval", courseId, nodeId);
+            TryCompleteJob(key, startedAt, job => job with
+            {
+                Status = GenerationStatus.Succeeded, Pack = pack, AiGenerated = aiGenerated,
+                AiReviewNote = $"The AI reviewer approved this, but saving it failed ({ex.Message}) — please approve it manually.",
+            });
+            return;
+        }
+
+        // Live now — remove the job slot entirely rather than leaving a "Succeeded" entry with
+        // Approve/Reject buttons for content that's already approved; same end state a human's own
+        // Approve click leaves behind (see Review.cshtml.cs's OnPostApproveAsync).
+        TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Pack = approvedPack, AiGenerated = aiGenerated });
+        ClearJob(courseId, nodeId, difficulty, GenerationStatus.Succeeded);
     }
 
     /// Only writes the result back if this key still points at the exact job we started (same

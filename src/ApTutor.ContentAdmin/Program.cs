@@ -68,8 +68,12 @@ builder.Services.AddSingleton(_ =>
     return new ClaudeClient(apiKey, model);
 });
 builder.Services.AddSingleton<Generator>();
+builder.Services.AddSingleton<AiReviewer>();
 
 builder.Services.Configure<S3ContentStoreOptions>(builder.Configuration.GetSection("ContentStore"));
+// AI Content Agent interim stopgap (see the handoff) — Enabled defaults false (see
+// AiContentAgentOptions's remarks) unless appsettings/environment explicitly turns it on.
+builder.Services.Configure<AiContentAgentOptions>(builder.Configuration.GetSection("AiContentAgent"));
 builder.Services.AddSingleton<IAmazonS3>(sp =>
 {
     var options = sp.GetRequiredService<IOptions<S3ContentStoreOptions>>().Value;
@@ -89,6 +93,7 @@ builder.Services.AddSingleton<UnitStructureGenerationService>();
 builder.Services.AddSingleton<CourseCreationService>();
 builder.Services.AddSingleton<LearnContentGenerationService>();
 builder.Services.AddSingleton<CourseCatalog>();
+builder.Services.AddSingleton<AutonomousContentAgentService>();
 
 var app = builder.Build();
 

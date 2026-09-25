@@ -16,12 +16,22 @@ public sealed record LearnStep(string Caption, string? Detail = null);
 /// current explanation, reused across every difficulty, unlike the practice-item library's
 /// accumulate-many-sets-per-difficulty model. That's also why this isn't content-addressed/hashed
 /// like NodeContentPack — there's no "keep every past version" concept here, just the current one.
+// AiGenerated/AiReviewed (see the AI-content-agent interim-stopgap plan) describe the two
+// independent, unattended steps this content can go through while no human SME is available:
+// AiGenerated is true when the autonomous scan triggered generation (vs. a person clicking
+// Generate); AiReviewed is true only when the AI reviewer — not a human — was the one who set
+// Verified=true. Both default false so every pack approved before this plan existed (which is all
+// of them, always human-generated and human-verified) deserializes correctly. AiReviewed must never
+// be folded into Verified itself: Verified alone can't say WHO verified it, and that distinction is
+// exactly what lets a future human SME pass find and re-review AI-approved content specifically.
 public sealed record LearnContent(
     string Overview,
     IReadOnlyList<LearnStep> Steps,
     bool Verified,
     DateTimeOffset GeneratedAt,
-    string Model);
+    string Model,
+    bool AiGenerated = false,
+    bool AiReviewed = false);
 
 /// Local single-file cache for a node's learn content — same on-disk shape/atomic-write convention
 /// as ContentPackStore, deliberately much simpler (one file per node, no version subdirectory) since

@@ -1,0 +1,64 @@
+@page
+@model ApTutor.ContentAdmin.Pages.AiAgentModel
+@{
+    ViewData["Title"] = "AI Content Agent";
+}
+
+<div class="unit-header">
+    <h1>AI Content Agent</h1>
+    <a href="/" class="link-button">&larr; Back to content review</a>
+</div>
+
+<p class="notice">
+    This is an explicit, temporary stopgap for while no human subject-matter expert is available to
+    review content — <strong>not</strong> a permanent replacement for human review. It can (1) scan a
+    course for nodes/difficulties with no approved content yet and generate them itself, and (2) has an
+    AI reviewer pass that auto-approves or flags generated drafts, whether triggered by a scan or by a
+    person clicking Generate. Content it approves is tagged <code>AiReviewed</code> everywhere it's
+    stored — never indistinguishable from human-verified content — specifically so a future human SME
+    can find and re-review it.
+</p>
+
+@if (!Model.Enabled)
+{
+    <p class="error">
+        Currently <strong>disabled</strong> (<code>AiContentAgent:Enabled</code> is false). Generation
+        completes and sits pending for a human, exactly as it always has — no AI review runs, and a scan
+        below won't do anything until this is turned on in configuration.
+    </p>
+}
+else
+{
+    <p class="notice">Currently <strong>enabled</strong>. A scan triggers up to @Model.MaxGenerationsPerScan generation(s) per run.</p>
+}
+
+@if (Model.Notice is not null)
+{
+    <p class="notice">@Model.Notice</p>
+}
+
+@if (Model.Courses.Count == 0)
+{
+    <p class="notice">No courses exist yet.</p>
+}
+
+@foreach (var course in Model.Courses)
+{
+    <section class="card">
+        <div class="unit-header">
+            <h2>@course.DisplayName</h2>
+            <form method="post" asp-page-handler="RunScan" asp-route-course="@course.CourseId">
+                <button type="submit" class="link-button" disabled="@(!Model.Enabled || course.GapCount == 0)">
+                    Run scan (@course.GapCount gap(s))
+                </button>
+            </form>
+        </div>
+        @if (course.AiReviewedVersionCount > 0)
+        {
+            <p class="notice">
+                <span class="badge badge-pending">@course.AiReviewedVersionCount AI-reviewed</span>
+                approved version(s) in this course are awaiting a human SME re-review.
+            </p>
+        }
+    </section>
+}

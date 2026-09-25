@@ -18,7 +18,9 @@ public class LearnContentGenerationServiceTests
         var generator = new Generator(client);
         var store = new S3ContentStore(null!, Options.Create(new S3ContentStoreOptions { Bucket = "test-bucket", Region = "us-east-1" }), NullLogger<S3ContentStore>.Instance);
         var catalog = new CourseCatalog(store, NullLogger<CourseCatalog>.Instance);
-        return new LearnContentGenerationService(generator, catalog, NullLogger<LearnContentGenerationService>.Instance);
+        var aiReviewer = new AiReviewer(client);
+        var agentOptions = Options.Create(new AiContentAgentOptions());
+        return new LearnContentGenerationService(generator, catalog, aiReviewer, store, agentOptions, NullLogger<LearnContentGenerationService>.Instance);
     }
 
     private static LearnContent SampleContent() => new(
