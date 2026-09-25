@@ -73,4 +73,40 @@ public class SceneOpJsonTests
         using var doc = JsonDocument.Parse(json);
         Assert.Equal("lineHighlight", doc.RootElement.GetProperty("op").GetString());
     }
+
+    // Content generation showed the model emitting a bare JSON number for a "value" field it was
+    // never told had to be a quoted string (e.g. exprResolve's value is "whatever the expression
+    // evaluated to", which reads as a number to the model). FlexibleStringConverter accepts number/
+    // bool tokens on these fields instead of failing generation over a formatting choice the schema
+    // never pinned down.
+    [Theory]
+    [InlineData("""{"op":"exprResolve","exprId":"e1","value":42}""", "42")]
+    [InlineData("""{"op":"exprResolve","exprId":"e1","value":3.5}""", "3.5")]
+    [InlineData("""{"op":"exprResolve","exprId":"e1","value":true}""", "true")]
+    [InlineData("""{"op":"exprResolve","exprId":"e1","value":"already a string"}""", "already a string")]
+    public void ExprResolve_AcceptsBareNumberOrBoolValue(string json, string expectedValue)
+    {
+        var op = Assert.IsType<ExprResolve>(JsonSerializer.Deserialize<SceneOp>(json, Options));
+        Assert.Equal(expectedValue, op.Value);
+    }
+
+    [Theory]
+    [InlineData("""{"op":"memCellSet","frameId":"main","name":"x","type":"int","value":5}""")]
+    [InlineData("""{"op":"fieldSet","objId":"1","field":"x","value":5}""")]
+    [InlineData("""{"op":"arrayWrite","arrId":"a1","index":0,"value":5}""")]
+    [InlineData("""{"op":"grid2dWrite","gridId":"g1","row":0,"col":0,"value":5}""")]
+    [InlineData("""{"op":"grid2dAlloc","gridId":"g1","rows":1,"cols":1,"elementType":"int","defaultValue":0}""")]
+    [InlineData("""{"op":"callTreeReturn","nodeId":"c1","returnValue":5}""")]
+    public void OtherValueFields_AlsoAcceptBareNumber_DoesNotThrow(string json)
+    {
+        var op = JsonSerializer.Deserialize<SceneOp>(json, Options);
+        Assert.NotNull(op);
+    }
+
+    [Fact]
+    public void ExprResolve_RejectsArrayValue_StillFailsLoudly()
+    {
+        const string json = """{"op":"exprResolve","exprId":"e1","value":[1,2]}""";
+        Assert.Throws<JsonException>(() => JsonSerializer.Deserialize<SceneOp>(json, Options));
+    }
 }

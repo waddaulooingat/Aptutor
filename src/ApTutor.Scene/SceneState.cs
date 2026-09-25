@@ -38,11 +38,11 @@ public abstract record SceneOp;
 
 public sealed record FramePush(string FrameId, string MethodSig) : SceneOp;
 public sealed record FramePop(string FrameId) : SceneOp;
-public sealed record MemCellSet(string FrameId, string Name, string Type, string Value) : SceneOp;
+public sealed record MemCellSet(string FrameId, string Name, string Type, [property: JsonConverter(typeof(FlexibleStringConverter))] string Value) : SceneOp;
 public sealed record MemCellFlash(string FrameId, string Name) : SceneOp;
 public sealed record HeapAlloc(string ObjId, string ClassName,
                               IReadOnlyList<KeyValuePair<string, string>> Fields) : SceneOp;
-public sealed record FieldSet(string ObjId, string Field, string Value) : SceneOp;
+public sealed record FieldSet(string ObjId, string Field, [property: JsonConverter(typeof(FlexibleStringConverter))] string Value) : SceneOp;
 public sealed record RefSet(string FrameId, string VarName, string? TargetObjId) : SceneOp; // null = null ref
 public sealed record LineHighlight(int Line) : SceneOp;
 
@@ -50,19 +50,19 @@ public sealed record LineHighlight(int Line) : SceneOp;
 
 // indexedStrip (1D array / ArrayList / String backing)
 public sealed record ArrayAlloc(string ArrId, string ElementType, IReadOnlyList<string> InitialValues) : SceneOp;
-public sealed record ArrayWrite(string ArrId, int Index, string Value) : SceneOp;
+public sealed record ArrayWrite(string ArrId, int Index, [property: JsonConverter(typeof(FlexibleStringConverter))] string Value) : SceneOp;
 
 // grid2d (2D array)
-public sealed record Grid2dAlloc(string GridId, int Rows, int Cols, string ElementType, string DefaultValue) : SceneOp;
-public sealed record Grid2dWrite(string GridId, int Row, int Col, string Value) : SceneOp;
+public sealed record Grid2dAlloc(string GridId, int Rows, int Cols, string ElementType, [property: JsonConverter(typeof(FlexibleStringConverter))] string DefaultValue) : SceneOp;
+public sealed record Grid2dWrite(string GridId, int Row, int Col, [property: JsonConverter(typeof(FlexibleStringConverter))] string Value) : SceneOp;
 
 // callTree (recursion)
 public sealed record CallTreeNode(string NodeId, string? ParentId, string Label) : SceneOp;
-public sealed record CallTreeReturn(string NodeId, string ReturnValue) : SceneOp;
+public sealed record CallTreeReturn(string NodeId, [property: JsonConverter(typeof(FlexibleStringConverter))] string ReturnValue) : SceneOp;
 
 // exprBubble / boolTruthGlow (sub-expression evaluation)
 public sealed record ExprPush(string ExprId, string Text) : SceneOp;
-public sealed record ExprResolve(string ExprId, string Value) : SceneOp;
+public sealed record ExprResolve(string ExprId, [property: JsonConverter(typeof(FlexibleStringConverter))] string Value) : SceneOp;
 public sealed record BoolGlow(string ExprId, bool Value) : SceneOp;
 
 public sealed record SceneDelta(IReadOnlyList<SceneOp> Ops);
