@@ -52,8 +52,52 @@ public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<Generate
 public sealed record GeneratedStep(string Caption, int? SourceLine, IReadOnlyList<SceneOp> Ops);
 public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
+// Same defensive posture as GeneratedChoiceConverter above: the schema asks for {caption,detail}
+// objects, but a model asked for "steps" naturally sometimes emits a plain array of strings instead
+// (each string standing in as the caption) — accept both wire shapes rather than failing generation
+// over a formatting choice, same as every other Generated* converter in this file.
+[JsonConverter(typeof(GeneratedLearnStepConverter))]
 public sealed record GeneratedLearnStep(string Caption, string? Detail);
-public sealed record GeneratedLearnContent(string Overview, IReadOnlyList<GeneratedLearnStep> Steps);
+
+public sealed class GeneratedLearnStepConverter : JsonConverter<GeneratedLearnStep>
+{
+    public override GeneratedLearnStep Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String)
+            return new GeneratedLearnStep(reader.GetString() ?? "", null);
+
+        using var doc = JsonDocument.ParseValue(ref reader);
+        var root = doc.RootElement;
+        var caption = root.TryGetProperty("caption", out var captionEl) && captionEl.ValueKind == JsonValueKind.String
+            ? captionEl.GetString() ?? ""
+            : "";
+        var detail = root.TryGetProperty("detail", out var detailEl) && detailEl.ValueKind == JsonValueKind.String
+            ? detailEl.GetString()
+            : null;
+        return new GeneratedLearnStep(caption, detail);
+    }
+
+    public override void Write(Utf8JsonWriter writer, GeneratedLearnStep value, JsonSerializerOptions options) =>
+        throw new NotSupportedException($"{nameof(GeneratedLearnStep)} is only ever parsed from Claude's response, never written.");
+}
+
+// The schema asks for "steps" to be an array (minItems: 2), but a model that generates only one
+// step sometimes drops the array wrapper entirely and returns a single step object/string directly
+// — accept that too rather than failing generation, same posture as GeneratedLearnStepConverter.
+public sealed class GeneratedLearnStepListConverter : JsonConverter<IReadOnlyList<GeneratedLearnStep>>
+{
+    public override IReadOnlyList<GeneratedLearnStep> Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options) =>
+        reader.TokenType == JsonTokenType.StartArray
+            ? JsonSerializer.Deserialize<List<GeneratedLearnStep>>(ref reader, options) ?? new List<GeneratedLearnStep>()
+            : new List<GeneratedLearnStep> { JsonSerializer.Deserialize<GeneratedLearnStep>(ref reader, options)! };
+
+    public override void Write(Utf8JsonWriter writer, IReadOnlyList<GeneratedLearnStep> value, JsonSerializerOptions options) =>
+        throw new NotSupportedException($"{nameof(GeneratedLearnStep)} lists are only ever parsed from Claude's response, never written.");
+}
+
+public sealed record GeneratedLearnContent(
+    string Overview,
+    [property: JsonConverter(typeof(GeneratedLearnStepListConverter))] IReadOnlyList<GeneratedLearnStep> Steps);
 public sealed record GeneratedUnitNode(string Id, string Title, string Type, IReadOnlyList<string> Prereqs, string Viz);
 public sealed record GeneratedUnitStructure(IReadOnlyList<GeneratedUnitNode> Nodes);
 public sealed record GeneratedCourseUnit(int Unit, string Title);

@@ -510,4 +510,44 @@ public class GeneratorTests
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => generator.GenerateLearnContentAsync("csa", SampleNode));
     }
+
+    // Production hit this: the model sometimes drops the {caption,detail} object wrapper and emits
+    // steps as bare strings instead — GeneratedLearnStepConverter should accept that shape too.
+    [Fact]
+    public async Task GenerateLearnContentAsync_StepsAsBareStrings_ParsesWithNoDetail()
+    {
+        const string response = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": [ "Declare a variable.", "Reassign it." ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        var content = await generator.GenerateLearnContentAsync("csa", SampleNode);
+
+        Assert.Equal(2, content.Steps.Count);
+        Assert.Equal("Declare a variable.", content.Steps[0].Caption);
+        Assert.Null(content.Steps[0].Detail);
+    }
+
+    // Production also hit this: for a single-step response the model sometimes drops the array
+    // wrapper entirely and returns "steps" as a bare object instead of a one-element array.
+    [Fact]
+    public async Task GenerateLearnContentAsync_StepsAsBareObject_WrapsInSingleElementList()
+    {
+        const string response = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": { "caption": "The only step.", "detail": "Some detail." } } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        var content = await generator.GenerateLearnContentAsync("csa", SampleNode);
+
+        var step = Assert.Single(content.Steps);
+        Assert.Equal("The only step.", step.Caption);
+        Assert.Equal("Some detail.", step.Detail);
+    }
 }
