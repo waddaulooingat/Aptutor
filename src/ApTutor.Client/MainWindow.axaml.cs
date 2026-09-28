@@ -307,6 +307,27 @@ public partial class MainWindow : Window
     /// itself, which made it look like "generate" wasn't doing anything even when it was.
     private void RefreshContent(DagNode node)
     {
+        // Learn mode shows teaching content instead of the Quiz-mode explanation/practice items and
+        // never touches mastery (see the learn-quiz-mode-switch plan's Part A/B) — checked FIRST, so
+        // Learn mode never even fetches or shows the Quiz-mode walkthrough text below. That text is
+        // scoped to explaining the practice items (Quiz mode's job); showing it in Learn mode read as
+        // a bug (both a stale Quiz explanation AND a "no learn content yet" message appearing
+        // together for the same node, with no clear relationship between them). Learn content isn't
+        // synced/cached locally like practice content (see ContentSyncService.TryFetchLearnContentAsync's
+        // remarks) — fetched live, on demand, each time a node is opened in Learn mode.
+        if (_mode == ShellMode.Learn)
+        {
+            var loadingText = new TextBlock
+            {
+                Text = "Loading learn content…",
+                FontStyle = FontStyle.Italic,
+                Foreground = Brushes.Gray,
+            };
+            ContentPanel.Children.Add(loadingText);
+            _ = LoadLearnContentAsync(node, loadingText);
+            return;
+        }
+
         string? walkthroughText = null;
         try
         {
@@ -324,24 +345,6 @@ public partial class MainWindow : Window
             FontStyle = walkthroughText is null ? FontStyle.Italic : FontStyle.Normal,
             Foreground = walkthroughText is null ? Brushes.Gray : Brushes.Black,
         });
-
-        // Learn mode shows teaching content instead of practice items and never touches mastery
-        // (see the learn-quiz-mode-switch plan's Part A/B). Learn content isn't synced/cached
-        // locally like practice content (see ContentSyncService.TryFetchLearnContentAsync's
-        // remarks) — fetched live, on demand, each time a node is opened in Learn mode.
-        if (_mode == ShellMode.Learn)
-        {
-            var loadingText = new TextBlock
-            {
-                Text = "Loading learn content…",
-                FontStyle = FontStyle.Italic,
-                Foreground = Brushes.Gray,
-                Margin = new Thickness(0, 8, 0, 0),
-            };
-            ContentPanel.Children.Add(loadingText);
-            _ = LoadLearnContentAsync(node, loadingText);
-            return;
-        }
 
         // Dev-only "Refresh questions" (see OnRefreshQuestionsClick) writes a fresh, Verified: false
         // pack straight to disk, bypassing the normal verified-only Content.GetPracticeItems path on
