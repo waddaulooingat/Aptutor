@@ -225,12 +225,35 @@ public sealed class Generator
         if (generated.Steps.Count == 0)
             throw new InvalidOperationException($"Node '{node.Id}': learn content has zero steps.");
         foreach (var step in generated.Steps)
+        {
             if (string.IsNullOrWhiteSpace(step.Caption))
                 throw new InvalidOperationException($"Node '{node.Id}': a learn-content step is missing its caption.");
+
+            // Seen in production: the model sometimes fails to produce a real steps ARRAY and
+            // instead dumps one giant string containing its own hand-rolled "<step><caption>...
+            // </caption><detail>...</detail></step>" markup for every step it meant to write —
+            // GeneratedLearnStepConverter's bare-string leniency (added for the much more benign
+            // "a step is just a plain caption string" case) then silently accepts that whole blob as
+            // ONE step's caption instead of failing, which is exactly the "structurally invalid
+            // content must never reach SME review" rule this file otherwise holds to everywhere
+            // else. These tag names are specific enough (leaked straight from the schema's own field
+            // names) that a false positive on legitimate content is effectively impossible — unlike
+            // a bare "<"/">" check, which would wrongly reject ordinary comparisons like "x < 5".
+            if (ContainsLeakedStepMarkup(step.Caption) || (step.Detail is not null && ContainsLeakedStepMarkup(step.Detail)))
+                throw new InvalidOperationException(
+                    $"Node '{node.Id}': a learn-content step contains embedded <step>/<caption>/<detail> markup — " +
+                    "the model likely failed to produce a real steps array instead of one blob of text.");
+        }
 
         var steps = generated.Steps.Select(s => new LearnStep(s.Caption, s.Detail)).ToList();
         return new LearnContent(generated.Overview, steps, Verified: false, DateTimeOffset.UtcNow, _client.Model);
     }
+
+    private static readonly string[] LeakedStepMarkupMarkers =
+        { "<step>", "</step>", "<caption>", "</caption>", "<detail>", "</detail>" };
+
+    private static bool ContainsLeakedStepMarkup(string text) =>
+        LeakedStepMarkupMarkers.Any(marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase));
 
     /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring
     /// plan's Part B) — one level above per-node content generation: drafts the node list

@@ -550,4 +550,58 @@ public class GeneratorTests
         Assert.Equal("The only step.", step.Caption);
         Assert.Equal("Some detail.", step.Detail);
     }
+
+    // Seen in production: the model dumped its whole intended step sequence as one giant string
+    // containing hand-rolled "<step><caption>...</caption><detail>...</detail></step>" markup
+    // instead of a real steps array. GeneratedLearnStepListConverter's bare-string fallback (added
+    // for the legitimate "steps": "A short step." shape) would otherwise silently accept this whole
+    // blob as one step's caption — this must fail loudly instead, same as any other malformed draft.
+    [Fact]
+    public async Task GenerateLearnContentAsync_StepsLeakedAsOneStringWithEmbeddedStepTags_Throws()
+    {
+        const string response = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": "<step><caption>State the rule</caption><detail>Some detail.</detail></step><step><caption>Case 1</caption></step>" } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_DetailContainsLeakedStepMarkup_Throws()
+    {
+        const string response = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": [ { "caption": "A normal caption", "detail": "<detail>nested junk</detail>" } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_OrdinaryCaptionUsingLessThanSign_DoesNotFalsePositive()
+    {
+        // A generic "<"/">" check would wrongly reject completely ordinary math/code content like
+        // this — the leaked-markup check must only match the specific tag vocabulary that leaks from
+        // the schema's own field names, never bare angle brackets.
+        const string response = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": [ { "caption": "Compare i < 5 in the loop condition", "detail": "If i < 5, the loop continues." } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        var content = await generator.GenerateLearnContentAsync("csa", SampleNode);
+
+        Assert.Equal("Compare i < 5 in the loop condition", content.Steps[0].Caption);
+    }
 }
