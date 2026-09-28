@@ -100,7 +100,14 @@ else
                     {
                         <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
                             @(i == item.CorrectIndex ? "✓" : "—")
-                            @(item.Choices[i].IsGraph ? "[Graph-based answer — review rendering not built yet]" : item.Choices[i].Text)
+                            @if (item.Choices[i].IsGraph)
+                            {
+                                @Html.Raw(GraphSpecSvg.Render(item.Choices[i].Graph!))
+                            }
+                            else
+                            {
+                                @item.Choices[i].Text
+                            }
                         </p>
                     }
                     <p class="notice">@item.Explanation</p>

@@ -639,11 +639,33 @@ public partial class MainWindow : Window
         ContentPanel.Children.Add(new TextBlock { Text = text, TextWrapping = TextWrapping.Wrap, Foreground = color });
     }
 
-    /// A graph-typed choice has no renderer yet (see the graph-spec-rendering plan — the Avalonia
-    /// chart control is a separate, later piece of that work); shown as a clearly-labeled
-    /// placeholder rather than silently falling back to the record's default ToString().
-    private static string ChoiceDisplayText(PracticeItemChoice choice) =>
-        choice.Text ?? "[Graph-based answer — rendering not built yet]";
+    /// A choice is either plain text or a static line/point graph (see the graph-spec-rendering
+    /// plan) — never both, per PracticeItemChoice.IsGraph.
+    private static Control BuildChoiceContent(PracticeItemChoice choice) =>
+        choice.IsGraph ? GraphSpecRenderer.Build(choice.Graph!) : MathTextRenderer.Build(choice.Text ?? "");
+
+    /// The "check answer" result panel, shared between the preview and tracked practice-item blocks
+    /// below — a composite Control rather than one formatted string, since a graph-based correct
+    /// answer can't be embedded inside interpolated text the way plain text could.
+    private static Control BuildResultBlock(PracticeItem item, bool correct)
+    {
+        var color = correct ? Brushes.DarkGreen : Brushes.DarkRed;
+        var panel = new StackPanel { Spacing = 4 };
+
+        if (correct)
+        {
+            panel.Children.Add(MathTextRenderer.Build("✓ Correct!", foreground: color));
+        }
+        else
+        {
+            panel.Children.Add(MathTextRenderer.Build(
+                $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}.", foreground: color));
+            panel.Children.Add(BuildChoiceContent(item.Choices[item.CorrectIndex]));
+        }
+
+        panel.Children.Add(MathTextRenderer.Build(item.Explanation, foreground: color));
+        return panel;
+    }
 
     /// Dev-only raw preview of an unreviewed, just-refreshed draft (see RefreshContent's
     /// rawPack-is-unverified branch) — same withhold-the-answer-until-checked UX as the real
@@ -659,7 +681,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = MathTextRenderer.Build(ChoiceDisplayText(item.Choices[i])), GroupName = item.Id };
+            var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = item.Id };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) selected = choiceIndex;
@@ -677,11 +699,7 @@ public partial class MainWindow : Window
             foreach (var radio in radios) radio.IsEnabled = false;
             checkButton.IsEnabled = false;
 
-            var correct = chosen == item.CorrectIndex;
-            var resultTextValue = correct
-                ? $"✓ Correct! {item.Explanation}"
-                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {ChoiceDisplayText(item.Choices[item.CorrectIndex])}\n{item.Explanation}";
-            resultContainer.Content = MathTextRenderer.Build(resultTextValue, foreground: correct ? Brushes.DarkGreen : Brushes.DarkRed);
+            resultContainer.Content = BuildResultBlock(item, correct: chosen == item.CorrectIndex);
             resultContainer.IsVisible = true;
         };
 
@@ -706,7 +724,7 @@ public partial class MainWindow : Window
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = MathTextRenderer.Build(ChoiceDisplayText(item.Choices[i])), GroupName = $"{packHash}-{item.Id}" };
+            var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = $"{packHash}-{item.Id}" };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) selected = choiceIndex;
@@ -725,10 +743,7 @@ public partial class MainWindow : Window
             checkButton.IsEnabled = false;
 
             var correct = chosen == item.CorrectIndex;
-            var resultTextValue = correct
-                ? $"✓ Correct! {item.Explanation}"
-                : $"✗ Not quite — correct answer: {(char)('A' + item.CorrectIndex)}. {ChoiceDisplayText(item.Choices[item.CorrectIndex])}\n{item.Explanation}";
-            resultContainer.Content = MathTextRenderer.Build(resultTextValue, foreground: correct ? Brushes.DarkGreen : Brushes.DarkRed);
+            resultContainer.Content = BuildResultBlock(item, correct);
             resultContainer.IsVisible = true;
 
             AttemptLogStore.Append(AttemptLogStore.DefaultDir, new AttemptRecord(

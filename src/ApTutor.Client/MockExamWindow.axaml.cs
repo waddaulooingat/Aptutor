@@ -10,6 +10,7 @@ using ApTutor.Platform;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
 
@@ -41,10 +42,22 @@ public partial class MockExamWindow : Window
         ShowQuestion(0);
     }
 
-    /// A graph-typed choice has no renderer yet (see the graph-spec-rendering plan) — shown as a
-    /// clearly-labeled placeholder rather than falling back to the record's default ToString().
-    private static string ChoiceDisplayText(PracticeItemChoice choice) =>
-        choice.Text ?? "[Graph-based answer — rendering not built yet]";
+    /// A choice is either plain text or a static line/point graph (see the graph-spec-rendering
+    /// plan) — never both, per PracticeItemChoice.IsGraph. Sized smaller than the Shell's practice
+    /// panel default (see MainWindow's own BuildChoiceContent) since a mock-exam choice sits inline
+    /// with several others rather than being the sole focus of the screen.
+    private static Control BuildChoiceContent(PracticeItemChoice choice) =>
+        choice.IsGraph ? GraphSpecRenderer.Build(choice.Graph!, width: 200, height: 130) : MathTextRenderer.Build(choice.Text ?? "");
+
+    /// A labeled result row ("Your answer: ..." / "Correct answer: ...") — a composite Control rather
+    /// than a formatted string, since a graph-based choice can't be embedded inside interpolated text.
+    private static Control BuildLabeledChoiceRow(string label, PracticeItemChoice choice)
+    {
+        var row = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
+        row.Children.Add(new TextBlock { Text = label });
+        row.Children.Add(BuildChoiceContent(choice));
+        return row;
+    }
 
     private void ShowQuestion(int index)
     {
@@ -59,7 +72,7 @@ public partial class MockExamWindow : Window
         for (var i = 0; i < item.Choices.Count; i++)
         {
             var choiceIndex = i;
-            var radio = new RadioButton { Content = MathTextRenderer.Build(ChoiceDisplayText(item.Choices[i])), GroupName = "mockExamChoices" };
+            var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = "mockExamChoices" };
             radio.IsCheckedChanged += (_, _) =>
             {
                 if (radio.IsChecked == true) _selectedForCurrent = choiceIndex;
@@ -126,9 +139,10 @@ public partial class MockExamWindow : Window
 
             if (!item.Correct)
             {
-                var yourAnswer = item.SelectedIndex is { } si ? ChoiceDisplayText(item.Item.Choices[si]) : "(unanswered)";
-                container.Children.Add(MathTextRenderer.Build($"   Your answer: {yourAnswer}"));
-                container.Children.Add(MathTextRenderer.Build($"   Correct answer: {ChoiceDisplayText(item.Item.Choices[item.Item.CorrectIndex])}"));
+                container.Children.Add(item.SelectedIndex is { } si
+                    ? BuildLabeledChoiceRow("   Your answer:", item.Item.Choices[si])
+                    : MathTextRenderer.Build("   Your answer: (unanswered)"));
+                container.Children.Add(BuildLabeledChoiceRow("   Correct answer:", item.Item.Choices[item.Item.CorrectIndex]));
                 container.Children.Add(MathTextRenderer.Build($"   {item.Item.Explanation}"));
             }
 
