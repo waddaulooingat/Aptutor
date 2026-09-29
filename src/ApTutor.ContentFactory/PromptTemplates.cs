@@ -49,6 +49,12 @@ public static class PromptTemplates
         deliberately (e.g. two different objects, or before-vs-after some event) — never just for
         visual variety. A question's four choices can all be graphs, all be text, or mix, whichever
         the question actually calls for.
+
+        STRUCTURAL REQUIREMENT, not a style preference: every choice where kind is "graph" MUST
+        include a complete "graph" object (xAxis, yAxis, and at least one segment with at least 2
+        points) in that same choice — never emit kind:"graph" as a placeholder or intention without
+        the actual graph data filled in. If you're not going to fully populate a choice's graph right
+        now, use kind:"text" for it instead.
         """;
 
     /// Difficulty only shapes how demanding the practice items are (see the difficulty-levels plan)
