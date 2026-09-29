@@ -56,6 +56,12 @@ main { max-width: 900px; margin: 0 auto; padding: 24px; }
 h1 { font-size: 1.4rem; }
 h2 { font-size: 1.1rem; margin-top: 1.5rem; }
 
+/* Collapsible course sections on the content-review page (a plain <details>/<summary>, no JS) —
+   summary styled to read like the h2 it replaces, with the browser's native disclosure triangle
+   kept as the expand/collapse affordance rather than hidden and reimplemented. */
+.course-summary { font-size: 1.1rem; font-weight: 600; cursor: pointer; }
+.course-summary::marker { color: var(--muted); }
+
 .unit-heading { margin-top: 1.5rem; color: var(--muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; }
 
 .unit-header { display: flex; justify-content: space-between; align-items: baseline; }

@@ -20,9 +20,10 @@
 
 @foreach (var course in Model.Courses)
 {
-    <section class="card">
+    <details class="card" open>
+        <summary class="course-summary">@course.DisplayName</summary>
         <div class="unit-header">
-            <h2>@course.DisplayName</h2>
+            <span></span>
             <a href="/GenerateUnit?course=@course.CourseId" class="link-button">Generate new unit</a>
         </div>
         @if (!course.HasStructure)
@@ -77,5 +78,5 @@
                 }
             </ul>
         }
-    </section>
+    </details>
 }
