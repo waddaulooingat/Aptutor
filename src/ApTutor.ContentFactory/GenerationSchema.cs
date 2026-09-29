@@ -49,6 +49,9 @@ public static class GenerationSchema
             {
                 ["type"] = "array",
                 ["minItems"] = 2,
+                ["description"] =
+                    "One array entry PER STEP — if there are several parallel cases/examples, each one " +
+                    "is its own separate entry, never combined into one entry's caption/detail.",
                 ["items"] = new JsonObject
                 {
                     ["type"] = "object",
@@ -58,12 +61,17 @@ public static class GenerationSchema
                         ["caption"] = new JsonObject
                         {
                             ["type"] = "string",
-                            ["description"] = "A worked-example step's action, or a section's subheading.",
+                            ["description"] =
+                                "A worked-example step's action, or a section's subheading — plain prose only, " +
+                                "covering exactly ONE step. Never include literal tags like \"<step>\" or " +
+                                "\"<caption>\" in this text, and never concatenate multiple steps here.",
                         },
                         ["detail"] = new JsonObject
                         {
                             ["type"] = "string",
-                            ["description"] = "The reasoning/equation behind the step, or the section's explanatory paragraph with a concrete example.",
+                            ["description"] =
+                                "The reasoning/equation behind this ONE step, or the section's explanatory " +
+                                "paragraph with a concrete example — plain prose only, no literal tags.",
                         },
                     },
                 },

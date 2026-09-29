@@ -99,6 +99,15 @@ public static class PromptTemplates
         (a subheading-style caption with an explanatory paragraph, including a concrete illustrative
         example). Do not just restate the practice items' explanations — this is the teaching moment
         that comes before a student ever sees a question, not a recap after one.
+
+        STRUCTURAL REQUIREMENT, not a style preference: "steps" is a real JSON array — one object per
+        step, each with its own "caption" (and optional "detail") field. If your content naturally
+        has several parallel cases or examples (e.g. "Case 1", "Case 2", "Case 3"), that is several
+        SEPARATE array entries, one per case — never one entry whose caption or detail contains all of
+        them concatenated together. Never write literal tags like "<step>", "<caption>", or "<detail>"
+        as text anywhere in your output — those are this tool's own field names, not content you
+        should ever reproduce; if you find yourself typing an angle bracket followed by one of those
+        words, stop and put that content into a proper new array entry instead.
         """;
 
     /// Content Admin's "Create new course" (see the Shell-display-only/course-authoring plan's
