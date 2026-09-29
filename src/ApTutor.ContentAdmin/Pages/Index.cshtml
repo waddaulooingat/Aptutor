@@ -51,7 +51,7 @@
                 @foreach (var node in unit.Nodes)
                 {
                     <li class="node-row">
-                        <a href="/Review?course=@course.CourseId&node=@node.NodeId">@node.Title</a>
+                        <a href="/Review?course=@course.CourseId&node=@node.NodeId"><span class="node-id">@node.NodeId</span> — @node.Title</a>
                         <div class="difficulty-badges">
                             @foreach (var d in ApTutor.ContentAdmin.Pages.Difficulties.All)
                             {

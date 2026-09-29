@@ -64,6 +64,10 @@ h2 { font-size: 1.1rem; margin-top: 1.5rem; }
 
 .unit-heading { margin-top: 1.5rem; color: var(--muted); font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.04em; }
 
+/* Node id label (e.g. "u1.10") shown alongside a node's title — monospace and muted so it reads as
+   an identifier, not as part of the title's own wording. */
+.node-id { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); font-size: 0.85em; }
+
 .unit-header { display: flex; justify-content: space-between; align-items: baseline; }
 .unit-header .unit-heading { margin-top: 1.5rem; }
 .generate-unit-form { margin: 0; }
