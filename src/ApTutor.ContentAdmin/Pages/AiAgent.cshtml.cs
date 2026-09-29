@@ -10,7 +10,8 @@ namespace ApTutor.ContentAdmin.Pages;
 /// remarks); AiReviewedVersionCount is every approved node-version across every difficulty this
 /// course has that the AI reviewer — not a human — approved, i.e. Part C's "queryable so a future
 /// human SME pass can find and prioritize it" made concrete as a per-course count on this page.
-public sealed record CourseAgentSummary(string CourseId, string DisplayName, int GapCount, int AiReviewedVersionCount);
+public sealed record CourseAgentSummary(
+    string CourseId, string DisplayName, int GapCount, int AiReviewedVersionCount, IReadOnlyList<AiTouchedItem> AiTouchedItems);
 
 // A scan can trigger real, billed generation calls (up to MaxGenerationsPerScan of them from one
 // click) — same rate-limiting posture as Index/Review's own generation-triggering handlers.
@@ -77,14 +78,15 @@ public sealed class AiAgentModel : PageModel
         {
             if (course.Graph is null)
             {
-                summaries.Add(new CourseAgentSummary(course.CourseId, course.DisplayName, GapCount: 0, AiReviewedVersionCount: 0));
+                summaries.Add(new CourseAgentSummary(course.CourseId, course.DisplayName, GapCount: 0, AiReviewedVersionCount: 0, AiTouchedItems: Array.Empty<AiTouchedItem>()));
                 continue;
             }
 
             var gaps = await _agent.FindGapsAsync(course.CourseId);
             var manifest = await _store.GetCourseManifestAsync(course.CourseId);
             var aiReviewedCount = manifest.Nodes.Values.Sum(entry => entry.Versions.Count(v => v.AiReviewed));
-            summaries.Add(new CourseAgentSummary(course.CourseId, course.DisplayName, gaps.Count, aiReviewedCount));
+            var aiTouched = await _agent.FindAiTouchedContentAsync(course.CourseId);
+            summaries.Add(new CourseAgentSummary(course.CourseId, course.DisplayName, gaps.Count, aiReviewedCount, aiTouched));
         }
         return summaries;
     }

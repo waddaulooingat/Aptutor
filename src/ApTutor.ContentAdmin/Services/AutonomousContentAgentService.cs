@@ -15,6 +15,16 @@ public sealed record ContentGap(string CourseId, string NodeId, Difficulty Diffi
 /// for the next scan, not an error.
 public sealed record ScanResult(int GapsFound, int Triggered, int SkippedAlreadyInFlight);
 
+/// One CURRENTLY-LIVE piece of content that the AI touched — either generation, review, or both (see
+/// NodeContentPack/LearnContent's own remarks on why those are independent bits). Difficulty is null
+/// for learn content (not difficulty-scoped — see LearnContent's remarks); ContentType distinguishes
+/// the two, since a node can appear in this list once per difficulty for practice content AND once
+/// more for learn content. Deliberately reports only the LATEST version per node+difficulty/type, not
+/// every historical version the manifest accumulates (see AiAgentModel's own AiReviewedVersionCount
+/// for that all-time total) — this list is "what a human should go look at right now," not an audit
+/// of everything the AI has ever produced.
+public sealed record AiTouchedItem(string NodeId, string NodeTitle, string ContentType, Difficulty? Difficulty, bool AiGenerated, bool AiReviewed);
+
 /// Part A of the AI Content Agent interim stopgap (see the handoff): finds nodes/difficulties with no
 /// approved content yet and triggers generation itself, instead of requiring a person to open
 /// Content Admin and click "Generate" per unit. Deliberately on-demand only (a person calls
@@ -88,4 +98,37 @@ public sealed class AutonomousContentAgentService
 
     private static bool IsGap(string nodeId, Difficulty difficulty, CourseManifest manifest) =>
         !manifest.Nodes.TryGetValue(nodeId, out var entry) || entry.LatestFor(difficulty) is null;
+
+    /// Every currently-live node+difficulty/learn-content combination the AI touched (see
+    /// AiTouchedItem's remarks) — the answer to "what did the AI agent actually generate/approve
+    /// that's live right now," as opposed to AiAgentModel's cumulative all-time count. Checks learn
+    /// content per node too (one extra S3 GET each — acceptable for an on-demand admin page, not a
+    /// hot path) even though the gap SCAN above never generates it, since Part B's AI review pass
+    /// does apply to manually-triggered learn content generation too.
+    public async Task<IReadOnlyList<AiTouchedItem>> FindAiTouchedContentAsync(string courseId, CancellationToken ct = default)
+    {
+        if (!_catalog.TryGet(courseId, out var course) || course.Graph is not { } graph)
+            return Array.Empty<AiTouchedItem>();
+
+        var manifest = await _store.GetCourseManifestAsync(courseId, ct);
+        var items = new List<AiTouchedItem>();
+
+        foreach (var node in graph.Dag.Nodes)
+        {
+            if (manifest.Nodes.TryGetValue(node.Id, out var entry))
+            {
+                foreach (var difficulty in AllDifficulties)
+                {
+                    if (entry.LatestFor(difficulty) is { } latest && (latest.AiGenerated || latest.AiReviewed))
+                        items.Add(new AiTouchedItem(node.Id, node.Title, "Practice", difficulty, latest.AiGenerated, latest.AiReviewed));
+                }
+            }
+
+            var learnContent = await _store.TryGetLiveLearnContentAsync(courseId, node.Id, ct);
+            if (learnContent is { } learn && (learn.AiGenerated || learn.AiReviewed))
+                items.Add(new AiTouchedItem(node.Id, node.Title, "Learn", Difficulty: null, learn.AiGenerated, learn.AiReviewed));
+        }
+
+        return items;
+    }
 }

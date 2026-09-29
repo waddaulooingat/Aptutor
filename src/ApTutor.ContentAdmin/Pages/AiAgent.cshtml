@@ -57,8 +57,42 @@ else
         {
             <p class="notice">
                 <span class="badge badge-pending">@course.AiReviewedVersionCount AI-reviewed</span>
-                approved version(s) in this course are awaiting a human SME re-review.
+                approved version(s) in this course are awaiting a human SME re-review (cumulative,
+                across every version ever approved — see the list below for what's live right now).
             </p>
+        }
+        @if (course.AiTouchedItems.Count > 0)
+        {
+            <details style="margin-top: 12px;">
+                <summary class="course-summary" style="font-size: 1rem;">
+                    @course.AiTouchedItems.Count currently-live item(s) the AI touched — click to view
+                </summary>
+                <table style="width: 100%; margin-top: 8px; border-collapse: collapse;">
+                    <thead>
+                        <tr style="text-align: left; border-bottom: 1px solid var(--border);">
+                            <th style="padding: 4px 8px 4px 0;">Node</th>
+                            <th style="padding: 4px 8px;">Content</th>
+                            <th style="padding: 4px 8px;">AI-generated</th>
+                            <th style="padding: 4px 8px;">AI-reviewed</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in course.AiTouchedItems.OrderBy(i => i.NodeId, StringComparer.Ordinal).ThenBy(i => i.ContentType, StringComparer.Ordinal))
+                        {
+                            <tr style="border-bottom: 1px solid var(--border);">
+                                <td style="padding: 4px 8px 4px 0;">
+                                    <a href="/Review?course=@course.CourseId&node=@item.NodeId@(item.Difficulty is { } d ? $"&difficulty={d}" : "")">
+                                        @item.NodeId — @item.NodeTitle
+                                    </a>
+                                </td>
+                                <td style="padding: 4px 8px;">@item.ContentType@(item.Difficulty is { } diff ? $" ({diff})" : "")</td>
+                                <td style="padding: 4px 8px;">@(item.AiGenerated ? "✓" : "")</td>
+                                <td style="padding: 4px 8px;">@(item.AiReviewed ? "✓" : "")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </details>
         }
     </section>
 }

@@ -130,6 +130,87 @@ public class AutonomousContentAgentServiceTests
         Assert.Equal(3, result.SkippedAlreadyInFlight);
     }
 
+    private static LearnContent SampleLearnContent(bool aiGenerated = false, bool aiReviewed = false) => new(
+        "overview", new[] { new LearnStep("step") }, Verified: true, GeneratedAt: DateTimeOffset.UtcNow, Model: "test-model",
+        AiGenerated: aiGenerated, AiReviewed: aiReviewed);
+
+    [Fact]
+    public async Task FindAiTouchedContentAsync_HumanApprovedPack_IsNotListed()
+    {
+        var (agent, store, catalog, _) = NewAgent();
+        await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium));
+        await catalog.RefreshAsync();
+
+        var items = await agent.FindAiTouchedContentAsync("csa");
+
+        Assert.Empty(items);
+    }
+
+    [Fact]
+    public async Task FindAiTouchedContentAsync_AiApprovedPack_IsListedAsPracticeWithDifficulty()
+    {
+        var (agent, store, catalog, _) = NewAgent();
+        await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Hard) with { AiGenerated = true, AiReviewed = true });
+        await catalog.RefreshAsync();
+
+        var items = await agent.FindAiTouchedContentAsync("csa");
+
+        var item = Assert.Single(items);
+        Assert.Equal("u1.1", item.NodeId);
+        Assert.Equal("Practice", item.ContentType);
+        Assert.Equal(Difficulty.Hard, item.Difficulty);
+        Assert.True(item.AiGenerated);
+        Assert.True(item.AiReviewed);
+    }
+
+    [Fact]
+    public async Task FindAiTouchedContentAsync_AiTouchedLearnContent_IsListedWithNullDifficulty()
+    {
+        var (agent, store, catalog, _) = NewAgent();
+        await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent(aiReviewed: true));
+        await catalog.RefreshAsync();
+
+        var items = await agent.FindAiTouchedContentAsync("csa");
+
+        var item = Assert.Single(items);
+        Assert.Equal("Learn", item.ContentType);
+        Assert.Null(item.Difficulty);
+        Assert.True(item.AiReviewed);
+    }
+
+    [Fact]
+    public async Task FindAiTouchedContentAsync_HumanApprovedLearnContent_IsNotListed()
+    {
+        var (agent, store, catalog, _) = NewAgent();
+        await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent());
+        await catalog.RefreshAsync();
+
+        var items = await agent.FindAiTouchedContentAsync("csa");
+
+        Assert.Empty(items);
+    }
+
+    [Fact]
+    public async Task FindAiTouchedContentAsync_OnlyNewestVersionAtADifficulty_IsConsidered()
+    {
+        // An older AI-approved version superseded by a newer human-approved regeneration at the same
+        // difficulty must not still show up as "currently AI-touched" — see AiTouchedItem's remarks
+        // on why this reports the latest version only, not full history.
+        var (agent, store, catalog, _) = NewAgent();
+        await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium) with { AiGenerated = true, AiReviewed = true, WalkthroughText = "ai version" });
+        await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium) with { WalkthroughText = "human version" });
+        await catalog.RefreshAsync();
+
+        var items = await agent.FindAiTouchedContentAsync("csa");
+
+        Assert.Empty(items);
+    }
+
     /// Same minimal in-memory fake as CourseCatalogTests/S3ContentStoreTests use — overrides only the
     /// two leaf methods that actually touch IAmazonS3.
     private sealed class FakeS3ContentStore : S3ContentStore
