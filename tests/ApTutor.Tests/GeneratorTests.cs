@@ -241,6 +241,58 @@ public class GeneratorTests
             () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
     }
 
+    // Same leaked tool-call/JSON artifact check as GenerateLearnContentAsync's (see its remarks) —
+    // production showed the model can leak its own "<parameter name=\"...\">"/raw-JSON syntax into
+    // any free-text field, not just a learn-content step, so every text field here is checked too.
+    [Fact]
+    public async Task GenerateAsync_WalkthroughTextContainsLeakedToolCallSyntax_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "<parameter name=\"walkthroughText\">Some text.",
+                "practiceItems": [ { "prompt": "p", "correctIndex": 0, "explanation": "e", "choices": ["a", "b", "c", "d"] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ItemPromptContainsLeakedToolCallSyntax_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "<invoke name=\"emit_node_content\">What is x?", "correctIndex": 0, "explanation": "e", "choices": ["a", "b", "c", "d"] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_ChoiceTextContainsLeakedToolCallSyntax_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "correctIndex": 0, "explanation": "e",
+                    "choices": [ "{\"caption\":\"leaked\"}", "b", "c", "d" ] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+    }
+
     [Fact]
     public async Task GenerateAsync_GraphChoiceMissingXAxisLabel_Throws()
     {
@@ -603,5 +655,55 @@ public class GeneratorTests
         var content = await generator.GenerateLearnContentAsync("csa", SampleNode);
 
         Assert.Equal("Compare i < 5 in the loop condition", content.Steps[0].Caption);
+    }
+
+    // Production hit a second, different disguise of the same underlying problem: instead of its own
+    // "<step><caption>" markup, the model leaked its raw tool-call/JSON syntax — literally
+    // "<parameter name=\"steps\">[{\"caption\":...}, ...]" — as the entire "steps" value. Same root
+    // cause (GeneratedLearnStepListConverter's bare-string leniency accepting a blob it shouldn't),
+    // different leaked vocabulary — this must fail loudly too, not just the original <step> shape.
+    [Fact]
+    public async Task GenerateLearnContentAsync_StepsLeakedAsRawToolCallParameterSyntax_Throws()
+    {
+        const string response = """"
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": "<parameter name=\"steps\">[{\"caption\":\"Start from the definition.\",\"detail\":\"Some detail.\"}]" } } ] }
+            """";
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_StepCaptionIsRawJsonArrayText_Throws()
+    {
+        const string response = """"
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": [ { "caption": "[{\"caption\":\"leaked json\"}]" } ] } } ] }
+            """";
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_OverviewContainsLeakedToolCallSyntax_Throws()
+    {
+        const string response = """"
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "<invoke name=\"emit_learn_content\">An overview.",
+                "steps": [ { "caption": "A normal caption" }, { "caption": "Another normal caption" } ] } } ] }
+            """";
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateLearnContentAsync("csa", SampleNode));
     }
 }

@@ -137,6 +137,20 @@ public sealed class Generator
         var generated = JsonSerializer.Deserialize<GeneratedNodeContent>(inputJson.GetRawText(), ParseOptions)
             ?? throw new InvalidOperationException($"Claude returned an empty/unparsable content block for node '{node.Id}'.");
 
+        // Same leaked tool-call/JSON artifact check as GenerateLearnContentAsync (see its remarks) —
+        // production showed this isn't specific to learn content's steps array; any free-text field
+        // the model fills in is at risk of the same failure, so every text field here gets checked
+        // too rather than waiting for it to show up in practice items before guarding against it.
+        if (ContainsLeakedMarkup(generated.WalkthroughText))
+            throw new InvalidOperationException($"Node '{node.Id}': walkthrough text contains leaked tool-call/JSON artifacts instead of prose.");
+        foreach (var (item, i) in generated.PracticeItems.Select((item, i) => (item, i)))
+        {
+            if (ContainsLeakedMarkup(item.Prompt))
+                throw new InvalidOperationException($"Node '{node.Id}' item {i + 1}: prompt contains leaked tool-call/JSON artifacts instead of prose.");
+            if (ContainsLeakedMarkup(item.Explanation))
+                throw new InvalidOperationException($"Node '{node.Id}' item {i + 1}: explanation contains leaked tool-call/JSON artifacts instead of prose.");
+        }
+
         var practiceItems = generated.PracticeItems
             .Select((item, i) => new PracticeItem(
                 $"{node.Id}-q{i + 1}", node.Id, item.Prompt,
@@ -174,7 +188,9 @@ public sealed class Generator
         return choice.Kind?.ToLowerInvariant() switch
         {
             "text" => !string.IsNullOrWhiteSpace(choice.Text)
-                ? PracticeItemChoice.OfText(choice.Text)
+                ? !ContainsLeakedMarkup(choice.Text)
+                    ? PracticeItemChoice.OfText(choice.Text)
+                    : throw new InvalidOperationException($"{where}: text contains leaked tool-call/JSON artifacts instead of prose.")
                 : throw new InvalidOperationException($"{where}: kind is 'text' but no text was provided."),
             "graph" => choice.Graph is { } graph
                 ? PracticeItemChoice.OfGraph(ValidateGraph(graph, where))
@@ -222,6 +238,9 @@ public sealed class Generator
 
         if (string.IsNullOrWhiteSpace(generated.Overview))
             throw new InvalidOperationException($"Node '{node.Id}': learn content is missing an overview.");
+        if (ContainsLeakedMarkup(generated.Overview))
+            throw new InvalidOperationException(
+                $"Node '{node.Id}': learn content's overview contains leaked tool-call/JSON artifacts instead of prose.");
         if (generated.Steps.Count == 0)
             throw new InvalidOperationException($"Node '{node.Id}': learn content has zero steps.");
         foreach (var step in generated.Steps)
@@ -229,19 +248,22 @@ public sealed class Generator
             if (string.IsNullOrWhiteSpace(step.Caption))
                 throw new InvalidOperationException($"Node '{node.Id}': a learn-content step is missing its caption.");
 
-            // Seen in production: the model sometimes fails to produce a real steps ARRAY and
-            // instead dumps one giant string containing its own hand-rolled "<step><caption>...
-            // </caption><detail>...</detail></step>" markup for every step it meant to write —
-            // GeneratedLearnStepConverter's bare-string leniency (added for the much more benign
-            // "a step is just a plain caption string" case) then silently accepts that whole blob as
-            // ONE step's caption instead of failing, which is exactly the "structurally invalid
-            // content must never reach SME review" rule this file otherwise holds to everywhere
-            // else. These tag names are specific enough (leaked straight from the schema's own field
-            // names) that a false positive on legitimate content is effectively impossible — unlike
-            // a bare "<"/">" check, which would wrongly reject ordinary comparisons like "x < 5".
-            if (ContainsLeakedStepMarkup(step.Caption) || (step.Detail is not null && ContainsLeakedStepMarkup(step.Detail)))
+            // Seen in production, twice, in two different disguises: the model fails to produce a
+            // real steps ARRAY and instead dumps one giant string for every step it meant to write —
+            // first as its own hand-rolled "<step><caption>...</caption></step>" markup, then later
+            // as a literal "<parameter name=\"steps\">[{\"caption\":...}, ...]" — i.e. the raw
+            // tool-call/JSON syntax itself leaking into a text field, not prose describing the
+            // content at all. GeneratedLearnStepConverter's bare-string leniency (added for the much
+            // more benign "a step is just a plain caption string" case) then silently accepts
+            // whichever blob as ONE step's caption instead of failing, which is exactly the
+            // "structurally invalid content must never reach SME review" rule this file otherwise
+            // holds to everywhere else. Every marker here is specific enough (leaked straight from
+            // either the schema's own field names or Claude's own tool-call syntax) that a false
+            // positive on legitimate content is effectively impossible — unlike a bare "<"/">" check,
+            // which would wrongly reject ordinary comparisons like "x < 5".
+            if (ContainsLeakedMarkup(step.Caption) || (step.Detail is not null && ContainsLeakedMarkup(step.Detail)))
                 throw new InvalidOperationException(
-                    $"Node '{node.Id}': a learn-content step contains embedded <step>/<caption>/<detail> markup — " +
+                    $"Node '{node.Id}': a learn-content step contains leaked tool-call/JSON/markup artifacts — " +
                     "the model likely failed to produce a real steps array instead of one blob of text.");
         }
 
@@ -249,11 +271,17 @@ public sealed class Generator
         return new LearnContent(generated.Overview, steps, Verified: false, DateTimeOffset.UtcNow, _client.Model);
     }
 
-    private static readonly string[] LeakedStepMarkupMarkers =
-        { "<step>", "</step>", "<caption>", "</caption>", "<detail>", "</detail>" };
+    private static readonly string[] LeakedMarkupMarkers =
+    {
+        "<step>", "</step>", "<caption>", "</caption>", "<detail>", "</detail>",
+        // Claude's own tool-call/function-call syntax, or the raw JSON it's supposed to be filling
+        // into structured fields — never legitimate content in a teaching caption/detail/overview.
+        "<parameter", "</parameter>", "<invoke", "</invoke>", "{\"caption\"", "{\"steps\"",
+    };
 
-    private static bool ContainsLeakedStepMarkup(string text) =>
-        LeakedStepMarkupMarkers.Any(marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    private static bool ContainsLeakedMarkup(string text) =>
+        LeakedMarkupMarkers.Any(marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase))
+        || text.TrimStart().StartsWith("[{", StringComparison.Ordinal);
 
     /// Content Admin's "Generate unit structure" (see the Shell-display-only/course-authoring
     /// plan's Part B) — one level above per-node content generation: drafts the node list
