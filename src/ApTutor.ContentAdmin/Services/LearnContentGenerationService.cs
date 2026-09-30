@@ -48,16 +48,19 @@ public sealed class LearnContentGenerationService
     public LearnContentJob? GetJob(string courseId, string nodeId) =>
         _jobs.TryGetValue(Key(courseId, nodeId), out var job) ? job : null;
 
-    public bool TryStartGeneration(string courseId, string nodeId)
+    /// aiGenerated is true only when AutonomousContentAgentService's scan triggered this (see the
+    /// AI-content-agent handoff) — every existing caller (a person clicking Generate) omits it and
+    /// gets the same behavior as before, same convention as ContentGenerationService's own flag.
+    public bool TryStartGeneration(string courseId, string nodeId, bool aiGenerated = false)
     {
         var key = Key(courseId, nodeId);
         var startedAt = DateTimeOffset.UtcNow;
-        var job = new LearnContentJob(courseId, nodeId, GenerationStatus.Running, Error: null, Content: null, startedAt);
+        var job = new LearnContentJob(courseId, nodeId, GenerationStatus.Running, Error: null, Content: null, startedAt, aiGenerated);
         if (!_jobs.TryAdd(key, job)) return false;
 
         var cts = new CancellationTokenSource();
         _cancellations[key] = cts;
-        _ = RunAsync(courseId, nodeId, key, startedAt, cts.Token);
+        _ = RunAsync(courseId, nodeId, aiGenerated, key, startedAt, cts.Token);
         return true;
     }
 
@@ -79,21 +82,22 @@ public sealed class LearnContentGenerationService
         return removed;
     }
 
-    private async Task RunAsync(string courseId, string nodeId, string key, DateTimeOffset startedAt, CancellationToken ct)
+    private async Task RunAsync(string courseId, string nodeId, bool aiGenerated, string key, DateTimeOffset startedAt, CancellationToken ct)
     {
         try
         {
             var course = _catalog.Get(courseId);
             var node = course.Graph!.Node(nodeId);
             var content = await _generator.GenerateLearnContentAsync(courseId, node, ct);
+            if (aiGenerated) content = content with { AiGenerated = true };
 
             if (!_agentOptions.Value.Enabled)
             {
-                TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content });
+                TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content, AiGenerated = aiGenerated });
                 return;
             }
 
-            await ReviewAndResolveAsync(courseId, nodeId, node, content, key, startedAt, ct);
+            await ReviewAndResolveAsync(courseId, nodeId, node, content, aiGenerated, key, startedAt, ct);
         }
         catch (OperationCanceledException)
         {
@@ -108,7 +112,7 @@ public sealed class LearnContentGenerationService
     /// Same interim AI review pass as ContentGenerationService — see its ReviewAndResolveAsync for
     /// the full reasoning; this is the learn-content counterpart.
     private async Task ReviewAndResolveAsync(
-        string courseId, string nodeId, DagNode node, LearnContent content, string key, DateTimeOffset startedAt, CancellationToken ct)
+        string courseId, string nodeId, DagNode node, LearnContent content, bool aiGenerated, string key, DateTimeOffset startedAt, CancellationToken ct)
     {
         AiReviewResult review;
         try
@@ -120,7 +124,7 @@ public sealed class LearnContentGenerationService
             _logger.LogError(ex, "AI review failed for {Course}/{Node} learn content; leaving as a pending draft for manual review", courseId, nodeId);
             TryCompleteJob(key, startedAt, job => job with
             {
-                Status = GenerationStatus.Succeeded, Content = content,
+                Status = GenerationStatus.Succeeded, Content = content, AiGenerated = aiGenerated,
                 AiReviewNote = "The AI review pass itself failed, so this needs manual review.",
             });
             return;
@@ -128,7 +132,7 @@ public sealed class LearnContentGenerationService
 
         if (review.Verdict == AiReviewVerdict.Flag)
         {
-            TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content, AiReviewNote = review.Reasoning });
+            TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = content, AiGenerated = aiGenerated, AiReviewNote = review.Reasoning });
             return;
         }
 
@@ -142,13 +146,13 @@ public sealed class LearnContentGenerationService
             _logger.LogError(ex, "AI auto-approve failed for {Course}/{Node} learn content; leaving as a pending draft for manual approval", courseId, nodeId);
             TryCompleteJob(key, startedAt, job => job with
             {
-                Status = GenerationStatus.Succeeded, Content = content,
+                Status = GenerationStatus.Succeeded, Content = content, AiGenerated = aiGenerated,
                 AiReviewNote = $"The AI reviewer approved this, but saving it failed ({ex.Message}) — please approve it manually.",
             });
             return;
         }
 
-        TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = approved });
+        TryCompleteJob(key, startedAt, job => job with { Status = GenerationStatus.Succeeded, Content = approved, AiGenerated = aiGenerated });
         ClearJob(courseId, nodeId, GenerationStatus.Succeeded);
     }
 

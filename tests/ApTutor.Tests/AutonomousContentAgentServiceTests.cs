@@ -32,7 +32,7 @@ public class AutonomousContentAgentServiceTests
         PracticeItems: Array.Empty<Platform.PracticeItem>(), WalkthroughSteps: Array.Empty<Platform.VisualStep>(),
         Verified: true, GeneratedAt: DateTimeOffset.UtcNow, Model: "test-model", Difficulty: difficulty);
 
-    private static (AutonomousContentAgentService Agent, FakeS3ContentStore Store, CourseCatalog Catalog, ContentGenerationService Generation) NewAgent()
+    private static (AutonomousContentAgentService Agent, FakeS3ContentStore Store, CourseCatalog Catalog, ContentGenerationService Generation, LearnContentGenerationService LearnGeneration) NewAgent()
     {
         var store = new FakeS3ContentStore();
         var catalog = new CourseCatalog(store, NullLogger<CourseCatalog>.Instance);
@@ -41,46 +41,49 @@ public class AutonomousContentAgentServiceTests
         var aiReviewer = new AiReviewer(client);
         var agentOptions = Options.Create(new AiContentAgentOptions());
         var generation = new ContentGenerationService(generator, catalog, aiReviewer, store, agentOptions, NullLogger<ContentGenerationService>.Instance);
-        var agent = new AutonomousContentAgentService(catalog, store, generation);
-        return (agent, store, catalog, generation);
+        var learnGeneration = new LearnContentGenerationService(generator, catalog, aiReviewer, store, agentOptions, NullLogger<LearnContentGenerationService>.Instance);
+        var agent = new AutonomousContentAgentService(catalog, store, generation, learnGeneration);
+        return (agent, store, catalog, generation, learnGeneration);
     }
 
     [Fact]
-    public async Task FindGapsAsync_BrandNewCourse_EveryNodeAtEveryDifficultyIsAGap()
+    public async Task FindGapsAsync_BrandNewCourse_EveryNodeAtEveryDifficultyIsAGap_PlusLearnContent()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await catalog.RefreshAsync();
 
         var gaps = await agent.FindGapsAsync("csa");
 
-        Assert.Equal(3, gaps.Count); // one node x three difficulties
-        Assert.Contains(gaps, g => g.Difficulty == Difficulty.Easy);
-        Assert.Contains(gaps, g => g.Difficulty == Difficulty.Medium);
-        Assert.Contains(gaps, g => g.Difficulty == Difficulty.Hard);
+        Assert.Equal(4, gaps.Count); // one node x three practice difficulties, plus one learn-content gap
+        Assert.Contains(gaps, g => g.ContentType == GapContentType.Practice && g.Difficulty == Difficulty.Easy);
+        Assert.Contains(gaps, g => g.ContentType == GapContentType.Practice && g.Difficulty == Difficulty.Medium);
+        Assert.Contains(gaps, g => g.ContentType == GapContentType.Practice && g.Difficulty == Difficulty.Hard);
+        Assert.Contains(gaps, g => g.ContentType == GapContentType.Learn && g.Difficulty == null);
     }
 
     [Fact]
-    public async Task FindGapsAsync_NodeApprovedAtOneDifficultyOnly_OtherTwoStillGaps()
+    public async Task FindGapsAsync_NodeApprovedAtOneDifficultyOnly_OtherTwoAndLearnStillGaps()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium));
         await catalog.RefreshAsync();
 
         var gaps = await agent.FindGapsAsync("csa");
 
-        Assert.Equal(2, gaps.Count);
-        Assert.DoesNotContain(gaps, g => g.Difficulty == Difficulty.Medium);
+        Assert.Equal(3, gaps.Count); // easy, hard, and learn content
+        Assert.DoesNotContain(gaps, g => g.ContentType == GapContentType.Practice && g.Difficulty == Difficulty.Medium);
     }
 
     [Fact]
-    public async Task FindGapsAsync_EveryDifficultyApproved_NoGaps()
+    public async Task FindGapsAsync_EveryDifficultyAndLearnContentApproved_NoGaps()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         foreach (var difficulty in new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard })
             await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", difficulty));
+        await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent());
         await catalog.RefreshAsync();
 
         var gaps = await agent.FindGapsAsync("csa");
@@ -89,9 +92,25 @@ public class AutonomousContentAgentServiceTests
     }
 
     [Fact]
+    public async Task FindGapsAsync_OnlyLearnContentMissing_ReportsExactlyOneLearnGap()
+    {
+        var (agent, store, catalog, _, _) = NewAgent();
+        await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
+        foreach (var difficulty in new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard })
+            await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", difficulty));
+        await catalog.RefreshAsync();
+
+        var gaps = await agent.FindGapsAsync("csa");
+
+        var gap = Assert.Single(gaps);
+        Assert.Equal(GapContentType.Learn, gap.ContentType);
+        Assert.Null(gap.Difficulty);
+    }
+
+    [Fact]
     public async Task FindGapsAsync_CourseWithNoStructureYet_ReturnsEmpty()
     {
-        var (agent, _, _, _) = NewAgent();
+        var (agent, _, _, _, _) = NewAgent();
 
         var gaps = await agent.FindGapsAsync("ghost-course");
 
@@ -101,33 +120,36 @@ public class AutonomousContentAgentServiceTests
     [Fact]
     public async Task RunScanAsync_MaxGenerationsZero_ReportsGapsButTriggersNothing()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await catalog.RefreshAsync();
 
         var result = await agent.RunScanAsync("csa", maxGenerations: 0);
 
-        Assert.Equal(3, result.GapsFound);
+        Assert.Equal(4, result.GapsFound); // three practice difficulties plus learn content
         Assert.Equal(0, result.Triggered);
     }
 
     [Fact]
     public async Task RunScanAsync_GapAlreadyInFlight_CountsAsSkippedNotTriggered()
     {
-        var (agent, store, catalog, generation) = NewAgent();
+        var (agent, store, catalog, generation, learnGeneration) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await catalog.RefreshAsync();
 
-        // Pre-seed every gap's job slot as already running so RunScanAsync's TryStartGeneration
-        // calls fail fast on TryAdd (never reach the real generator) — see class remarks.
+        // Pre-seed every gap's job slot (practice AND learn) as already running so RunScanAsync's
+        // TryStartGeneration calls fail fast on TryAdd (never reach the real generator) — see class
+        // remarks. Skipping the learn-content seed here would let that one gap's TryStartGeneration
+        // genuinely fire off a real Anthropic API call from this test.
         foreach (var difficulty in new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard })
             generation.RestoreJob(new GenerationJob("csa", "u1.1", difficulty, false, GenerationStatus.Running, null, null, DateTimeOffset.UtcNow));
+        learnGeneration.RestoreJob(new LearnContentJob("csa", "u1.1", GenerationStatus.Running, null, null, DateTimeOffset.UtcNow));
 
         var result = await agent.RunScanAsync("csa", maxGenerations: 20);
 
-        Assert.Equal(3, result.GapsFound);
+        Assert.Equal(4, result.GapsFound);
         Assert.Equal(0, result.Triggered);
-        Assert.Equal(3, result.SkippedAlreadyInFlight);
+        Assert.Equal(4, result.SkippedAlreadyInFlight);
     }
 
     private static LearnContent SampleLearnContent(bool aiGenerated = false, bool aiReviewed = false) => new(
@@ -137,7 +159,7 @@ public class AutonomousContentAgentServiceTests
     [Fact]
     public async Task FindAiTouchedContentAsync_HumanApprovedPack_IsNotListed()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium));
         await catalog.RefreshAsync();
@@ -150,7 +172,7 @@ public class AutonomousContentAgentServiceTests
     [Fact]
     public async Task FindAiTouchedContentAsync_AiApprovedPack_IsListedAsPracticeWithDifficulty()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Hard) with { AiGenerated = true, AiReviewed = true });
         await catalog.RefreshAsync();
@@ -168,7 +190,7 @@ public class AutonomousContentAgentServiceTests
     [Fact]
     public async Task FindAiTouchedContentAsync_AiTouchedLearnContent_IsListedWithNullDifficulty()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent(aiReviewed: true));
         await catalog.RefreshAsync();
@@ -184,7 +206,7 @@ public class AutonomousContentAgentServiceTests
     [Fact]
     public async Task FindAiTouchedContentAsync_HumanApprovedLearnContent_IsNotListed()
     {
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await store.ApproveLearnContentAsync("csa", "u1.1", SampleLearnContent());
         await catalog.RefreshAsync();
@@ -200,7 +222,7 @@ public class AutonomousContentAgentServiceTests
         // An older AI-approved version superseded by a newer human-approved regeneration at the same
         // difficulty must not still show up as "currently AI-touched" — see AiTouchedItem's remarks
         // on why this reports the latest version only, not full history.
-        var (agent, store, catalog, _) = NewAgent();
+        var (agent, store, catalog, _, _) = NewAgent();
         await store.ApproveStructureAsync("csa", Structure(("u1.1", 1)));
         await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium) with { AiGenerated = true, AiReviewed = true, WalkthroughText = "ai version" });
         await store.ApproveNodeAsync("csa", "u1.1", SamplePack("u1.1", Difficulty.Medium) with { WalkthroughText = "human version" });

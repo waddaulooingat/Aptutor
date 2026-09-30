@@ -105,6 +105,12 @@ public sealed record GeneratedCourseUnitList(IReadOnlyList<GeneratedCourseUnit> 
 
 public sealed class Generator
 {
+    // Total attempts (including the first) GenerateAsync/GenerateLearnContentAsync will make before
+    // giving up on a validation failure — see GenerateAsync's remarks for why retrying the whole
+    // call is the right response to a validation failure specifically (as opposed to a network/API
+    // error, which a caller's own job-tracking retry, if any, already handles separately).
+    private const int MaxGenerationAttempts = 4;
+
     // CamelCase + case-insensitive so "frameId" (our schema/prompt) maps onto SceneOp's "FrameId"
     // etc., reusing the same [JsonPolymorphic]/[JsonDerivedType] "op" discriminator that
     // ApTutor.Scene already declares — no hand-written op-shape mapping needed. JsonStringEnumConverter
@@ -127,7 +133,35 @@ public sealed class Generator
     /// — required, not defaulted, so every call site states its intent rather than the prompt
     /// vaguely hoping the model infers it. False preserves today's text-only generation exactly;
     /// existing courses/nodes are entirely unaffected unless a caller opts in.
+    /// Retries the whole generate-and-validate cycle a bounded number of times before finally
+    /// failing — every validation failure in this file (leaked markup, a missing graph, an
+    /// unrecognized choice kind, ...) reflects one unlucky sample from the model, not a deterministic
+    /// bug, so a fresh independent attempt is often enough to get a clean result (seen firsthand:
+    /// production needed several manual "Generate another attempt" clicks before a leaked-markup
+    /// node came back clean). Never silently downgrades what "clean" means — every attempt goes
+    /// through the exact same validation as a single-shot call would; only genuinely valid content is
+    /// ever returned, and MaxGenerationAttempts exhausted still fails loudly, just after trying
+    /// harder first.
     public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, CancellationToken ct = default)
+    {
+        Exception lastFailure = new InvalidOperationException("unreachable");
+        for (var attempt = 1; attempt <= MaxGenerationAttempts; attempt++)
+        {
+            try
+            {
+                return await GenerateOnceAsync(courseId, node, difficulty, allowGraphChoices, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                lastFailure = ex;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Node '{node.Id}': generation failed validation {MaxGenerationAttempts} times in a row. Last error: {lastFailure.Message}", lastFailure);
+    }
+
+    private async Task<NodeContentPack> GenerateOnceAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, CancellationToken ct)
     {
         var schema = GenerationSchema.NodeContentSchema(allowGraphChoices);
         var system = PromptTemplates.System(courseId);
@@ -225,8 +259,29 @@ public sealed class Generator
     /// Content Admin's Learn-mode teaching content (see the learn-quiz-mode-switch plan's Part B) —
     /// not difficulty-scoped and not tied to any allow-graph-choices toggle; a node has exactly one
     /// current explanation, reused across every difficulty (see S3ContentStore.ApproveLearnContentAsync's
-    /// remarks on why this isn't content-addressed like practice content).
+    /// remarks on why this isn't content-addressed like practice content). Retries on validation
+    /// failure same as GenerateAsync — see its remarks; this is the content type that actually
+    /// surfaced the need for it (repeated leaked-markup failures on long, step-heavy nodes).
     public async Task<LearnContent> GenerateLearnContentAsync(string courseId, DagNode node, CancellationToken ct = default)
+    {
+        Exception lastFailure = new InvalidOperationException("unreachable");
+        for (var attempt = 1; attempt <= MaxGenerationAttempts; attempt++)
+        {
+            try
+            {
+                return await GenerateLearnContentOnceAsync(courseId, node, ct);
+            }
+            catch (InvalidOperationException ex)
+            {
+                lastFailure = ex;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"Node '{node.Id}': learn-content generation failed validation {MaxGenerationAttempts} times in a row. Last error: {lastFailure.Message}", lastFailure);
+    }
+
+    private async Task<LearnContent> GenerateLearnContentOnceAsync(string courseId, DagNode node, CancellationToken ct)
     {
         var schema = GenerationSchema.LearnContentSchema();
         var system = PromptTemplates.System(courseId);

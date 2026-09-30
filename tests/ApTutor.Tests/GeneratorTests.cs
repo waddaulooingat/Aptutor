@@ -26,6 +26,29 @@ public class GeneratorTests
             });
     }
 
+    /// Returns a different canned response on each successive call — for exercising
+    /// GenerateAsync/GenerateLearnContentAsync's retry-on-validation-failure loop, where a real
+    /// Claude call would return a genuinely different sample each attempt.
+    private sealed class SequencedFakeHandler : HttpMessageHandler
+    {
+        private readonly Queue<string> _responses;
+        public int CallCount { get; private set; }
+
+        public SequencedFakeHandler(params string[] responses) => _responses = new Queue<string>(responses);
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken ct)
+        {
+            CallCount++;
+            // The last response repeats once the queue is exhausted, so a test can assert "still
+            // failing after N attempts" without needing to supply exactly MaxGenerationAttempts entries.
+            var body = _responses.Count > 1 ? _responses.Dequeue() : _responses.Peek();
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(body, Encoding.UTF8, "application/json"),
+            });
+        }
+    }
+
     private static readonly DagNode SampleNode = new(
         "u1.2", 1, NodeType.Skill, "Variables and primitive data types", new[] { "u1.1" }, "memCell");
 
@@ -100,6 +123,65 @@ public class GeneratorTests
         // the .Select(...) call on a null list throws, which is the desired "fail loudly, don't
         // silently ship half-generated content" behavior.
         await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+    }
+
+    // GenerateAsync/GenerateLearnContentAsync retry the whole generate-and-validate cycle on a
+    // validation failure (see GenerateAsync's remarks) — a real Claude call returns a genuinely
+    // different sample each attempt, so a bad-then-good sequence should recover transparently.
+    private const string BadWalkthroughTextResponse = """
+        { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+            "walkthroughText": "<parameter name=\"walkthroughText\">leaked",
+            "practiceItems": [ { "prompt": "p", "correctIndex": 0, "explanation": "e", "choices": ["a", "b", "c", "d"] } ],
+            "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+        """;
+
+    [Fact]
+    public async Task GenerateAsync_FailsOnceThenSucceeds_RecoversTransparently()
+    {
+        var handler = new SequencedFakeHandler(BadWalkthroughTextResponse, BadWalkthroughTextResponse, CannedResponse);
+        var client = new ClaudeClient("fake-key", "fake-model", handler);
+        var generator = new Generator(client);
+
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false);
+
+        Assert.Equal(3, handler.CallCount);
+        Assert.Equal("Variables hold typed values.", pack.WalkthroughText);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_FailsEveryAttempt_ThrowsAfterExhaustingRetries()
+    {
+        var handler = new SequencedFakeHandler(BadWalkthroughTextResponse);
+        var client = new ClaudeClient("fake-key", "fake-model", handler);
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+
+        Assert.Equal(4, handler.CallCount); // MaxGenerationAttempts, not an infinite/unbounded retry
+    }
+
+    [Fact]
+    public async Task GenerateLearnContentAsync_FailsOnceThenSucceeds_RecoversTransparently()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": "<parameter name=\"steps\">[{\"caption\":\"leaked\"}]" } } ] }
+            """;
+        const string goodResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_learn_content", "input": {
+                "overview": "An overview.",
+                "steps": [ { "caption": "Step one." }, { "caption": "Step two." } ] } } ] }
+            """;
+        var handler = new SequencedFakeHandler(badResponse, goodResponse);
+        var client = new ClaudeClient("fake-key", "fake-model", handler);
+        var generator = new Generator(client);
+
+        var content = await generator.GenerateLearnContentAsync("csa", SampleNode);
+
+        Assert.Equal(2, handler.CallCount);
+        Assert.Equal(2, content.Steps.Count);
     }
 
     // GenerateAsync with allowGraphChoices: true (see the graph-spec-rendering plan's Part 2) — a

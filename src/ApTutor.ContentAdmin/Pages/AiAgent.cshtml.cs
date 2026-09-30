@@ -6,10 +6,11 @@ using Microsoft.Extensions.Options;
 
 namespace ApTutor.ContentAdmin.Pages;
 
-/// GapCount is the practice-item completeness gap only (see AutonomousContentAgentService's
-/// remarks); AiReviewedVersionCount is every approved node-version across every difficulty this
-/// course has that the AI reviewer — not a human — approved, i.e. Part C's "queryable so a future
-/// human SME pass can find and prioritize it" made concrete as a per-course count on this page.
+/// GapCount covers both practice-item completeness gaps (per difficulty) and learn-content gaps (see
+/// AutonomousContentAgentService's remarks); AiReviewedVersionCount is every approved node-version
+/// across every difficulty this course has that the AI reviewer — not a human — approved, i.e. Part
+/// C's "queryable so a future human SME pass can find and prioritize it" made concrete as a
+/// per-course count on this page.
 public sealed record CourseAgentSummary(
     string CourseId, string DisplayName, int GapCount, int AiReviewedVersionCount, IReadOnlyList<AiTouchedItem> AiTouchedItems);
 

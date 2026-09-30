@@ -2,13 +2,18 @@ using ApTutor.Content;
 
 namespace ApTutor.ContentAdmin.Services;
 
-/// One node+difficulty combination the scan found with no approved content yet — the same
-/// "NotStarted" definition Index.cshtml.cs already uses per-node (at least one approved set per
-/// difficulty per node), just aggregated into a batch instead of requiring a person to click into
-/// each node individually. See the AI-content-agent handoff's Part A: "confirm this matches whatever
-/// multi-set/difficulty completeness expectations already exist" — it does, deliberately, so this
-/// scan and the existing Index page's per-node status always agree on what counts as a gap.
-public sealed record ContentGap(string CourseId, string NodeId, Difficulty Difficulty);
+public enum GapContentType { Practice, Learn }
+
+/// One node+difficulty combination (Practice) or node (Learn, Difficulty null) the scan found with
+/// no approved content yet. The Practice definition is the same "NotStarted" one Index.cshtml.cs
+/// already uses per-node (at least one approved set per difficulty per node), just aggregated into a
+/// batch instead of requiring a person to click into each node individually — see the
+/// AI-content-agent handoff's Part A: "confirm this matches whatever multi-set/difficulty
+/// completeness expectations already exist," which it does, deliberately, so this scan and the
+/// existing Index page's per-node status always agree on what counts as a gap. The Learn definition
+/// (no live learn.json object at all) has no manifest/difficulty equivalent since learn content has
+/// neither — see LearnContent's own remarks.
+public sealed record ContentGap(string CourseId, string NodeId, GapContentType ContentType, Difficulty? Difficulty);
 
 /// Everything the scan looked at and did. GapsFound can exceed Triggered when
 /// AiContentAgentOptions.MaxGenerationsPerScan capped this run — the remaining gaps are simply left
@@ -31,29 +36,35 @@ public sealed record AiTouchedItem(string NodeId, string NodeTitle, string Conte
 /// RunScanAsync) rather than scheduled — see the handoff's own "Open items" recommendation to start
 /// simple rather than building scheduling infrastructure for what's explicitly a temporary tool.
 ///
-/// Scoped to PRACTICE-ITEM generation only — the "one approved set per difficulty" completeness bar
-/// is a practice-item/difficulty concept with no learn-content equivalent (a node has exactly one
-/// current explanation, not a per-difficulty library — see LearnContent's remarks), so learn content
-/// isn't part of what this scan looks for. Whatever this scan generates still goes through the exact
-/// same AI review pass as anything else (see ContentGenerationService.RunAsync) — this class only
-/// automates the "notice a gap and click Generate" step, never review/approval.
+/// Covers both practice-item gaps (the "one approved set per difficulty" completeness bar) and
+/// learn-content gaps (no live learn.json object at all for a node) — the two are structurally
+/// different (difficulty-scoped multi-set library vs. one fixed-key object with no difficulty axis,
+/// see LearnContent's remarks) but both are still just "nothing approved yet for this node," so both
+/// count as gaps this scan fills. Whatever this scan generates still goes through the exact same AI
+/// review pass as anything else (see ContentGenerationService/LearnContentGenerationService's
+/// RunAsync) — this class only automates the "notice a gap and click Generate" step, never
+/// review/approval.
 public sealed class AutonomousContentAgentService
 {
     private readonly CourseCatalog _catalog;
     private readonly S3ContentStore _store;
     private readonly ContentGenerationService _generation;
+    private readonly LearnContentGenerationService _learnGeneration;
 
-    public AutonomousContentAgentService(CourseCatalog catalog, S3ContentStore store, ContentGenerationService generation)
+    public AutonomousContentAgentService(
+        CourseCatalog catalog, S3ContentStore store, ContentGenerationService generation, LearnContentGenerationService learnGeneration)
     {
         _catalog = catalog;
         _store = store;
         _generation = generation;
+        _learnGeneration = learnGeneration;
     }
 
     private static readonly IReadOnlyList<Difficulty> AllDifficulties = new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard };
 
     /// Every current gap for a course, without triggering anything — lets the AiAgent page show what
-    /// a scan would do before someone commits to running it.
+    /// a scan would do before someone commits to running it. One extra S3 GET per node for the learn-
+    /// content check (see FindAiTouchedContentAsync's remarks on why that's an accepted cost here).
     public async Task<IReadOnlyList<ContentGap>> FindGapsAsync(string courseId, CancellationToken ct = default)
     {
         if (!_catalog.TryGet(courseId, out var course) || course.Graph is not { } graph)
@@ -62,18 +73,25 @@ public sealed class AutonomousContentAgentService
         var manifest = await _store.GetCourseManifestAsync(courseId, ct);
         var gaps = new List<ContentGap>();
         foreach (var node in graph.Dag.Nodes)
+        {
             foreach (var difficulty in AllDifficulties)
-                if (IsGap(node.Id, difficulty, manifest))
-                    gaps.Add(new ContentGap(courseId, node.Id, difficulty));
+                if (IsPracticeGap(node.Id, difficulty, manifest))
+                    gaps.Add(new ContentGap(courseId, node.Id, GapContentType.Practice, difficulty));
+
+            if (await _store.TryGetLiveLearnContentAsync(courseId, node.Id, ct) is null)
+                gaps.Add(new ContentGap(courseId, node.Id, GapContentType.Learn, Difficulty: null));
+        }
 
         return gaps;
     }
 
     /// Finds every current gap and triggers generation for up to MaxGenerationsPerScan of them —
-    /// each as an ordinary background TryStartGeneration job (see ContentGenerationService), just
-    /// like a person clicking "Generate remaining" but driven by the scan instead of a click per
-    /// unit. A gap already claimed by an in-flight job (e.g. a person started it manually moments
-    /// ago) is counted as skipped, not triggered again.
+    /// each as an ordinary background TryStartGeneration job (see ContentGenerationService/
+    /// LearnContentGenerationService), just like a person clicking "Generate remaining"/"Generate
+    /// learn content" but driven by the scan instead of a click per node. A gap already claimed by an
+    /// in-flight job (e.g. a person started it manually moments ago) is counted as skipped, not
+    /// triggered again. Practice and learn-content gaps share one cap per run, not separate budgets —
+    /// the cap exists to bound this run's total blast radius/cost, not to guarantee a specific split.
     public async Task<ScanResult> RunScanAsync(string courseId, int maxGenerations, CancellationToken ct = default)
     {
         var gaps = await FindGapsAsync(courseId, ct);
@@ -84,19 +102,23 @@ public sealed class AutonomousContentAgentService
         {
             if (triggered >= maxGenerations) break;
 
-            // allowGraphChoices: false — same posture as Index.cshtml.cs's bulk "Generate remaining"
-            // action: graph-based answer choices stay an explicit, per-node SME decision, never
-            // something a batch/unattended pass opts into on its own.
-            if (_generation.TryStartGeneration(gap.CourseId, gap.NodeId, gap.Difficulty, allowGraphChoices: false, aiGenerated: true))
-                triggered++;
-            else
-                skipped++;
+            // allowGraphChoices: false for practice gaps — same posture as Index.cshtml.cs's bulk
+            // "Generate remaining" action: graph-based answer choices stay an explicit, per-node SME
+            // decision, never something a batch/unattended pass opts into on its own.
+            var started = gap.ContentType switch
+            {
+                GapContentType.Practice => _generation.TryStartGeneration(gap.CourseId, gap.NodeId, gap.Difficulty!.Value, allowGraphChoices: false, aiGenerated: true),
+                GapContentType.Learn => _learnGeneration.TryStartGeneration(gap.CourseId, gap.NodeId, aiGenerated: true),
+                _ => false,
+            };
+
+            if (started) triggered++; else skipped++;
         }
 
         return new ScanResult(gaps.Count, triggered, skipped);
     }
 
-    private static bool IsGap(string nodeId, Difficulty difficulty, CourseManifest manifest) =>
+    private static bool IsPracticeGap(string nodeId, Difficulty difficulty, CourseManifest manifest) =>
         !manifest.Nodes.TryGetValue(nodeId, out var entry) || entry.LatestFor(difficulty) is null;
 
     /// Every currently-live node+difficulty/learn-content combination the AI touched (see
