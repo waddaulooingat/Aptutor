@@ -94,4 +94,73 @@ public class ClaudeClientTests
         await Assert.ThrowsAsync<InvalidOperationException>(() =>
             client.GenerateToolInputAsync("sys", "user", new JsonObject { ["type"] = "object" }, "emit_node_content"));
     }
+
+    // SendMessageAsync — the "explain it to me" experiment's plain conversational path (see its own
+    // remarks): no forced tool, no schema, just a text reply.
+    [Fact]
+    public async Task SendMessageAsync_ReturnsTextBlockContent()
+    {
+        const string responseJson = """{ "content": [ { "type": "text", "text": "Velocity is how fast something moves, with direction." } ] }""";
+        var handler = new FakeHandler(_ => JsonResponse(HttpStatusCode.OK, responseJson));
+        var client = new ClaudeClient("fake-key", "fake-model", handler);
+
+        var reply = await client.SendMessageAsync("system prompt", new[] { ("user", "Explain this lesson to me.") });
+
+        Assert.Equal("Velocity is how fast something moves, with direction.", reply);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_MultipleTextBlocks_JoinsThemTogether()
+    {
+        const string responseJson = """{ "content": [ { "type": "text", "text": "First part." }, { "type": "text", "text": "Second part." } ] }""";
+        var handler = new FakeHandler(_ => JsonResponse(HttpStatusCode.OK, responseJson));
+        var client = new ClaudeClient("fake-key", "fake-model", handler);
+
+        var reply = await client.SendMessageAsync("system", new[] { ("user", "question") });
+
+        Assert.Equal("First part.\nSecond part.", reply);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_SendsFullHistoryNotJustTheLatestTurn()
+    {
+        const string responseJson = """{ "content": [ { "type": "text", "text": "reply" } ] }""";
+        var handler = new FakeHandler(_ => JsonResponse(HttpStatusCode.OK, responseJson));
+        var client = new ClaudeClient("fake-key", "fake-model", handler);
+
+        await client.SendMessageAsync("system", new[]
+        {
+            ("user", "What is velocity?"),
+            ("assistant", "Speed with direction."),
+            ("user", "Can you give an example?"),
+        });
+
+        var body = JsonNode.Parse(handler.LastRequestBody!)!;
+        var messages = body["messages"]!.AsArray();
+        Assert.Equal(3, messages.Count);
+        Assert.Equal("Can you give an example?", messages[2]!["content"]!.GetValue<string>());
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_NonSuccessStatus_ThrowsWithBody()
+    {
+        var handler = new FakeHandler(_ => JsonResponse(HttpStatusCode.Unauthorized, """{"error":"bad key"}"""));
+        var client = new ClaudeClient("bad-key", "model", handler);
+
+        var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.SendMessageAsync("system", new[] { ("user", "hi") }));
+
+        Assert.Contains("bad key", ex.Message);
+    }
+
+    [Fact]
+    public async Task SendMessageAsync_NoTextBlockInResponse_Throws()
+    {
+        const string responseJson = """{ "content": [] }""";
+        var handler = new FakeHandler(_ => JsonResponse(HttpStatusCode.OK, responseJson));
+        var client = new ClaudeClient("key", "model", handler);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            client.SendMessageAsync("system", new[] { ("user", "hi") }));
+    }
 }

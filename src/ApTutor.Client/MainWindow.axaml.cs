@@ -37,6 +37,14 @@ public partial class MainWindow : Window
     // unchanged existing behavior, so this defaults to it for anyone who's never picked a mode.
     private ShellMode _mode = ShellModeStore.Load(AppSettingsStore.DefaultDir);
 
+    // "explain it to me" experiment (explain-it-to-me-experiment branch only — see its own handoff)
+    // — the most recently successfully-loaded Learn content for whatever node is selected, so
+    // OnExplainItToMeClick can ground the live tutor conversation in the richer Learn-mode content
+    // when it's what the student is actually looking at, without re-fetching it. Cleared whenever a
+    // different node is selected (see RefreshDetail) so a stale node's content can never leak into
+    // the next node's "explain it to me" call.
+    private LearnContent? _currentLearnContent;
+
     public MainWindow()
     {
         InitializeComponent();
@@ -278,6 +286,7 @@ public partial class MainWindow : Window
     private void RefreshDetail()
     {
         ContentPanel.Children.Clear();
+        _currentLearnContent = null;
 
         if (_selectedNode is not { } node)
         {
@@ -434,6 +443,8 @@ public partial class MainWindow : Window
             });
             return;
         }
+
+        _currentLearnContent = content;
 
         var overview = MathTextRenderer.Build(content.Overview);
         overview.Margin = new Thickness(0, 4, 0, 8);
@@ -802,6 +813,41 @@ public partial class MainWindow : Window
 
     private void OnMockExamClick(object? sender, RoutedEventArgs e) =>
         new MockExamWindow(_course, _mastery, () => { SaveProgress(); RefreshAll(); }).Show();
+
+    /// "explain it to me" experiment (explain-it-to-me-experiment branch only — see its own handoff)
+    /// — grounds the live conversation in whatever's actually on screen for the selected node: the
+    /// richer Learn-mode content if that's what's loaded (see _currentLearnContent's remarks),
+    /// otherwise the node's walkthrough text (the one explanation every course/node already has
+    /// regardless of Learn/Quiz mode). No node selected is a silent no-op — nothing to explain yet.
+    private void OnExplainItToMeClick(object? sender, RoutedEventArgs e)
+    {
+        if (_selectedNode is not { } node) return;
+
+        var apiKey = ConfigResolver.Resolve("ANTHROPIC_API_KEY", _settings.AnthropicApiKey);
+        var lessonContent = BuildLessonContextText(node);
+        new ExplainItToMeWindow(apiKey ?? "", node.Title, lessonContent).Show();
+    }
+
+    private string BuildLessonContextText(DagNode node)
+    {
+        if (_mode == ShellMode.Learn && _currentLearnContent is { } learn)
+        {
+            var steps = string.Join("\n", learn.Steps.Select((s, i) =>
+                $"{i + 1}. {s.Caption}" + (string.IsNullOrWhiteSpace(s.Detail) ? "" : $" — {s.Detail}")));
+            return $"{learn.Overview}\n\n{steps}";
+        }
+
+        try
+        {
+            return _course.Content.GetWalkthroughText(node.Id, "generated");
+        }
+        catch
+        {
+            // No verified walkthrough text for this node yet — fall back to just the title/prereqs
+            // so the tutor conversation still has *something* to ground itself in rather than nothing.
+            return $"{node.Title} (type: {node.Type}, viz: {node.Viz})";
+        }
+    }
 
     private void SaveProgress()
     {

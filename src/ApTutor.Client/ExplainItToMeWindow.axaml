@@ -1,0 +1,23 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ApTutor.Client.ExplainItToMeWindow"
+        Title="Explain it to me"
+        Width="640" Height="580"
+        WindowStartupLocation="CenterOwner">
+  <Grid RowDefinitions="Auto,*,Auto,Auto" Margin="16">
+    <TextBlock Name="HeaderText" Grid.Row="0" FontSize="16" FontWeight="Bold" Margin="0,0,0,8" TextWrapping="Wrap" />
+
+    <ScrollViewer Grid.Row="1" Name="ConversationScroll">
+      <StackPanel Name="ConversationPanel" Spacing="12" />
+    </ScrollViewer>
+
+    <TextBlock Name="StatusText" Grid.Row="2" Foreground="Gray" FontStyle="Italic" Margin="0,8,0,0" MinHeight="18" />
+
+    <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,8,0,0">
+      <TextBox Name="QuestionBox" Grid.Column="0" PlaceholderText="Type a follow-up question..." KeyDown="OnQuestionBoxKeyDown" />
+      <Button Name="AskButton" Grid.Column="1" Content="Ask" Click="OnAskClick" Margin="8,0,0,0" />
+      <Button Name="RecordButton" Grid.Column="2" Content="🎤 Hold to talk" Margin="8,0,0,0"
+              PointerPressed="OnRecordPointerPressed" PointerReleased="OnRecordPointerReleased" />
+    </Grid>
+  </Grid>
+</Window>

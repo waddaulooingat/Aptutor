@@ -1,7 +1,10 @@
-// Thin wrapper around the Anthropic Messages API, used only at build time by this tool — never
-// shipped in the client app (ApTutor.Client has no dependency on this project or on any API key).
-// Uses forced tool-use (tool_choice pinned to one tool) so the model's output is a single
-// schema-shaped JSON object, not prose we'd have to scrape.
+// Thin wrapper around the Anthropic Messages API. Historically build-time-only (Content
+// Admin/ApTutor.ContentFactory), using forced tool-use (tool_choice pinned to one tool) so the
+// model's output is a single schema-shaped JSON object, not prose we'd have to scrape — see
+// GenerateToolInputAsync. The "explain it to me" experiment (explain-it-to-me-experiment branch
+// only — see its own handoff) is the first caller to use this live from the Shell, via
+// SendMessageAsync's plain conversational path below; that's a deliberate, scoped exception for
+// this experiment, not a change to how the rest of the app's generation pipeline works.
 
 using System.Text;
 using System.Text.Json;
@@ -70,5 +73,47 @@ public sealed class ClaudeClient
         }
 
         throw new InvalidOperationException($"Claude response contained no '{toolName}' tool_use block:\n{responseText}");
+    }
+
+    /// Plain conversational turn — no forced tool, no schema — for the "explain it to me" experiment
+    /// (see this file's own remarks). history is the whole conversation so far, in order, each a
+    /// ("user"|"assistant", text) pair; the caller is responsible for appending the new user turn
+    /// before calling this and the returned assistant turn after. Returns every text block in the
+    /// response joined together — plain conversational replies are effectively always a single text
+    /// block, but joining defensively covers the rare case where the model splits its reply.
+    public async Task<string> SendMessageAsync(
+        string system, IReadOnlyList<(string Role, string Text)> history, CancellationToken ct = default)
+    {
+        var body = new JsonObject
+        {
+            ["model"] = Model,
+            ["max_tokens"] = 1024,
+            ["system"] = system,
+            ["messages"] = new JsonArray(history.Select(turn => (JsonNode)new JsonObject
+            {
+                ["role"] = turn.Role,
+                ["content"] = turn.Text,
+            }).ToArray()),
+        };
+
+        using var request = new HttpRequestMessage(HttpMethod.Post, "v1/messages")
+        {
+            Content = new StringContent(body.ToJsonString(), Encoding.UTF8, "application/json"),
+        };
+
+        using var response = await _http.SendAsync(request, ct);
+        var responseText = await response.Content.ReadAsStringAsync(ct);
+        if (!response.IsSuccessStatusCode)
+            throw new InvalidOperationException($"Claude API returned {(int)response.StatusCode}: {responseText}");
+
+        using var doc = JsonDocument.Parse(responseText);
+        var textBlocks = doc.RootElement.GetProperty("content").EnumerateArray()
+            .Where(block => block.TryGetProperty("type", out var type) && type.GetString() == "text")
+            .Select(block => block.GetProperty("text").GetString() ?? "")
+            .ToList();
+
+        return textBlocks.Count > 0
+            ? string.Join("\n", textBlocks)
+            : throw new InvalidOperationException($"Claude response contained no text block:\n{responseText}");
     }
 }

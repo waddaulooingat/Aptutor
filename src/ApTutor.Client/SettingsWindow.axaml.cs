@@ -17,6 +17,7 @@ public partial class SettingsWindow : Window
         ContentRegionBox.Text = settings.ContentRegion;
         AwsAccessKeyIdBox.Text = settings.AwsAccessKeyId;
         AwsSecretAccessKeyBox.Text = settings.AwsSecretAccessKey;
+        AnthropicApiKeyBox.Text = settings.AnthropicApiKey;
     }
 
     private void OnSaveClick(object? sender, RoutedEventArgs e)
@@ -25,7 +26,8 @@ public partial class SettingsWindow : Window
             ContentBucket: NullIfBlank(ContentBucketBox.Text),
             ContentRegion: NullIfBlank(ContentRegionBox.Text),
             AwsAccessKeyId: NullIfBlank(AwsAccessKeyIdBox.Text),
-            AwsSecretAccessKey: NullIfBlank(AwsSecretAccessKeyBox.Text));
+            AwsSecretAccessKey: NullIfBlank(AwsSecretAccessKeyBox.Text),
+            AnthropicApiKey: NullIfBlank(AnthropicApiKeyBox.Text));
 
         AppSettingsStore.Save(AppSettingsStore.DefaultDir, settings);
         Saved = true;

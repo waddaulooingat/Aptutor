@@ -6,22 +6,26 @@ public sealed record AppSettings(
     string? ContentBucket = null,
     string? ContentRegion = null,
     string? AwsAccessKeyId = null,
-    string? AwsSecretAccessKey = null)
+    string? AwsSecretAccessKey = null,
+    // "explain it to me" experiment (explain-it-to-me-experiment branch only — see its own
+    // handoff): a live Claude API key, locally-configured here rather than hardcoded in source, same
+    // storage this file already uses for the AWS content credential above. Deliberately not a
+    // production key-management story (no accounts/billing/metering) — that's explicitly out of
+    // scope for this experiment; see the handoff.
+    string? AnthropicApiKey = null)
 {
     public static readonly AppSettings Empty = new();
 }
 
 /// Local, per-machine settings for the S3 content-sync test bridge — TUTORAI_CONTENT_BUCKET/REGION
 /// plus a read-only AWS credential, all otherwise only readable from plain environment variables.
-/// Having to re-set those in every fresh terminal window was real day-to-day friction. Deliberately
-/// doesn't cover ANTHROPIC_API_KEY/MODEL — those belong to the separate, dev-only "Refresh
-/// questions" debug tool (a live Claude call for one node), not to what this app's Shell actually
-/// does day to day (pull already-approved content from S3); keeping this Settings surface scoped to
-/// that real behavior rather than every environment variable this codebase happens to read. Stored
-/// as local, unencrypted JSON under the current user's profile: no worse than the plaintext
-/// environment variables this already accepted (see the plan's dev-convenience-vs-customer-facing
-/// note), and not something this app hands to a real paying customer as-is — revisit if/when this
-/// ships beyond internal SME use.
+/// Having to re-set those in every fresh terminal window was real day-to-day friction. Stored as
+/// local, unencrypted JSON under the current user's profile: no worse than the plaintext environment
+/// variables this already accepted (see the plan's dev-convenience-vs-customer-facing note), and not
+/// something this app hands to a real paying customer as-is — revisit if/when this ships beyond
+/// internal SME use. AnthropicApiKey (added for the "explain it to me" experiment, see AppSettings'
+/// own remarks) is the one exception to this file's original "no live-API-key settings" scoping —
+/// accepted deliberately for that experiment, not a general precedent.
 public static class AppSettingsStore
 {
     public static string DefaultDir =>

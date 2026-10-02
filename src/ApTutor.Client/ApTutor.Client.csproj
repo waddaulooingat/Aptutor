@@ -22,6 +22,15 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.0" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.0" />
     <PackageReference Include="AWSSDK.S3" Version="4.0.102.1" />
+    <!-- "explain it to me" experiment (explain-it-to-me-experiment branch only — see its own
+         handoff): local speech-to-text so a student can ask a follow-up by talking. Whisper.net
+         over a cloud STT API specifically to avoid a second live API key/account for an experiment
+         that's already accepting one (Anthropic's) — see TutorVoiceInputService's remarks. -->
+    <PackageReference Include="Whisper.net" Version="1.9.1" />
+    <PackageReference Include="Whisper.net.Runtime" Version="1.9.1" />
+    <!-- Microphone capture for the same experiment. NAudio is Windows-only (Win32 audio APIs) —
+         an accepted constraint for an experiment branch nobody ships; see TutorVoiceInputService. -->
+    <PackageReference Include="NAudio" Version="2.2.1" />
   </ItemGroup>
 
   <ItemGroup>
@@ -41,10 +50,10 @@
     <ProjectReference Include="..\ApTutor.Tracer.Csa\ApTutor.Tracer.Csa.csproj" />
     <ProjectReference Include="..\ApTutor.Narration\ApTutor.Narration.csproj" />
     <ProjectReference Include="..\ApTutor.Content\ApTutor.Content.csproj" />
-    <!-- Dev-only "Refresh questions" right-click (see MainWindow.axaml.cs): reuses
-         ApTutor.ContentFactory's ClaudeClient/Generator to regenerate a single node's practice
-         items live. Only reachable if ANTHROPIC_API_KEY/ANTHROPIC_MODEL are set — nothing calls
-         the API on its own, and no key ships with the app. -->
+    <!-- "explain it to me" experiment (explain-it-to-me-experiment branch only — see its own
+         handoff and TutorChatService): reuses ApTutor.ContentFactory's ClaudeClient for a live,
+         grounded conversational tutor call. Only reachable if an Anthropic API key is configured in
+         Settings — nothing calls the API on its own, and no key ships with the app. -->
     <ProjectReference Include="..\ApTutor.ContentFactory\ApTutor.ContentFactory.csproj" />
   </ItemGroup>
 

@@ -25,6 +25,9 @@
       <Button Name="MockExamButton" Content="Mock Exam" Click="OnMockExamClick" Margin="24,0,0,0" />
       <Button Name="ProgressChartButton" Content="Progress chart" Click="OnProgressChartClick" />
       <Button Name="RefreshContentButton" Content="Refresh content" Click="OnRefreshContentClick" />
+      <!-- "explain it to me" experiment (explain-it-to-me-experiment branch only — see its own
+           handoff): a live, spoken, grounded tutor conversation about whatever node is selected. -->
+      <Button Name="ExplainItToMeButton" Content="Explain it to me" Click="OnExplainItToMeClick" />
       <Button Name="SettingsButton" Content="Settings" Click="OnSettingsClick" />
     </StackPanel>
 
