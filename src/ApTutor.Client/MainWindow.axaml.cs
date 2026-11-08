@@ -667,6 +667,11 @@ public partial class MainWindow : Window
         {
             panel.Children.Add(MathTextRenderer.Build("✓ Correct!", foreground: color));
         }
+        else if (item.IsGridIn)
+        {
+            panel.Children.Add(MathTextRenderer.Build(
+                $"✗ Not quite — correct answer: {item.CorrectAnswer}.", foreground: color));
+        }
         else
         {
             panel.Children.Add(MathTextRenderer.Build(
@@ -685,34 +690,52 @@ public partial class MainWindow : Window
     private static Control BuildPreviewPracticeItemBlock(PracticeItem item)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        if (item.Passage is not null)
+            container.Children.Add(new TextBlock { Text = item.Passage, TextWrapping = TextWrapping.Wrap, FontStyle = FontStyle.Italic });
         container.Children.Add(MathTextRenderer.Build($"Q: {item.Prompt}", fontWeight: FontWeight.SemiBold));
-
-        int? selected = null;
-        var radios = new List<RadioButton>();
-        for (var i = 0; i < item.Choices.Count; i++)
-        {
-            var choiceIndex = i;
-            var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = item.Id };
-            radio.IsCheckedChanged += (_, _) =>
-            {
-                if (radio.IsChecked == true) selected = choiceIndex;
-            };
-            radios.Add(radio);
-            container.Children.Add(radio);
-        }
 
         var resultContainer = new ContentControl { IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
         var checkButton = new Button { Content = "Check answer" };
-        checkButton.Click += (_, _) =>
+
+        if (item.IsGridIn)
         {
-            if (selected is not { } chosen) return;
+            var answerBox = new TextBox { Watermark = "Type your answer", Width = 160 };
+            checkButton.Click += (_, _) =>
+            {
+                answerBox.IsEnabled = false;
+                checkButton.IsEnabled = false;
+                resultContainer.Content = BuildResultBlock(item, correct: GridInGrader.IsCorrect(answerBox.Text, item.CorrectAnswer));
+                resultContainer.IsVisible = true;
+            };
+            container.Children.Add(answerBox);
+        }
+        else
+        {
+            int? selected = null;
+            var radios = new List<RadioButton>();
+            for (var i = 0; i < item.Choices.Count; i++)
+            {
+                var choiceIndex = i;
+                var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = item.Id };
+                radio.IsCheckedChanged += (_, _) =>
+                {
+                    if (radio.IsChecked == true) selected = choiceIndex;
+                };
+                radios.Add(radio);
+                container.Children.Add(radio);
+            }
 
-            foreach (var radio in radios) radio.IsEnabled = false;
-            checkButton.IsEnabled = false;
+            checkButton.Click += (_, _) =>
+            {
+                if (selected is not { } chosen) return;
 
-            resultContainer.Content = BuildResultBlock(item, correct: chosen == item.CorrectIndex);
-            resultContainer.IsVisible = true;
-        };
+                foreach (var radio in radios) radio.IsEnabled = false;
+                checkButton.IsEnabled = false;
+
+                resultContainer.Content = BuildResultBlock(item, correct: chosen == item.CorrectIndex);
+                resultContainer.IsVisible = true;
+            };
+        }
 
         container.Children.Add(checkButton);
         container.Children.Add(resultContainer);
@@ -728,39 +751,60 @@ public partial class MainWindow : Window
     private Control BuildPracticeItemBlock(DagNode node, string packHash, PracticeItem item, Difficulty difficulty)
     {
         var container = new StackPanel { Spacing = 4, Margin = new Thickness(0, 8, 0, 0) };
+        if (item.Passage is not null)
+            container.Children.Add(new TextBlock { Text = item.Passage, TextWrapping = TextWrapping.Wrap, FontStyle = FontStyle.Italic });
         container.Children.Add(MathTextRenderer.Build($"Q: {item.Prompt}", fontWeight: FontWeight.SemiBold));
-
-        int? selected = null;
-        var radios = new List<RadioButton>();
-        for (var i = 0; i < item.Choices.Count; i++)
-        {
-            var choiceIndex = i;
-            var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = $"{packHash}-{item.Id}" };
-            radio.IsCheckedChanged += (_, _) =>
-            {
-                if (radio.IsChecked == true) selected = choiceIndex;
-            };
-            radios.Add(radio);
-            container.Children.Add(radio);
-        }
 
         var resultContainer = new ContentControl { IsVisible = false, Margin = new Thickness(0, 4, 0, 0) };
         var checkButton = new Button { Content = "Check answer" };
-        checkButton.Click += (_, _) =>
+
+        void RecordAndShow(bool correct)
         {
-            if (selected is not { } chosen) return;
-
-            foreach (var radio in radios) radio.IsEnabled = false;
-            checkButton.IsEnabled = false;
-
-            var correct = chosen == item.CorrectIndex;
             resultContainer.Content = BuildResultBlock(item, correct);
             resultContainer.IsVisible = true;
 
             AttemptLogStore.Append(AttemptLogStore.DefaultDir, new AttemptRecord(
                 DateTimeOffset.UtcNow, _course.CourseId, node.Id, difficulty, packHash, item.Id, correct));
             UpdateRetryButtonState(node);
-        };
+        }
+
+        if (item.IsGridIn)
+        {
+            var answerBox = new TextBox { Watermark = "Type your answer", Width = 160 };
+            checkButton.Click += (_, _) =>
+            {
+                answerBox.IsEnabled = false;
+                checkButton.IsEnabled = false;
+                RecordAndShow(GridInGrader.IsCorrect(answerBox.Text, item.CorrectAnswer));
+            };
+            container.Children.Add(answerBox);
+        }
+        else
+        {
+            int? selected = null;
+            var radios = new List<RadioButton>();
+            for (var i = 0; i < item.Choices.Count; i++)
+            {
+                var choiceIndex = i;
+                var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = $"{packHash}-{item.Id}" };
+                radio.IsCheckedChanged += (_, _) =>
+                {
+                    if (radio.IsChecked == true) selected = choiceIndex;
+                };
+                radios.Add(radio);
+                container.Children.Add(radio);
+            }
+
+            checkButton.Click += (_, _) =>
+            {
+                if (selected is not { } chosen) return;
+
+                foreach (var radio in radios) radio.IsEnabled = false;
+                checkButton.IsEnabled = false;
+
+                RecordAndShow(chosen == item.CorrectIndex);
+            };
+        }
 
         container.Children.Add(checkButton);
         container.Children.Add(resultContainer);

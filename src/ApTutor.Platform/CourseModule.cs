@@ -64,8 +64,19 @@ public interface IContentSource
     IReadOnlyList<PracticeItem> GetPracticeItems(string nodeId);
 }
 
+/// Passage/CorrectAnswer (PSAT-content-generation scope) are additive, optional fields for item
+/// shapes beyond CS A/World History's plain 4-choice MCQ: Passage is a short reading-comprehension
+/// passage the prompt is based on (Reading & Writing-style items); CorrectAnswer is set instead of
+/// Choices/CorrectIndex for a "grid-in" item with no answer choices at all (PSAT Math's
+/// student-produced-response items) — Choices is empty and CorrectIndex is -1 for a grid-in item,
+/// never a 4-entry Choices list with a meaningless CorrectIndex. Every existing course/item is
+/// unaffected: both default to null/unused, exactly today's plain-MCQ shape.
 public sealed record PracticeItem(string Id, string NodeId, string Prompt,
-                                  IReadOnlyList<PracticeItemChoice> Choices, int CorrectIndex, string Explanation);
+                                  IReadOnlyList<PracticeItemChoice> Choices, int CorrectIndex, string Explanation,
+                                  string? Passage = null, string? CorrectAnswer = null)
+{
+    public bool IsGridIn => CorrectAnswer is not null;
+}
 
 /// One answer option — plain text (the overwhelming case today) or a static line/point graph (see
 /// GraphSpec), for courses like Physics where an option is itself a graph, not text (e.g. four

@@ -24,6 +24,7 @@ public partial class MockExamWindow : Window
     private readonly DispatcherTimer _timer;
     private int _currentIndex;
     private int? _selectedForCurrent;
+    private string? _selectedTextForCurrent;
 
     public MockExamWindow(ICourseModule course, MasteryTracker mastery, Action onFinished)
     {
@@ -63,21 +64,36 @@ public partial class MockExamWindow : Window
     {
         _currentIndex = index;
         _selectedForCurrent = null;
+        _selectedTextForCurrent = null;
         var item = _session.Items[index];
 
         ProgressText.Text = $"Question {index + 1} / {_session.Items.Count}";
-        PromptContainer.Content = MathTextRenderer.Build(item.Prompt, fontSize: 16);
+
+        var promptPanel = new StackPanel { Spacing = 4 };
+        if (item.Passage is not null)
+            promptPanel.Children.Add(new TextBlock { Text = item.Passage, TextWrapping = TextWrapping.Wrap, FontStyle = FontStyle.Italic });
+        promptPanel.Children.Add(MathTextRenderer.Build(item.Prompt, fontSize: 16));
+        PromptContainer.Content = promptPanel;
 
         ChoicesPanel.Children.Clear();
-        for (var i = 0; i < item.Choices.Count; i++)
+        if (item.IsGridIn)
         {
-            var choiceIndex = i;
-            var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = "mockExamChoices" };
-            radio.IsCheckedChanged += (_, _) =>
+            var answerBox = new TextBox { Watermark = "Type your answer", Width = 200 };
+            answerBox.TextChanged += (_, _) => _selectedTextForCurrent = answerBox.Text;
+            ChoicesPanel.Children.Add(answerBox);
+        }
+        else
+        {
+            for (var i = 0; i < item.Choices.Count; i++)
             {
-                if (radio.IsChecked == true) _selectedForCurrent = choiceIndex;
-            };
-            ChoicesPanel.Children.Add(radio);
+                var choiceIndex = i;
+                var radio = new RadioButton { Content = BuildChoiceContent(item.Choices[i]), GroupName = "mockExamChoices" };
+                radio.IsCheckedChanged += (_, _) =>
+                {
+                    if (radio.IsChecked == true) _selectedForCurrent = choiceIndex;
+                };
+                ChoicesPanel.Children.Add(radio);
+            }
         }
 
         NextButton.Content = index == _session.Items.Count - 1 ? "Submit" : "Next";
@@ -91,8 +107,16 @@ public partial class MockExamWindow : Window
 
     private void OnNextClick(object? sender, RoutedEventArgs e)
     {
-        if (_selectedForCurrent is { } choiceIndex)
-            _session.Answer(_session.Items[_currentIndex].Id, choiceIndex);
+        var item = _session.Items[_currentIndex];
+        if (item.IsGridIn)
+        {
+            if (!string.IsNullOrWhiteSpace(_selectedTextForCurrent))
+                _session.AnswerText(item.Id, _selectedTextForCurrent);
+        }
+        else if (_selectedForCurrent is { } choiceIndex)
+        {
+            _session.Answer(item.Id, choiceIndex);
+        }
 
         if (_currentIndex + 1 < _session.Items.Count)
             ShowQuestion(_currentIndex + 1);
@@ -139,10 +163,19 @@ public partial class MockExamWindow : Window
 
             if (!item.Correct)
             {
-                container.Children.Add(item.SelectedIndex is { } si
-                    ? BuildLabeledChoiceRow("   Your answer:", item.Item.Choices[si])
-                    : MathTextRenderer.Build("   Your answer: (unanswered)"));
-                container.Children.Add(BuildLabeledChoiceRow("   Correct answer:", item.Item.Choices[item.Item.CorrectIndex]));
+                if (item.Item.IsGridIn)
+                {
+                    container.Children.Add(MathTextRenderer.Build(
+                        $"   Your answer: {(string.IsNullOrWhiteSpace(item.SelectedText) ? "(unanswered)" : item.SelectedText)}"));
+                    container.Children.Add(MathTextRenderer.Build($"   Correct answer: {item.Item.CorrectAnswer}"));
+                }
+                else
+                {
+                    container.Children.Add(item.SelectedIndex is { } si
+                        ? BuildLabeledChoiceRow("   Your answer:", item.Item.Choices[si])
+                        : MathTextRenderer.Build("   Your answer: (unanswered)"));
+                    container.Children.Add(BuildLabeledChoiceRow("   Correct answer:", item.Item.Choices[item.Item.CorrectIndex]));
+                }
                 container.Children.Add(MathTextRenderer.Build($"   {item.Item.Explanation}"));
             }
 

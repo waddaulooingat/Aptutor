@@ -48,7 +48,15 @@ public sealed class GeneratedChoiceConverter : JsonConverter<GeneratedChoice>
         throw new NotSupportedException($"{nameof(GeneratedChoice)} is only ever parsed from Claude's response, never written.");
 }
 
-public sealed record GeneratedPracticeItem(string Prompt, IReadOnlyList<GeneratedChoice> Choices, int CorrectIndex, string Explanation);
+// Passage/ItemType/CorrectAnswer (PSAT-content-generation scope) are additive: Choices/CorrectIndex
+// are now nullable because a "gridIn" item (PSAT Math's student-produced-response items) has
+// neither — it has CorrectAnswer instead. ItemType is only meaningful when allowGridIns asked for
+// it; an ordinary MCQ item (allowGridIns false, or ItemType omitted/"multipleChoice") is completely
+// unaffected and still requires Choices/CorrectIndex exactly as before — see ToPracticeItem.
+public sealed record GeneratedPracticeItem(
+    string Prompt, string Explanation,
+    IReadOnlyList<GeneratedChoice>? Choices = null, int? CorrectIndex = null,
+    string? Passage = null, string? ItemType = null, string? CorrectAnswer = null);
 public sealed record GeneratedStep(string Caption, int? SourceLine, IReadOnlyList<SceneOp> Ops);
 public sealed record GeneratedNodeContent(
     string WalkthroughText, IReadOnlyList<GeneratedPracticeItem> PracticeItems, IReadOnlyList<GeneratedStep> WalkthroughSteps);
@@ -142,14 +150,17 @@ public sealed class Generator
     /// through the exact same validation as a single-shot call would; only genuinely valid content is
     /// ever returned, and MaxGenerationAttempts exhausted still fails loudly, just after trying
     /// harder first.
-    public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, CancellationToken ct = default)
+    /// allowPassages/allowGridIns (PSAT-content-generation scope) are the same kind of required,
+    /// explicit, never-defaulted signal as allowGraphChoices (see its own remarks just above) —
+    /// both false preserves today's generation exactly for every existing course/node.
+    public async Task<NodeContentPack> GenerateAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, bool allowPassages, bool allowGridIns, CancellationToken ct = default)
     {
         Exception lastFailure = new InvalidOperationException("unreachable");
         for (var attempt = 1; attempt <= MaxGenerationAttempts; attempt++)
         {
             try
             {
-                return await GenerateOnceAsync(courseId, node, difficulty, allowGraphChoices, ct);
+                return await GenerateOnceAsync(courseId, node, difficulty, allowGraphChoices, allowPassages, allowGridIns, ct);
             }
             catch (InvalidOperationException ex)
             {
@@ -161,11 +172,11 @@ public sealed class Generator
             $"Node '{node.Id}': generation failed validation {MaxGenerationAttempts} times in a row. Last error: {lastFailure.Message}", lastFailure);
     }
 
-    private async Task<NodeContentPack> GenerateOnceAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, CancellationToken ct)
+    private async Task<NodeContentPack> GenerateOnceAsync(string courseId, DagNode node, Difficulty difficulty, bool allowGraphChoices, bool allowPassages, bool allowGridIns, CancellationToken ct)
     {
-        var schema = GenerationSchema.NodeContentSchema(allowGraphChoices);
+        var schema = GenerationSchema.NodeContentSchema(allowGraphChoices, allowPassages, allowGridIns);
         var system = PromptTemplates.System(courseId);
-        var user = PromptTemplates.ForNode(node, difficulty, allowGraphChoices);
+        var user = PromptTemplates.ForNode(node, difficulty, allowGraphChoices, allowPassages, allowGridIns);
 
         var inputJson = await _client.GenerateToolInputAsync(system, user, schema, "emit_node_content", ct);
         var generated = JsonSerializer.Deserialize<GeneratedNodeContent>(inputJson.GetRawText(), ParseOptions)
@@ -183,13 +194,12 @@ public sealed class Generator
                 throw new InvalidOperationException($"Node '{node.Id}' item {i + 1}: prompt contains leaked tool-call/JSON artifacts instead of prose.");
             if (ContainsLeakedMarkup(item.Explanation))
                 throw new InvalidOperationException($"Node '{node.Id}' item {i + 1}: explanation contains leaked tool-call/JSON artifacts instead of prose.");
+            if (item.Passage is not null && ContainsLeakedMarkup(item.Passage))
+                throw new InvalidOperationException($"Node '{node.Id}' item {i + 1}: passage contains leaked tool-call/JSON artifacts instead of prose.");
         }
 
         var practiceItems = generated.PracticeItems
-            .Select((item, i) => new PracticeItem(
-                $"{node.Id}-q{i + 1}", node.Id, item.Prompt,
-                item.Choices.Select((choice, ci) => ToPracticeItemChoice(choice, node.Id, i, ci)).ToList(),
-                item.CorrectIndex, item.Explanation))
+            .Select((item, i) => ToPracticeItem(item, node.Id, i, allowGridIns))
             .ToList();
 
         var steps = generated.WalkthroughSteps
@@ -207,6 +217,40 @@ public sealed class Generator
             GeneratedAt: DateTimeOffset.UtcNow,
             Model: _client.Model,
             Difficulty: difficulty);
+    }
+
+    /// Turns one raw generated item into a real PracticeItem — either an ordinary multiple-choice
+    /// item (Choices/CorrectIndex, exactly as before) or, when allowGridIns opted in and the model
+    /// set itemType to "gridIn", a PSAT-Math-style item with no choices at all and a CorrectAnswer
+    /// instead (see PracticeItem's own remarks). allowGridIns false means itemType is never even in
+    /// the schema (see PracticeItemsArraySchema), so every existing course/node takes the
+    /// multiple-choice branch exactly as before, unconditionally. A validation failure here fails
+    /// the whole generation, same posture as ToPracticeItemChoice below.
+    private static PracticeItem ToPracticeItem(GeneratedPracticeItem item, string nodeId, int itemIndex, bool allowGridIns)
+    {
+        var where = $"node '{nodeId}' item {itemIndex + 1}";
+        var id = $"{nodeId}-q{itemIndex + 1}";
+        var itemType = allowGridIns ? (item.ItemType?.ToLowerInvariant() ?? "multiplechoice") : "multiplechoice";
+
+        if (itemType == "gridin")
+        {
+            if (string.IsNullOrWhiteSpace(item.CorrectAnswer))
+                throw new InvalidOperationException($"{where}: itemType is 'gridIn' but no correctAnswer was provided.");
+            if (ContainsLeakedMarkup(item.CorrectAnswer))
+                throw new InvalidOperationException($"{where}: correctAnswer contains leaked tool-call/JSON artifacts instead of a value.");
+
+            return new PracticeItem(id, nodeId, item.Prompt, Array.Empty<PracticeItemChoice>(), -1, item.Explanation, item.Passage, item.CorrectAnswer);
+        }
+
+        if (itemType != "multiplechoice")
+            throw new InvalidOperationException($"{where}: unrecognized itemType '{item.ItemType}'.");
+        if (item.Choices is null)
+            throw new InvalidOperationException($"{where}: itemType is 'multipleChoice' but no choices were provided.");
+        if (item.CorrectIndex is null)
+            throw new InvalidOperationException($"{where}: itemType is 'multipleChoice' but no correctIndex was provided.");
+
+        var choices = item.Choices.Select((choice, ci) => ToPracticeItemChoice(choice, nodeId, itemIndex, ci)).ToList();
+        return new PracticeItem(id, nodeId, item.Prompt, choices, item.CorrectIndex.Value, item.Explanation, item.Passage);
     }
 
     /// Turns one raw generated choice into a real PracticeItemChoice, failing loudly on anything

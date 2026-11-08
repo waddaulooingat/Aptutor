@@ -142,7 +142,7 @@ public class AutonomousContentAgentServiceTests
         // remarks. Skipping the learn-content seed here would let that one gap's TryStartGeneration
         // genuinely fire off a real Anthropic API call from this test.
         foreach (var difficulty in new[] { Difficulty.Easy, Difficulty.Medium, Difficulty.Hard })
-            generation.RestoreJob(new GenerationJob("csa", "u1.1", difficulty, false, GenerationStatus.Running, null, null, DateTimeOffset.UtcNow));
+            generation.RestoreJob(new GenerationJob("csa", "u1.1", difficulty, false, false, false, GenerationStatus.Running, null, null, DateTimeOffset.UtcNow));
         learnGeneration.RestoreJob(new LearnContentJob("csa", "u1.1", GenerationStatus.Running, null, null, DateTimeOffset.UtcNow));
 
         var result = await agent.RunScanAsync("csa", maxGenerations: 20);

@@ -80,11 +80,12 @@ public sealed class IndexModel : PageModel
         var manifest = await _store.GetCourseManifestAsync(course);
         foreach (var node in graph.Dag.Nodes.Where(n => n.Unit == unit))
         {
-            // Bulk generation always stays text-only (see the graph-spec-rendering plan's Part 2) —
-            // graph-based choices are an explicit, per-node SME decision made on the Review page,
-            // not something to fire unattended across a whole unit at once.
+            // Bulk generation always stays plain-text multiple-choice (see the graph-spec-rendering
+            // plan's Part 2 and the PSAT-content-generation plan) — graph-based choices, reading
+            // passages, and grid-ins are all explicit, per-node SME decisions made on the Review
+            // page, not something to fire unattended across a whole unit at once.
             if (StatusFor(course, node, difficulty, manifest) == NodeReviewStatus.NotStarted)
-                _generation.TryStartGeneration(course, node.Id, difficulty, allowGraphChoices: false);
+                _generation.TryStartGeneration(course, node.Id, difficulty, allowGraphChoices: false, allowPassages: false, allowGridIns: false);
         }
 
         return RedirectToPage("/Index");

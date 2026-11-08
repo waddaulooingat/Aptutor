@@ -37,6 +37,14 @@
                 <input type="checkbox" name="allowGraphChoices" value="true" />
                 Allow graph-based answer options (e.g. velocity-vs-time plots) — for Physics/Chemistry-style questions
             </label>
+            <label>
+                <input type="checkbox" name="allowPassages" value="true" />
+                Give every item its own reading passage — for PSAT Reading & Writing-style questions
+            </label>
+            <label>
+                <input type="checkbox" name="allowGridIns" value="true" />
+                Allow grid-in items with no answer choices — for PSAT Math-style questions
+            </label>
             <button type="submit" class="btn-primary">Generate</button>
         </form>
     </div>
@@ -63,6 +71,14 @@ else if (!Model.PackIsPending)
                 <label>
                     <input type="checkbox" name="allowGraphChoices" value="true" />
                     Allow graph-based answer options
+                </label>
+                <label>
+                    <input type="checkbox" name="allowPassages" value="true" />
+                    Give every item its own reading passage
+                </label>
+                <label>
+                    <input type="checkbox" name="allowGridIns" value="true" />
+                    Allow grid-in items with no answer choices
                 </label>
                 <button type="submit">Generate another set</button>
             </form>
@@ -95,20 +111,31 @@ else
             @foreach (var item in Model.Pack.PracticeItems)
             {
                 <div class="card">
-                    <p><strong>@item.Prompt</strong></p>
-                    @for (var i = 0; i < item.Choices.Count; i++)
+                    @if (item.Passage is not null)
                     {
-                        <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
-                            @(i == item.CorrectIndex ? "✓" : "—")
-                            @if (item.Choices[i].IsGraph)
-                            {
-                                @Html.Raw(GraphSpecSvg.Render(item.Choices[i].Graph!))
-                            }
-                            else
-                            {
-                                @item.Choices[i].Text
-                            }
-                        </p>
+                        <p class="notice"><em>@item.Passage</em></p>
+                    }
+                    <p><strong>@item.Prompt</strong></p>
+                    @if (item.IsGridIn)
+                    {
+                        <p class="choice correct">[grid-in] correct answer: @item.CorrectAnswer</p>
+                    }
+                    else
+                    {
+                        @for (var i = 0; i < item.Choices.Count; i++)
+                        {
+                            <p class="choice @(i == item.CorrectIndex ? "correct" : "")">
+                                @(i == item.CorrectIndex ? "✓" : "—")
+                                @if (item.Choices[i].IsGraph)
+                                {
+                                    @Html.Raw(GraphSpecSvg.Render(item.Choices[i].Graph!))
+                                }
+                                else
+                                {
+                                    @item.Choices[i].Text
+                                }
+                            </p>
+                        }
                     }
                     <p class="notice">@item.Explanation</p>
 
@@ -148,6 +175,14 @@ else
                 <label>
                     <input type="checkbox" name="allowGraphChoices" value="true" />
                     Allow graph-based answer options
+                </label>
+                <label>
+                    <input type="checkbox" name="allowPassages" value="true" />
+                    Give every item its own reading passage
+                </label>
+                <label>
+                    <input type="checkbox" name="allowGridIns" value="true" />
+                    Allow grid-in items with no answer choices
                 </label>
                 <button type="submit">Generate a new attempt</button>
             </form>

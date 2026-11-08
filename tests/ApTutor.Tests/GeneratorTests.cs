@@ -87,7 +87,7 @@ public class GeneratorTests
         var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(CannedResponse));
         var generator = new Generator(client);
 
-        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Hard, allowGraphChoices: false);
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Hard, allowGraphChoices: false, allowPassages: false, allowGridIns: false);
 
         Assert.Equal("csa", pack.CourseId);
         Assert.Equal("u1.2", pack.NodeId);
@@ -122,7 +122,7 @@ public class GeneratorTests
         // Missing required practiceItems/walkthroughSteps -> deserialization leaves them null ->
         // the .Select(...) call on a null list throws, which is the desired "fail loudly, don't
         // silently ship half-generated content" behavior.
-        await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+        await Assert.ThrowsAnyAsync<Exception>(() => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false));
     }
 
     // GenerateAsync/GenerateLearnContentAsync retry the whole generate-and-validate cycle on a
@@ -142,7 +142,7 @@ public class GeneratorTests
         var client = new ClaudeClient("fake-key", "fake-model", handler);
         var generator = new Generator(client);
 
-        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false);
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false);
 
         Assert.Equal(3, handler.CallCount);
         Assert.Equal("Variables hold typed values.", pack.WalkthroughText);
@@ -156,7 +156,7 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false));
 
         Assert.Equal(4, handler.CallCount); // MaxGenerationAttempts, not an infinite/unbounded retry
     }
@@ -244,7 +244,7 @@ public class GeneratorTests
         var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(GraphChoiceResponse));
         var generator = new Generator(client);
 
-        var pack = await generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true);
+        var pack = await generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true, allowPassages: false, allowGridIns: false);
 
         var item = Assert.Single(pack.PracticeItems);
         Assert.Equal(4, item.Choices.Count);
@@ -278,7 +278,7 @@ public class GeneratorTests
         var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(CannedResponse));
         var generator = new Generator(client);
 
-        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false);
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false);
 
         var item = Assert.Single(pack.PracticeItems);
         Assert.All(item.Choices, c => Assert.False(c.IsGraph));
@@ -302,7 +302,7 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
+            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true, allowPassages: false, allowGridIns: false));
     }
 
     [Fact]
@@ -320,7 +320,7 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
+            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true, allowPassages: false, allowGridIns: false));
     }
 
     // Same leaked tool-call/JSON artifact check as GenerateLearnContentAsync's (see its remarks) —
@@ -339,7 +339,7 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false));
     }
 
     [Fact]
@@ -355,7 +355,7 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false));
     }
 
     [Fact]
@@ -372,7 +372,7 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false));
+            () => generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false));
     }
 
     [Fact]
@@ -393,7 +393,169 @@ public class GeneratorTests
         var generator = new Generator(client);
 
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true));
+            () => generator.GenerateAsync("physics1", PhysicsNode, Difficulty.Medium, allowGraphChoices: true, allowPassages: false, allowGridIns: false));
+    }
+
+    // GenerateAsync with allowPassages/allowGridIns true (see the PSAT-content-generation plan) —
+    // Reading & Writing-style passages and Math-style grid-in items with no answer choices at all.
+    private static readonly DagNode PsatNode = new(
+        "r1.1", 1, NodeType.Concept, "Reading comprehension: main idea", Array.Empty<string>(), "");
+
+    private const string PassageAndMixedItemTypesResponse = """
+        {
+            "content": [
+                {
+                    "type": "tool_use",
+                    "name": "emit_node_content",
+                    "input": {
+                        "walkthroughText": "Identify the main idea of a short passage.",
+                        "practiceItems": [
+                            {
+                                "prompt": "What is the main idea of the passage above?",
+                                "passage": "The library extended its hours this fall to accommodate students.",
+                                "itemType": "multipleChoice",
+                                "choices": ["Libraries are old.", "The library extended its hours for students.", "Students dislike libraries.", "Fall is a season."],
+                                "correctIndex": 1,
+                                "explanation": "The passage states the library extended hours for students."
+                            },
+                            {
+                                "prompt": "If x + 2 = 5, what is x?",
+                                "itemType": "gridIn",
+                                "correctAnswer": "3",
+                                "explanation": "Subtract 2 from both sides."
+                            }
+                        ],
+                        "walkthroughSteps": [ { "caption": "Read the passage.", "ops": [] } ]
+                    }
+                }
+            ]
+        }
+        """;
+
+    [Fact]
+    public async Task GenerateAsync_AllowPassagesAndGridInsTrue_ParsesMixedItemTypesAndPassage()
+    {
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(PassageAndMixedItemTypesResponse));
+        var generator = new Generator(client);
+
+        var pack = await generator.GenerateAsync("psat", PsatNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: true, allowGridIns: true);
+
+        Assert.Equal(2, pack.PracticeItems.Count);
+
+        var mcq = pack.PracticeItems[0];
+        Assert.False(mcq.IsGridIn);
+        Assert.Equal("The library extended its hours this fall to accommodate students.", mcq.Passage);
+        Assert.Equal(4, mcq.Choices.Count);
+        Assert.Equal(1, mcq.CorrectIndex);
+
+        var gridIn = pack.PracticeItems[1];
+        Assert.True(gridIn.IsGridIn);
+        Assert.Empty(gridIn.Choices);
+        Assert.Equal(-1, gridIn.CorrectIndex);
+        Assert.Equal("3", gridIn.CorrectAnswer);
+        Assert.Null(gridIn.Passage); // optional per item, genuinely omitted here
+    }
+
+    [Fact]
+    public async Task GenerateAsync_AllowGridInsFalse_ItemTypeFieldIsIgnored_AlwaysMultipleChoice()
+    {
+        // allowGridIns false means itemType is never even in the schema (see
+        // PracticeItemsArraySchema) — a model that still emits one anyway must be treated as an
+        // ordinary multiple-choice item, not acted on, since the schema never asked for it.
+        const string response = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "itemType": "gridIn", "correctAnswer": "3", "correctIndex": 1, "explanation": "e", "choices": ["a", "b", "c", "d"] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(response));
+        var generator = new Generator(client);
+
+        var pack = await generator.GenerateAsync("csa", SampleNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: false);
+
+        var item = Assert.Single(pack.PracticeItems);
+        Assert.False(item.IsGridIn);
+        Assert.Equal(1, item.CorrectIndex);
+    }
+
+    [Fact]
+    public async Task GenerateAsync_GridInMissingCorrectAnswer_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "itemType": "gridIn", "explanation": "e" } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("psat", PsatNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: true));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_MultipleChoiceItemMissingChoices_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "itemType": "multipleChoice", "correctIndex": 0, "explanation": "e" } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("psat", PsatNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: true));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_UnrecognizedItemType_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "itemType": "shortAnswer", "explanation": "e" } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("psat", PsatNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: true));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_PassageContainsLeakedToolCallSyntax_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "passage": "<invoke name=\"emit_node_content\">leaked", "correctIndex": 0, "explanation": "e", "choices": ["a", "b", "c", "d"] } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("psat", PsatNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: true, allowGridIns: false));
+    }
+
+    [Fact]
+    public async Task GenerateAsync_GridInCorrectAnswerContainsLeakedToolCallSyntax_Throws()
+    {
+        const string badResponse = """
+            { "content": [ { "type": "tool_use", "name": "emit_node_content", "input": {
+                "walkthroughText": "text",
+                "practiceItems": [ { "prompt": "p", "itemType": "gridIn", "correctAnswer": "{\"caption\":\"leaked\"}", "explanation": "e" } ],
+                "walkthroughSteps": [ { "caption": "c", "ops": [] } ] } } ] }
+            """;
+        var client = new ClaudeClient("fake-key", "fake-model", new FakeHandler(badResponse));
+        var generator = new Generator(client);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(
+            () => generator.GenerateAsync("psat", PsatNode, Difficulty.Medium, allowGraphChoices: false, allowPassages: false, allowGridIns: true));
     }
 
     // GenerateUnitStructureAsync (see the Shell-display-only/course-authoring plan's Part B) —

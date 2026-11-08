@@ -12,6 +12,11 @@ public class MockExamTests
             new[] { "a", "b", "c", "d" }.Select(PracticeItemChoice.OfText).ToList(),
             correctIndex, $"explanation for {id}");
 
+    // A grid-in item (see the PSAT-content-generation plan) has no Choices/CorrectIndex at all —
+    // CorrectAnswer is graded via GridInGrader instead (see MockExamSession.Submit).
+    private static PracticeItem GridInItem(string id, string nodeId, string correctAnswer) =>
+        new(id, nodeId, $"prompt for {id}", Array.Empty<PracticeItemChoice>(), -1, $"explanation for {id}", CorrectAnswer: correctAnswer);
+
     private sealed class FakeContentSource : IContentSource
     {
         private readonly IReadOnlyList<PracticeItem> _items;
@@ -129,6 +134,62 @@ public class MockExamTests
     [Fact]
     public void Constructor_EmptyItemList_Throws() =>
         Assert.Throws<ArgumentException>(() => new MockExamSession(Array.Empty<PracticeItem>(), TimeSpan.FromMinutes(10)));
+
+    [Fact]
+    public void AnswerText_GridInItem_GradedViaCorrectAnswerNotChoiceIndex()
+    {
+        var items = new[] { GridInItem("q1", "n1", "3/4") };
+        var session = new MockExamSession(items, TimeSpan.FromMinutes(10));
+
+        session.AnswerText("q1", "0.75"); // numerically equivalent, not an exact string match
+        var result = session.Submit();
+
+        var q1 = Assert.Single(result.Items);
+        Assert.True(q1.Correct);
+        Assert.Equal("0.75", q1.SelectedText);
+        Assert.Null(q1.SelectedIndex);
+    }
+
+    [Fact]
+    public void AnswerText_GridInItem_WrongAnswer_FlagsNodeAsWeak()
+    {
+        var items = new[] { GridInItem("q1", "n1", "3") };
+        var session = new MockExamSession(items, TimeSpan.FromMinutes(10));
+
+        session.AnswerText("q1", "4");
+        var result = session.Submit();
+
+        Assert.False(result.Items.Single().Correct);
+        Assert.Equal(new[] { "n1" }, result.WeakNodeIds);
+    }
+
+    [Fact]
+    public void Submit_GridInItem_UnansweredCountsAsIncorrectNotAsError()
+    {
+        var items = new[] { GridInItem("q1", "n1", "3") };
+        var session = new MockExamSession(items, TimeSpan.FromMinutes(10));
+
+        var result = session.Submit(); // never answered q1
+
+        var q1 = Assert.Single(result.Items);
+        Assert.False(q1.Correct);
+        Assert.Null(q1.SelectedText);
+        Assert.Null(q1.SelectedIndex);
+    }
+
+    [Fact]
+    public void Submit_MixOfMultipleChoiceAndGridInItems_GradesEachByItsOwnShape()
+    {
+        var items = new[] { Item("q1", "n1", 0), GridInItem("q2", "n2", "7") };
+        var session = new MockExamSession(items, TimeSpan.FromMinutes(10));
+
+        session.Answer("q1", 0);
+        session.AnswerText("q2", "7");
+        var result = session.Submit();
+
+        Assert.Equal(2, result.CorrectCount);
+        Assert.Empty(result.WeakNodeIds);
+    }
 
     [Fact]
     public void ForNodes_FlattensItemsAcrossMultipleNodesFromContentSource()

@@ -6,7 +6,9 @@ using ApTutor.Curriculum;
 
 namespace ApTutor.Platform;
 
-public sealed record ExamItemResult(PracticeItem Item, int? SelectedIndex, bool Correct);
+/// SelectedText (PSAT-content-generation scope) is set instead of SelectedIndex for a grid-in item
+/// (see PracticeItem.IsGridIn) — a grid-in has no choice index to select, just typed text.
+public sealed record ExamItemResult(PracticeItem Item, int? SelectedIndex, bool Correct, string? SelectedText = null);
 
 public sealed record MockExamResult(
     IReadOnlyList<ExamItemResult> Items, int CorrectCount, int TotalCount, TimeSpan Elapsed, bool TimedOut)
@@ -31,6 +33,7 @@ public sealed record MockExamResult(
 public sealed class MockExamSession
 {
     private readonly Dictionary<string, int> _answers = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, string> _textAnswers = new(StringComparer.Ordinal);
     private readonly Func<DateTimeOffset> _now;
     private readonly DateTimeOffset _start;
 
@@ -59,6 +62,16 @@ public sealed class MockExamSession
         _answers[itemId] = selectedIndex;
     }
 
+    /// For a grid-in item (PracticeItem.IsGridIn) — the typed-text counterpart to Answer's
+    /// choice-index answer, since a grid-in has no choices to select from at all.
+    public void AnswerText(string itemId, string text)
+    {
+        if (IsSubmitted) throw new InvalidOperationException("This exam has already been submitted.");
+        if (IsTimedOut) throw new InvalidOperationException("Exam time has expired.");
+        if (Items.All(i => i.Id != itemId)) throw new KeyNotFoundException(itemId);
+        _textAnswers[itemId] = text;
+    }
+
     public MockExamResult Submit()
     {
         var timedOut = IsTimedOut;
@@ -66,6 +79,12 @@ public sealed class MockExamSession
         var results = Items
             .Select(i =>
             {
+                if (i.IsGridIn)
+                {
+                    var text = _textAnswers.TryGetValue(i.Id, out var t) ? t : null;
+                    return new ExamItemResult(i, null, GridInGrader.IsCorrect(text, i.CorrectAnswer), text);
+                }
+
                 var selected = _answers.TryGetValue(i.Id, out var idx) ? idx : (int?)null;
                 return new ExamItemResult(i, selected, selected == i.CorrectIndex);
             })

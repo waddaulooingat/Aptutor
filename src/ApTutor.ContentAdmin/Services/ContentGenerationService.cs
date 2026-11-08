@@ -18,7 +18,7 @@ public enum GenerationStatus { Running, Succeeded, Failed }
 // RunAsync remarks for why it's removed from this dictionary entirely, same end state as a human's
 // own Approve click.
 public sealed record GenerationJob(
-    string CourseId, string NodeId, Difficulty Difficulty, bool AllowGraphChoices, GenerationStatus Status, string? Error, NodeContentPack? Pack, DateTimeOffset StartedAt,
+    string CourseId, string NodeId, Difficulty Difficulty, bool AllowGraphChoices, bool AllowPassages, bool AllowGridIns, GenerationStatus Status, string? Error, NodeContentPack? Pack, DateTimeOffset StartedAt,
     bool AiGenerated = false, string? AiReviewNote = null);
 
 /// Wraps ApTutor.ContentFactory's Generator so a "Generate" click returns immediately (redirect to
@@ -70,16 +70,16 @@ public sealed class ContentGenerationService
     /// separately-billed API call. aiGenerated is true only when AutonomousContentAgentService's scan
     /// triggered this (see the AI-content-agent handoff) — every existing caller (a person clicking
     /// Generate) omits it and gets the same behavior as before.
-    public bool TryStartGeneration(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, bool aiGenerated = false)
+    public bool TryStartGeneration(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, bool allowPassages, bool allowGridIns, bool aiGenerated = false)
     {
         var key = Key(courseId, nodeId, difficulty);
         var startedAt = DateTimeOffset.UtcNow;
-        var job = new GenerationJob(courseId, nodeId, difficulty, allowGraphChoices, GenerationStatus.Running, Error: null, Pack: null, startedAt, aiGenerated);
+        var job = new GenerationJob(courseId, nodeId, difficulty, allowGraphChoices, allowPassages, allowGridIns, GenerationStatus.Running, Error: null, Pack: null, startedAt, aiGenerated);
         if (!_jobs.TryAdd(key, job)) return false;
 
         var cts = new CancellationTokenSource();
         _cancellations[key] = cts;
-        _ = RunAsync(courseId, nodeId, difficulty, allowGraphChoices, aiGenerated, key, startedAt, cts.Token);
+        _ = RunAsync(courseId, nodeId, difficulty, allowGraphChoices, allowPassages, allowGridIns, aiGenerated, key, startedAt, cts.Token);
         return true;
     }
 
@@ -110,7 +110,7 @@ public sealed class ContentGenerationService
         return removed;
     }
 
-    private async Task RunAsync(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, bool aiGenerated, string key, DateTimeOffset startedAt, CancellationToken ct)
+    private async Task RunAsync(string courseId, string nodeId, Difficulty difficulty, bool allowGraphChoices, bool allowPassages, bool allowGridIns, bool aiGenerated, string key, DateTimeOffset startedAt, CancellationToken ct)
     {
         try
         {
@@ -119,7 +119,7 @@ public sealed class ContentGenerationService
             // calls after TryLoadContext has already confirmed this exact course/node has a
             // non-null Graph — see its own null check.
             var node = course.Graph!.Node(nodeId);
-            var pack = await _generator.GenerateAsync(courseId, node, difficulty, allowGraphChoices, ct);
+            var pack = await _generator.GenerateAsync(courseId, node, difficulty, allowGraphChoices, allowPassages, allowGridIns, ct);
             if (aiGenerated) pack = pack with { AiGenerated = true };
 
             // The AI review pass (see the AI-content-agent handoff) is an explicit, disabled-by-

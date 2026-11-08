@@ -20,7 +20,7 @@ public static class PromptTemplates
         you'd say it out loud while teaching.
         """;
 
-    public static string ForNode(DagNode node, Difficulty difficulty, bool allowGraphChoices) => $"""
+    public static string ForNode(DagNode node, Difficulty difficulty, bool allowGraphChoices, bool allowPassages, bool allowGridIns) => $"""
         Generate practice items, an explanation, and an animated walkthrough for this curriculum node:
 
         {NodeSummary(node)}
@@ -31,6 +31,8 @@ public static class PromptTemplates
 
         Target difficulty for the practice items: {DifficultyGuidance(difficulty)}
         {(allowGraphChoices ? GraphChoiceGuidance : "")}
+        {(allowPassages ? PassageGuidance : "")}
+        {(allowGridIns ? GridInGuidance : "")}
         """;
 
     /// Only appended when the SME has explicitly opted into graph-based answer choices for this
@@ -55,6 +57,36 @@ public static class PromptTemplates
         points) in that same choice — never emit kind:"graph" as a placeholder or intention without
         the actual graph data filled in. If you're not going to fully populate a choice's graph right
         now, use kind:"text" for it instead.
+        """;
+
+    /// Only appended when the SME has explicitly opted into reading-passage items for this
+    /// generation (see the PSAT-content-generation plan) — real PSAT Reading & Writing questions
+    /// each come with their own short passage, unlike CS A/World History's plain standalone prompts.
+    /// Kept out of the prompt entirely otherwise, so ordinary generation is unaffected.
+    private const string PassageGuidance = """
+        This node calls for Reading & Writing-style items: give EVERY practice item a short reading
+        passage (a few sentences to a short paragraph) in its "passage" field, original and never
+        reproducing real exam/book text. The question itself must test comprehension, grammar,
+        rhetoric, or vocabulary-in-context of THAT SPECIFIC passage — never something a student could
+        answer without reading it, and never a generic question that happens to have a passage
+        attached. Each item's passage is self-contained; never assume the student has read any other
+        item's passage.
+        """;
+
+    /// Only appended when the SME has explicitly opted into grid-in items for this generation (see
+    /// the PSAT-content-generation plan) — real PSAT Math mixes ordinary 4-choice multiple choice
+    /// with "student-produced response" items that have no answer choices at all. Kept out of the
+    /// prompt entirely otherwise, so ordinary multiple-choice-only generation is unaffected.
+    private const string GridInGuidance = """
+        This node calls for PSAT-Math-style items: each one is EITHER ordinary 4-choice multiple
+        choice OR a "grid-in" item with no answer choices at all — use your judgment on which fits
+        each specific question; real tests use a mix, weighted toward multiple choice. Set
+        "itemType" explicitly on every item: "multipleChoice" (fill in "choices" and "correctIndex"
+        as usual, omit "correctAnswer") or "gridIn" (omit "choices" and "correctIndex" entirely,
+        fill in "correctAnswer" instead). A grid-in item's correctAnswer must be the one unambiguous
+        right value, written as a plain integer, decimal, or simple fraction (e.g. "3/4") — never a
+        word or unit, and never a question whose correct answer could reasonably be written more
+        than one way.
         """;
 
     /// Difficulty only shapes how demanding the practice items are (see the difficulty-levels plan)
@@ -219,11 +251,18 @@ public static class PromptTemplates
         if (items.Count == 0) return "(no practice items)";
 
         return string.Join("\n\n", items.Select((item, i) => $"""
-            {i + 1}. {item.Prompt}
-            {string.Join("\n", item.Choices.Select((c, ci) => $"   {(ci == item.CorrectIndex ? "* " : "  ")}{(char)('A' + ci)}. {DescribeChoice(c)}"))}
+            {i + 1}. {(item.Passage is null ? "" : $"passage: {item.Passage}\n   ")}{item.Prompt}
+            {DescribeAnswerOptions(item)}
                explanation: {item.Explanation}
             """));
     }
+
+    /// A grid-in item (see the PSAT-content-generation plan) has no Choices at all — described as
+    /// its correct value instead of a lettered choice list, so the AI reviewer (and anything else
+    /// reading this text) sees what a grid-in item's "correct" even means.
+    private static string DescribeAnswerOptions(PracticeItem item) => item.IsGridIn
+        ? $"   [grid-in] correct answer: {item.CorrectAnswer}"
+        : string.Join("\n", item.Choices.Select((c, ci) => $"   {(ci == item.CorrectIndex ? "* " : "  ")}{(char)('A' + ci)}. {DescribeChoice(c)}"));
 
     /// A graph-based choice (see the graph-spec-rendering plan) is reviewed as a structural
     /// description, not a rendered image — the AI reviewer reasons about stated axis labels/units and

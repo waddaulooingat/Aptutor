@@ -102,12 +102,13 @@ public sealed class AutonomousContentAgentService
         {
             if (triggered >= maxGenerations) break;
 
-            // allowGraphChoices: false for practice gaps — same posture as Index.cshtml.cs's bulk
-            // "Generate remaining" action: graph-based answer choices stay an explicit, per-node SME
-            // decision, never something a batch/unattended pass opts into on its own.
+            // allowGraphChoices/allowPassages/allowGridIns: all false for practice gaps — same
+            // posture as Index.cshtml.cs's bulk "Generate remaining" action: these answer-shape
+            // opt-ins stay an explicit, per-node SME decision, never something a batch/unattended
+            // pass opts into on its own.
             var started = gap.ContentType switch
             {
-                GapContentType.Practice => _generation.TryStartGeneration(gap.CourseId, gap.NodeId, gap.Difficulty!.Value, allowGraphChoices: false, aiGenerated: true),
+                GapContentType.Practice => _generation.TryStartGeneration(gap.CourseId, gap.NodeId, gap.Difficulty!.Value, allowGraphChoices: false, allowPassages: false, allowGridIns: false, aiGenerated: true),
                 GapContentType.Learn => _learnGeneration.TryStartGeneration(gap.CourseId, gap.NodeId, aiGenerated: true),
                 _ => false,
             };

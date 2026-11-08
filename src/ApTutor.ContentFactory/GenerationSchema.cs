@@ -79,7 +79,7 @@ public static class GenerationSchema
         },
     };
 
-    public static JsonNode NodeContentSchema(bool allowGraphChoices) => new JsonObject
+    public static JsonNode NodeContentSchema(bool allowGraphChoices, bool allowPassages, bool allowGridIns) => new JsonObject
     {
         ["type"] = "object",
         ["required"] = new JsonArray { "walkthroughText", "practiceItems", "walkthroughSteps" },
@@ -91,7 +91,7 @@ public static class GenerationSchema
                 ["description"] = "A short (2-4 sentence) original explanation of the concept, " +
                                    "written for a high-school AP CS A student. Plain prose, no markdown.",
             },
-            ["practiceItems"] = PracticeItemsArraySchema(allowGraphChoices),
+            ["practiceItems"] = PracticeItemsArraySchema(allowGraphChoices, allowPassages, allowGridIns),
             ["walkthroughSteps"] = new JsonObject
             {
                 ["type"] = "array",
@@ -192,34 +192,91 @@ public static class GenerationSchema
         },
     };
 
-    private static JsonNode PracticeItemsArraySchema(bool allowGraphChoices) => new JsonObject
+    /// allowPassages/allowGridIns (PSAT-content-generation scope) are gated exactly like
+    /// allowGraphChoices above: left false, this produces the identical schema as before — same
+    /// required fields, same order, no "passage"/"itemType"/"correctAnswer" properties at all — so
+    /// ordinary text-only generation for every existing course/node is untouched.
+    private static JsonNode PracticeItemsArraySchema(bool allowGraphChoices, bool allowPassages, bool allowGridIns)
     {
-        ["type"] = "array",
-        ["minItems"] = 2,
-        ["maxItems"] = 3,
-        ["items"] = new JsonObject
+        var required = new JsonArray { "prompt" };
+        if (allowGridIns) required.Add("itemType"); else { required.Add("choices"); required.Add("correctIndex"); }
+        required.Add("explanation");
+
+        var choices = new JsonObject
         {
-            ["type"] = "object",
-            ["required"] = new JsonArray { "prompt", "choices", "correctIndex", "explanation" },
-            ["properties"] = new JsonObject
+            ["type"] = "array",
+            ["minItems"] = 4,
+            ["maxItems"] = 4,
+            ["items"] = allowGraphChoices ? ChoiceSchema() : new JsonObject { ["type"] = "string" },
+        };
+        var correctIndex = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 3 };
+        if (allowGridIns)
+        {
+            const string conditionalNote = "Required when itemType is \"multipleChoice\"; omit entirely when itemType is \"gridIn\".";
+            choices["description"] = conditionalNote;
+            correctIndex["description"] = conditionalNote;
+        }
+
+        var properties = new JsonObject
+        {
+            ["prompt"] = new JsonObject { ["type"] = "string" },
+            ["choices"] = choices,
+            ["correctIndex"] = correctIndex,
+            ["explanation"] = new JsonObject
             {
-                ["prompt"] = new JsonObject { ["type"] = "string" },
-                ["choices"] = new JsonObject
-                {
-                    ["type"] = "array",
-                    ["minItems"] = 4,
-                    ["maxItems"] = 4,
-                    ["items"] = allowGraphChoices ? ChoiceSchema() : new JsonObject { ["type"] = "string" },
-                },
-                ["correctIndex"] = new JsonObject { ["type"] = "integer", ["minimum"] = 0, ["maximum"] = 3 },
-                ["explanation"] = new JsonObject
-                {
-                    ["type"] = "string",
-                    ["description"] = "Why the correct choice is right AND why at least one distractor is wrong.",
-                },
+                ["type"] = "string",
+                ["description"] = "Why the correct choice/answer is right AND, for a multiple-choice " +
+                                   "item, why at least one distractor is wrong.",
             },
-        },
-    };
+        };
+
+        if (allowPassages)
+        {
+            properties["passage"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "A short reading passage (a few sentences to a short paragraph) this " +
+                                   "question is based on (Reading & Writing-style items) — the question " +
+                                   "must test comprehension/grammar/rhetoric/vocabulary of THIS passage, " +
+                                   "never something answerable without reading it. Required for a " +
+                                   "reading-comprehension item; omit entirely for one that doesn't need it. " +
+                                   "Each item's passage is self-contained — never assume another item's passage.",
+            };
+        }
+
+        if (allowGridIns)
+        {
+            properties["itemType"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["enum"] = new JsonArray { "multipleChoice", "gridIn" },
+                ["description"] = "\"multipleChoice\": fill in choices + correctIndex, omit correctAnswer. " +
+                                   "\"gridIn\" (a \"student-produced response\" item with no answer choices " +
+                                   "at all): fill in correctAnswer, omit choices and correctIndex entirely.",
+            };
+            properties["correctAnswer"] = new JsonObject
+            {
+                ["type"] = "string",
+                ["description"] = "Required when itemType is \"gridIn\" — the exact value a student would " +
+                                   "type: a plain integer, decimal, or simple fraction (e.g. \"3/4\"), never " +
+                                   "a word or unit. The question must have exactly one unambiguous correct " +
+                                   "value written this way. Omit entirely when itemType is \"multipleChoice\".",
+            };
+        }
+
+        return new JsonObject
+        {
+            ["type"] = "array",
+            ["minItems"] = 2,
+            ["maxItems"] = 3,
+            ["items"] = new JsonObject
+            {
+                ["type"] = "object",
+                ["required"] = required,
+                ["properties"] = properties,
+            },
+        };
+    }
 
     /// One answer option when graph-based choices are allowed (see the graph-spec-rendering plan's
     /// Part 2) — a discriminated union: "kind" says which of text/graph is meaningful. Only used

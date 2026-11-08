@@ -124,7 +124,7 @@ public sealed class ReviewModel : PageModel
         return Page();
     }
 
-    public IActionResult OnPostGenerate(string course, string node, Difficulty difficulty = Difficulty.Medium, bool allowGraphChoices = false)
+    public IActionResult OnPostGenerate(string course, string node, Difficulty difficulty = Difficulty.Medium, bool allowGraphChoices = false, bool allowPassages = false, bool allowGridIns = false)
     {
         if (!TryLoadContext(course, node, difficulty, out _, out var actionResult))
             return actionResult!;
@@ -132,9 +132,11 @@ public sealed class ReviewModel : PageModel
         // TryStartGeneration itself refuses a duplicate job for a node+difficulty already in
         // flight — either way, the SME lands on the same polling page. allowGraphChoices is the
         // explicit SME signal that this generation's answer options may be graphs, not text (see
-        // the graph-spec-rendering plan's Part 2) — unchecked by default, so every existing
-        // course/node keeps generating text-only choices exactly as before unless opted in here.
-        _generation.TryStartGeneration(course, node, difficulty, allowGraphChoices);
+        // the graph-spec-rendering plan's Part 2); allowPassages/allowGridIns are the same kind of
+        // explicit opt-in for PSAT-style reading passages and grid-in items (see the
+        // PSAT-content-generation plan) — all unchecked by default, so every existing course/node
+        // keeps generating exactly as before unless opted in here.
+        _generation.TryStartGeneration(course, node, difficulty, allowGraphChoices, allowPassages, allowGridIns);
         return RedirectToPage("/Generating", new { course, node, difficulty });
     }
 
